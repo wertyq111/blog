@@ -1,0 +1,9 @@
+insert ignore into blog.level (id, name, status, sort, create_user, created_at, update_user, updated_at) values (1, '董事会', 1, 1, 1, 1621998864, 1, 1651723168);
+insert ignore into blog.level (id, name, status, sort, create_user, created_at, update_user, updated_at) values (2, '总裁', 1, 125, 1, 1621998864, 1, 1681780058);
+insert ignore into blog.level (id, name, status, sort, create_user, created_at, update_user, updated_at) values (3, '市场总监', 1, 125, 1, 1621998864, 1, 1621998864);
+insert ignore into blog.level (id, name, status, sort, create_user, created_at, update_user, updated_at) values (4, '人事总监', 1, 125, 1, 1621998864, 1, 1621998864);
+insert ignore into blog.level (id, name, status, sort, create_user, created_at, update_user, updated_at) values (5, '财务总监', 1, 125, 1, 1621998864, 1, 1621998864);
+insert ignore into blog.level (id, name, status, sort, create_user, created_at, update_user, updated_at) values (6, '销售顾问', 1, 125, 1, 1621998864, 1, 1621998864);
+insert ignore into blog.level (id, name, status, sort, create_user, created_at, update_user, updated_at) values (7, '技术总监', 1, 125, 1, 1621998864, 1, 1621998864);
+insert ignore into blog.level (id, name, status, sort, create_user, created_at, update_user, updated_at) values (8, '运营总监', 1, 125, 1, 1621998864, 1, 1632137996);
+insert ignore into blog.level (id, name, status, sort, create_user, created_at, update_user, updated_at) values (9, '策划总监', 1, 125, 1, 1621998864, 1, 1632137991);

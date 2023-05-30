@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 // use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
 
 class DatabaseSeeder extends Seeder
 {
@@ -12,11 +13,27 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // \App\Models\User::factory(10)->create();
-
-        // \App\Models\User::factory()->create([
-        //     'name' => 'Test User',
-        //     'email' => 'test@example.com',
-        // ]);
+        $tableNames = [
+//            "users",
+//            "web_info",
+//            "im_chat_groups",
+//            "im_chat_group_users",
+//            "cities",
+            //"level",
+            //"member_level",
+            //"menus",
+            "positions",
+            "roles",
+            "role_menu",
+            "user_role",
+            "configs"
+        ];
+        foreach ($tableNames as $tableName) {
+            $path = base_path() . '/database/seeders/sql/' . $tableName . '.sql';
+            if (file_exists($path)) {
+                DB::unprepared(file_get_contents($path));
+                $this->command->info($tableName . ' table seeded!');
+            }
+        }
     }
 }
