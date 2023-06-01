@@ -2,7 +2,7 @@
 
 return [
     // HTTP 请求的超时时间（秒）
-    'timeout' => 10.0,
+    'timeout' => 100.0,
 
     // 默认发送配置
     'default' => [
@@ -22,7 +22,10 @@ return [
         'aliyun' => [
             'access_key_id' => env('SMS_ALIYUN_ACCESS_KEY_ID'),
             'access_key_secret' => env('SMS_ALIYUN_ACCESS_KEY_SECRET'),
-            'sign_name' => 'Larabbs',
+            'sign_name' => 'blog',
+            'templates' => [
+                'register' => env('SMS_ALIYUN_TEMPLATE_REGISTER'),
+            ]
         ],
     ],
 ];

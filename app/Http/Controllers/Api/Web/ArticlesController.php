@@ -3,8 +3,8 @@
 namespace App\Http\Controllers\Api\Web;
 
 use App\Http\Controllers\Api\Controller;
-use App\Http\Resources\Web\ArticleResource;
-use App\Models\Web\Article;
+use App\Http\Resources\Article\ArticleResource;
+use App\Models\Article\Article;
 
 class ArticlesController extends Controller
 {

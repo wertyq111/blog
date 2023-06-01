@@ -1,9 +1,9 @@
 <?php
 
-namespace App\Models\Web;
+namespace App\Models\Article;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use App\Models\BaseModel;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class Category extends BaseModel
 {

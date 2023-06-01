@@ -1,11 +1,11 @@
 <?php
 
-namespace App\Http\Resources\Web;
+namespace App\Http\Resources\User;
 
 use App\Http\Resources\BaseResource;
 use Illuminate\Http\Request;
 
-class ArticleResource extends BaseResource
+class MemberResource extends BaseResource
 {
     /**
      * Transform the resource into an array.
