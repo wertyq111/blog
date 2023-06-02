@@ -24,7 +24,7 @@ class UserRequest extends FormRequest
     public function attributes()
     {
         return [
-            'verification_key' => '短信验证码 key',
+            'verification_key' => '短信验证码必要字段',
             'verification_code' => '短信验证码',
         ];
     }

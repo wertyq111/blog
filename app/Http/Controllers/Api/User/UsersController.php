@@ -52,9 +52,9 @@ class UsersController extends Controller
      * 用户登录
      *
      * @param AuthorizationRequest $request
-     * @return \Illuminate\Http\JsonResponse
+     * @return UserResource
      * @author zhouxufeng <zxf@netsun.com>
-     * @date 2023/6/1 14:38
+     * @date 2023/6/2 15:00
      */
     public function login(AuthorizationRequest $request)
     {
@@ -72,11 +72,14 @@ class UsersController extends Controller
             throw new AuthenticationException('用户名或密码错误');
         }
 
-        return response()->json([
+        $data = [
             'access_token' => $token,
             'token_type' => 'Bearer',
             'expires_in' => Auth::guard('api')->factory()->getTTL() * 60
-        ])->setStatusCode(201);
+        ];
+
+
+        return new UserResource($data);
 
     }
 }

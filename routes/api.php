@@ -35,9 +35,6 @@ Route::name('api')->group(function() {
         // 用户注册
         Route::post('user/register', [UsersController::class, 'register'])->name('user.register');
 
-        // 图片验证码
-        Route::post('captcha', [CaptchasController::class, 'store'])->name('captcha.store');
-
         // 用户登录
         Route::post('user/login', [UsersController::class, 'login'])->name('user.login');
 
@@ -57,4 +54,7 @@ Route::name('api')->group(function() {
         // 会员打赏列表
         Route::get('web-members/admires', [MembersController::class, 'admires'])->name('web-members.admires');
     });
+
+    // 图片验证码
+    Route::post('captcha', [CaptchasController::class, 'store'])->name('captcha.store');
 });

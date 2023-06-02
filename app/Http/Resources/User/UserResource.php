@@ -16,4 +16,20 @@ class UserResource extends BaseResource
     {
         return parent::toArray($request);
     }
+
+    /**
+     * 设置请求成功时 HTTP 状态值
+     * @param $request
+     * @param $response
+     * @return void
+     * @author zhouxufeng <zxf@netsun.com>
+     * @date 2023/6/2 15:12
+     */
+    public function withResponse($request, $response)
+    {
+        /**
+         * Not all prerequisites were met.
+         */
+        $response->setStatusCode(201);
+    }
 }
