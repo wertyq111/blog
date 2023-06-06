@@ -171,6 +171,9 @@ return [
 
         // 短信
         App\Providers\EasySmsServiceProvider::class,
+
+        // 七牛云
+        Overtrue\LaravelFilesystem\Qiniu\QiniuStorageServiceProvider::class,
     ])->toArray(),
 
     /*

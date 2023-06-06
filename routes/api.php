@@ -9,6 +9,8 @@ use App\Http\Controllers\Api\Web\MembersController;
 use App\Http\Controllers\Api\User\VerificationCodesController;
 use App\Http\Controllers\Api\User\UsersController;
 use App\Http\Controllers\Api\CaptchasController;
+use App\Http\Controllers\Api\QiNiuController;
+use App\Http\Controllers\Api\ResourceController;
 
 /*
 |--------------------------------------------------------------------------
@@ -53,8 +55,23 @@ Route::name('api')->group(function() {
 
         // 会员打赏列表
         Route::get('web-members/admires', [MembersController::class, 'admires'])->name('web-members.admires');
+
+        // 后台功能组 - 登录后才能访问的接口
+        Route::middleware('auth:api')->group(function() {
+            // 编辑资源接口
+            Route::patch('resource/edit', [ResourceController::class, 'edit'])->name('resource.edit');
+            // 编辑网站信息
+            Route::patch('web-info/edit', [InfoController::class, 'edit'])->name('web-info.edit');
+        });
     });
 
     // 图片验证码
     Route::post('captcha', [CaptchasController::class, 'store'])->name('captcha.store');
+
+    // 后台功能组 - 登录后才能访问的接口
+    Route::middleware('auth:api')->group(function() {
+        // 七牛云上传 token
+        Route::get('qiniu/up-token', [QiNiuController::class, 'upToken'])->name('qiniu.up-token');
+    });
+
 });

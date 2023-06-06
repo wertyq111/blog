@@ -56,4 +56,16 @@ class User extends Authenticatable implements MustVerifyEmail, JWTSubject
     {
         return [];
     }
+
+    /**
+     * 一对一关联
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\HasOne
+     * @author zhouxufeng <zxf@netsun.com>
+     * @date 2023/6/6 13:35
+     */
+    public function member()
+    {
+        return $this->hasOne(Member::class);
+    }
 }

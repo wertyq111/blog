@@ -1,11 +1,11 @@
 <?php
 
-namespace App\Http\Resources\User;
+namespace App\Http\Resources;
 
-use App\Http\Resources\BaseResource;
 use Illuminate\Http\Request;
+use Illuminate\Http\Resources\Json\JsonResource;
 
-class UserResource extends BaseResource
+class ResourceResource extends JsonResource
 {
     /**
      * Transform the resource into an array.

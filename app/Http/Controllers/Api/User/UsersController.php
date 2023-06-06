@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\User;
 
 use App\Http\Requests\Api\User\AuthorizationRequest;
+use App\Models\User\Member;
 use App\Models\User\User;
 use App\Http\Controllers\Api\Controller;
 use App\Http\Resources\User\UserResource;
@@ -75,7 +76,8 @@ class UsersController extends Controller
         $data = [
             'access_token' => $token,
             'token_type' => 'Bearer',
-            'expires_in' => Auth::guard('api')->factory()->getTTL() * 60
+            'expires_in' => Auth::guard('api')->factory()->getTTL() * 60,
+            'member' => auth('api')->user()->member
         ];
 
 
