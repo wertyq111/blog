@@ -17,11 +17,12 @@ class InfoRequest extends FormRequest
             case 'POST':
             case 'PATCH':
                 return [
-                    'webName' => 'required|string',
-                    'webTitle' => 'required|string',
+                    'webName' => 'string',
+                    'webTitle' => 'string',
                     'footer' => 'string',
                     'backgroundImage' => 'string',
-                    'avatar' => 'string'
+                    'avatar' => 'string',
+                    'status' => 'int'
                 ];
                 break;
         }
@@ -40,6 +41,7 @@ class InfoRequest extends FormRequest
             'footer' => '页脚',
             'backgroundImage' => '背景',
             'avatar' => '头像',
+            'status' => '状态'
         ];
     }
 }

@@ -37,9 +37,6 @@ Route::name('api')->group(function() {
         // 用户注册
         Route::post('user/register', [UsersController::class, 'register'])->name('user.register');
 
-        // 用户登录
-        Route::post('user/login', [UsersController::class, 'login'])->name('user.login');
-
     });
 
     // 访问类路由组
@@ -56,8 +53,8 @@ Route::name('api')->group(function() {
         // 会员打赏列表
         Route::get('web-members/admires', [MembersController::class, 'admires'])->name('web-members.admires');
 
-        // 后台功能组 - 登录后才能访问的接口
-        Route::middleware('auth:api')->group(function() {
+        // 后台功能组 - 登录后才能访问的接口 - 验证 token 后会刷新 token 前端需要从响应 Header 中找到新的 token 进行替换
+        Route::middleware('auth:api')->middleware('refresh.token')->group(function() {
             // 编辑资源接口
             Route::patch('resource/edit', [ResourceController::class, 'edit'])->name('resource.edit');
             // 编辑网站信息
@@ -68,10 +65,13 @@ Route::name('api')->group(function() {
     // 图片验证码
     Route::post('captcha', [CaptchasController::class, 'store'])->name('captcha.store');
 
-    // 后台功能组 - 登录后才能访问的接口
-    Route::middleware('auth:api')->group(function() {
+    // 后台功能组 - 登录后才能访问的接口 - 验证 token 后会刷新 token 前端需要从响应 Header 中找到新的 token 进行替换
+    Route::middleware('auth:api')->middleware('refresh.token')->group(function() {
         // 七牛云上传 token
         Route::get('qiniu/up-token', [QiNiuController::class, 'upToken'])->name('qiniu.up-token');
     });
+
+    // 用户登录
+    Route::post('user/login', [UsersController::class, 'login'])->name('user.login');
 
 });

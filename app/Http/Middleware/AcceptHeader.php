@@ -9,7 +9,11 @@ class AcceptHeader
 {
     public function handle(Request $request, Closure $next)
     {
+
         $request->headers->set('Accept', 'application/json');
+
+        $response = $next($request);
+        $response->headers->set('Access-Control-Expose-Headers', 'Authorization');
 
         return $next($request);
     }
