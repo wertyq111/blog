@@ -2,15 +2,16 @@
 
 namespace App\Models\User;
 
+use App\Models\BaseModel;
+use App\Models\Permission\Role;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 use Illuminate\Auth\MustVerifyEmail as MustVerifyEmailTrait;
 use PHPOpenSourceSaver\JWTAuth\Contracts\JWTSubject;
 
-class User extends Authenticatable implements MustVerifyEmail, JWTSubject
+class User extends BaseModel implements MustVerifyEmail, JWTSubject
 {
     use HasApiTokens, HasFactory, Notifiable, MustVerifyEmailTrait;
 
@@ -58,7 +59,7 @@ class User extends Authenticatable implements MustVerifyEmail, JWTSubject
     }
 
     /**
-     * 一对一关联
+     * 一对一关联(正向)
      *
      * @return \Illuminate\Database\Eloquent\Relations\HasOne
      * @author zhouxufeng <zxf@netsun.com>
@@ -67,5 +68,17 @@ class User extends Authenticatable implements MustVerifyEmail, JWTSubject
     public function member()
     {
         return $this->hasOne(Member::class);
+    }
+
+    /**
+     * 多对多
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsToMany
+     * @author zhouxufeng <zxf@netsun.com>
+     * @date 2023/6/8 10:27
+     */
+    public function roles()
+    {
+        return $this->belongsToMany(Role::class);
     }
 }

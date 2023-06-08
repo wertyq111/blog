@@ -10,7 +10,7 @@ class Member extends BaseModel
     use HasFactory;
 
     /**
-     *  一对一关联
+     *  一对一关联(反向)
      *  @return \Illuminate\Database\Eloquent\Relations\BelongsTo
      */
     public function user()

@@ -21,9 +21,11 @@ return new class extends Migration
             $table->string('password')->nullable()->comment('密码');
             $table->timestamp('email_verified_at')->nullable()->comment('邮箱验证时间');
             $table->integer('status')->default(0)->comment('账号状态(0 - 未激活, 1 - 激活)');
-
             $table->rememberToken();
-            $table->timestamps();
+            $table->unsignedInteger('created_at')->default(0)->comment("创建时间");
+            $table->integer('update_user')->default(0)->comment("修改人");
+            $table->unsignedInteger('updated_at')->default(0)->comment("更新时间");
+            $table->unsignedInteger('deleted_at')->default(0)->comment("删除时间");
         });
     }
 

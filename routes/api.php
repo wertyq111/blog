@@ -11,6 +11,7 @@ use App\Http\Controllers\Api\User\UsersController;
 use App\Http\Controllers\Api\CaptchasController;
 use App\Http\Controllers\Api\QiNiuController;
 use App\Http\Controllers\Api\ResourceController;
+use App\Http\Controllers\Api\User\MembersController as AdminMemberController;
 
 /*
 |--------------------------------------------------------------------------
@@ -37,6 +38,9 @@ Route::name('api')->group(function() {
         // 用户注册
         Route::post('user/register', [UsersController::class, 'register'])->name('user.register');
 
+        // 用户登录
+        Route::post('user/login', [UsersController::class, 'login'])->name('user.login');
+
     });
 
     // 访问类路由组
@@ -59,6 +63,12 @@ Route::name('api')->group(function() {
             Route::patch('resource/edit', [ResourceController::class, 'edit'])->name('resource.edit');
             // 编辑网站信息
             Route::patch('web-info/edit', [InfoController::class, 'edit'])->name('web-info.edit');
+            // 用户列表
+            Route::get('users/list', [UsersController::class, 'index'])->name('users.index');
+            // 修改用户状态
+            Route::patch('users/status', [UsersController::class, 'status'])->name('users.status');
+            // 修改会员打赏
+            Route::patch('member/admire', [AdminMemberController::class, 'updateAdmire'])->name('member.admire');
         });
     });
 
@@ -70,8 +80,4 @@ Route::name('api')->group(function() {
         // 七牛云上传 token
         Route::get('qiniu/up-token', [QiNiuController::class, 'upToken'])->name('qiniu.up-token');
     });
-
-    // 用户登录
-    Route::post('user/login', [UsersController::class, 'login'])->name('user.login');
-
 });

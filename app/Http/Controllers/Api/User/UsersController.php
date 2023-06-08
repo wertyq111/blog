@@ -3,17 +3,53 @@
 namespace App\Http\Controllers\Api\User;
 
 use App\Http\Requests\Api\User\AuthorizationRequest;
+use App\Models\Permission\Role;
 use App\Models\User\Member;
 use App\Models\User\User;
 use App\Http\Controllers\Api\Controller;
 use App\Http\Resources\User\UserResource;
 use App\Http\Requests\Api\User\UserRequest;
 use Illuminate\Auth\AuthenticationException;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Propaganistas\LaravelPhone\PhoneNumber;
+use Spatie\QueryBuilder\AllowedFilter;
+use Spatie\QueryBuilder\QueryBuilder;
 
 class UsersController extends Controller
 {
+    /**
+     * 获取用户列表
+     *
+     * @param Request $request
+     * @param User $user
+     * @return \Illuminate\Http\Resources\Json\AnonymousResourceCollection
+     * @author zhouxufeng <zxf@netsun.com>
+     * @date 2023/6/8 10:10
+     */
+    public function index(Request $request, User $user)
+    {
+        $users = QueryBuilder::for(User::class)
+            ->allowedIncludes('member', 'roles')
+            ->allowedFilters([
+                'username',
+                'phone',
+                AllowedFilter::exact('status'),
+                AllowedFilter::exact('roles.id'),
+            ])->paginate();
+
+        return UserResource::collection($users);
+    }
+
+    public function status(UserRequest $request, User $user)
+    {
+        $user = $user->find($request->get('id'));
+        $user->status = $request->get('status');
+        $user->edit();
+
+        return new UserResource($user);
+    }
+
     /**
      * 注册账号
      *
@@ -24,7 +60,7 @@ class UsersController extends Controller
      */
     public function register(UserRequest $request)
     {
-        $cacheKey = 'verificationCode_'.$request->verification_key;
+        $cacheKey = 'verificationCode_' . $request->verification_key;
         $verifyData = \Cache::get($cacheKey);
 
         if (!$verifyData) {
@@ -69,7 +105,7 @@ class UsersController extends Controller
 
         $credentials['password'] = $request->get('password');
 
-        if(!$token = Auth::guard('api')->attempt($credentials)) {
+        if (!$token = Auth::guard('api')->attempt($credentials)) {
             throw new AuthenticationException('用户名或密码错误');
         }
 

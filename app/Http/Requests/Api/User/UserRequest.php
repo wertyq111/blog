@@ -7,18 +7,25 @@ use Illuminate\Foundation\Http\FormRequest;
 class UserRequest extends FormRequest
 {
     /**
-     * Get the validation rules that apply to the request.
-     *
-     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array|string>
+     * @return array|string[]|void
+     * @author zhouxufeng <zxf@netsun.com>
+     * @date 2023/6/8 15:38
      */
-    public function rules(): array
+    public function rules()
     {
-        return [
-            'username' => 'required|between:3,25|regex:/^[A-Za-z0-9\-\_]+$/|unique:users,username',
-            'password' => 'required|alpha_dash|min:6',
-            'verification_key' => 'required|string',
-            'verification_code' => 'required|string',
-        ];
+        switch ($this->method()) {
+            case 'POST':
+                return [
+                    'username' => 'required|between:3,25|regex:/^[A-Za-z0-9\-\_]+$/|unique:users,username',
+                    'password' => 'required|alpha_dash|min:6',
+                    'verification_key' => 'required|string',
+                    'verification_code' => 'required|string',
+                ];
+            case 'PATCH':
+                return [
+                    'status' => 'boolean',
+                ];
+        }
     }
 
     public function attributes()
