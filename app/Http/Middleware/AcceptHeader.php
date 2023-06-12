@@ -15,6 +15,6 @@ class AcceptHeader
         $response = $next($request);
         $response->headers->set('Access-Control-Expose-Headers', 'Authorization');
 
-        return $next($request);
+        return $response;
     }
 }

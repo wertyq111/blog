@@ -2,12 +2,14 @@
 
 namespace App\Models;
 
+use App\Models\Traits\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Database\Eloquent\Model;
 
 class BaseModel extends Authenticatable
 {
+
     // 默认使用时间戳戳功能
     public $timestamps = true;
 

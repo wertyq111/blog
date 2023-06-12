@@ -69,6 +69,12 @@ Route::name('api')->group(function() {
             Route::patch('users/status', [UsersController::class, 'status'])->name('users.status');
             // 修改会员打赏
             Route::patch('member/admire', [AdminMemberController::class, 'updateAdmire'])->name('member.admire');
+            // 添加分类
+            Route::post('web/category', [CategoriesController::class, 'add'])->name('web.category.add');
+            // 修改分类
+            Route::patch('web/category/{category}', [CategoriesController::class, 'edit'])->name('web.category.edit');
+            // 删除分类
+            Route::delete('web/category/{category}', [CategoriesController::class, 'delete'])->name('web.category.delete');
         });
     });
 

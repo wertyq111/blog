@@ -1,11 +1,11 @@
 <?php
 
-namespace App\Http\Resources\Article;
+namespace App\Http\Resources\Web;
 
 use App\Http\Resources\BaseResource;
 use Illuminate\Http\Request;
 
-class CategoryResource extends BaseResource
+class LabelResource extends BaseResource
 {
     /**
      * Transform the resource into an array.

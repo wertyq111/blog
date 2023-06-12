@@ -11,6 +11,7 @@ class ResourceController extends Controller
 {
     public function edit(ResourceRequest $request, Resource $resource)
     {
+        echo "ccc";
         $resource->fill($request->getSnakeRequest());
         $resource->member_id = $request->user()->member->id;
         $resource->edit();

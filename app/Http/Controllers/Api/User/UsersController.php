@@ -3,8 +3,6 @@
 namespace App\Http\Controllers\Api\User;
 
 use App\Http\Requests\Api\User\AuthorizationRequest;
-use App\Models\Permission\Role;
-use App\Models\User\Member;
 use App\Models\User\User;
 use App\Http\Controllers\Api\Controller;
 use App\Http\Resources\User\UserResource;
@@ -27,7 +25,7 @@ class UsersController extends Controller
      * @author zhouxufeng <zxf@netsun.com>
      * @date 2023/6/8 10:10
      */
-    public function index(Request $request, User $user)
+    public function index(Request $request)
     {
         $users = QueryBuilder::for(User::class)
             ->allowedIncludes('member', 'roles')

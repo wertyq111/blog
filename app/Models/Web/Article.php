@@ -1,11 +1,11 @@
 <?php
 
-namespace App\Models\Article;
+namespace App\Models\Web;
 
 use App\Models\BaseModel;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 
-class Category extends BaseModel
+class Article extends BaseModel
 {
     use HasFactory;
 }
