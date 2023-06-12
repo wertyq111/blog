@@ -12,4 +12,15 @@ class Label extends BaseModel
     protected $fillable = [
         'name', 'description'
     ];
+
+    /**
+     * 一对一关联
+     * @return void
+     * @author zhouxufeng <zxf@netsun.com>
+     * @date 2023/6/12 10:54
+     */
+    public function category()
+    {
+        $this->belongsTo(Category::class);
+    }
 }

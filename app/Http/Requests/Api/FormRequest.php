@@ -24,7 +24,7 @@ class FormRequest extends BaseFormRequest
      */
     public function getSnakeRequest()
     {
-        $requestArray = $this->request->all();
+        $requestArray = $this->all();
         return $this->transformSnake($requestArray);
     }
 
