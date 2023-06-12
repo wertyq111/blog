@@ -13,15 +13,23 @@ class InfoController extends Controller
      * 获取网站信息
      *
      * @param WebInfo $info
-     * @return WebInfoResource
+     * @return \Illuminate\Http\JsonResponse
      * @author zhouxufeng <zxf@netsun.com>
-     * @date 2023/6/6 16:30
+     * @date 2023/6/12 10:10
      */
     public function index(WebInfo $info)
     {
-        return new WebInfoResource($info->find(1));
+        return (new WebInfoResource($info->find(1)))->response()->setStatusCode(200);
     }
 
+    /**
+     * 编辑网站信息
+     *
+     * @param InfoRequest $request
+     * @return WebInfoResource
+     * @author zhouxufeng <zxf@netsun.com>
+     * @date 2023/6/12 10:10
+     */
     public function edit(InfoRequest $request)
     {
         $info = WebInfo::find(1);
