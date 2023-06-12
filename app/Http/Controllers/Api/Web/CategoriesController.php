@@ -30,7 +30,10 @@ class CategoriesController extends Controller
      */
     public function index(Request $request)
     {
-        $categories = QueryBuilder::for(Category::class)->paginate();
+        $categories = QueryBuilder::for(Category::query())
+            ->allowedIncludes('labels')
+            ->paginate();
+
         return CategoryResource::collection($categories);
     }
 

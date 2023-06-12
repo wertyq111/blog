@@ -20,11 +20,19 @@ class LabelRequest extends FormRequest
                     'categoryId' => [
                         'required',
                         'int',
-                        Rule::exists('categories')->where(function ($query) {
+                        Rule::exists('categories', 'id')->where(function ($query) {
                             $query->where('deleted_at', '=', 0);
                         }),
                     ],
-                    'name' => 'required|string|min:1',
+                    'name' => [
+                        'required',
+                        'string',
+                        'min:1',
+                        Rule::unique('labels')->where(function ($query) {
+                            $query->where('deleted_at', '=', 0)
+                                ->where('category_id', '=', $this->request->get('categoryId'));
+                        }),
+                    ],
                     'description' => 'required|string|min:1'
                 ];
                 break;
@@ -32,11 +40,18 @@ class LabelRequest extends FormRequest
                 return [
                     'categoryId' => [
                         'int',
-                        Rule::exists('categories')->where(function ($query) {
+                        Rule::exists('categories', 'id')->where(function ($query) {
                             $query->where('deleted_at', '=', 0);
                         }),
                     ],
-                    'name' => 'string|min:1',
+                    'name' => [
+                        'string',
+                        'min:1',
+                        Rule::unique('labels')->where(function ($query) {
+                            $query->where('deleted_at', '=', 0)
+                                ->where('category_id', '=', $this->request->get('categoryId'));
+                        }),
+                    ],
                     'description' => 'string|min:1'
                 ];
                 break;
