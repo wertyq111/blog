@@ -7,6 +7,7 @@ use App\Http\Requests\Api\FormRequest;
 use App\Http\Requests\Api\Web\ArticleRequest;
 use App\Http\Resources\Web\ArticleResource;
 use App\Models\Web\Article;
+use Doctrine\DBAL\Query;
 use Illuminate\Http\Request;
 use Spatie\QueryBuilder\QueryBuilder;
 
@@ -55,8 +56,13 @@ class ArticlesController extends Controller
      * @author zhouxufeng <zxf@netsun.com>
      * @date 2023/6/13 09:15
      */
-    public function show(Article $article)
+    public function show($articleId)
     {
+
+        $article = QueryBuilder::for(Article::class)
+            ->allowedIncludes('member', 'category', 'label')
+            ->findOrFail($articleId);
+
         // 前台访问文章时增加阅读数量
         $article->view_count += 1;
         $article->edit(false);
@@ -67,13 +73,16 @@ class ArticlesController extends Controller
     /**
      * 文章详情(后台)
      *
-     * @param Article $article
+     * @param $articleId
      * @return \Illuminate\Http\JsonResponse
      * @author zhouxufeng <zxf@netsun.com>
      * @date 2023/6/13 09:15
      */
-    public function detail(Article $article)
+    public function detail($articleId)
     {
+        $article = QueryBuilder::for(Article::class)
+            ->allowedIncludes('member')
+            ->findOrFail($articleId);
         return (new ArticleResource($article))->response()->setStatusCode(200);
     }
 
