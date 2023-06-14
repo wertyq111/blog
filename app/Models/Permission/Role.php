@@ -2,11 +2,11 @@
 
 namespace App\Models\Permission;
 
+use App\Models\BaseModel;
 use App\Models\User\User;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
 
-class Role extends Model
+class Role extends BaseModel
 {
     use HasFactory;
 

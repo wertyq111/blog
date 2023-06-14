@@ -10,6 +10,10 @@ use Illuminate\Database\Eloquent\Model;
 class BaseModel extends Authenticatable
 {
 
+    // 使用软删除
+    use SoftDeletes;
+
+
     // 默认使用时间戳戳功能
     public $timestamps = true;
 
@@ -63,27 +67,29 @@ class BaseModel extends Authenticatable
     /**
      * 添加/修改记录是填充额外属性
      *
-     * @param Model $model
+     * @param $userOperate 是否是用户操作
      * @return void
      * @author zhouxufeng <zxf@netsun.com>
-     * @date 2023/6/6 16:12
+     * @date 2023/6/13 14:29
      */
-    public function edit()
+    public function edit($userOperate = true)
     {
-        $tableName = $this->getTable();
-        // 如果对应的数据表中定义了create_user并且不存在 id 则填充创建者 id
-        if(!$this->id) {
-            if(Schema::hasColumn($tableName, 'create_user')) {
-                $this->create_user = Auth('api')->user()->id;
+        if($userOperate) {
+            $tableName = $this->getTable();
+            // 如果对应的数据表中定义了create_user并且不存在 id 则填充创建者 id
+            if(!$this->id) {
+                if(Schema::hasColumn($tableName, 'create_user')) {
+                    $this->create_user = Auth('api')->user()->id;
+                }
+                if(Schema::hasColumn($tableName, 'update_user')) {
+                    $this->update_user = Auth('api')->user()->id;
+                }
             }
-            if(Schema::hasColumn($tableName, 'update_user')) {
+
+            // 如果对应的数据表中定义了update_user并且存在 id 则填充修改者 id
+            if($this->id > 0 && Schema::hasColumn($tableName, 'update_user')) {
                 $this->update_user = Auth('api')->user()->id;
             }
-        }
-
-        // 如果对应的数据表中定义了update_user并且存在 id 则填充修改者 id
-        if($this->id > 0 && Schema::hasColumn($tableName, 'update_user')) {
-            $this->update_user = Auth('api')->user()->id;
         }
 
         $this->save();

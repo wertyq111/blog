@@ -20,7 +20,7 @@ use Illuminate\Http\Request;
 class LabelsController extends Controller
 {
     /**
-     * 标签列表
+     * 标签列表(后台)
      *
      * @param Request $request
      * @return \Illuminate\Http\Resources\Json\AnonymousResourceCollection
@@ -28,6 +28,22 @@ class LabelsController extends Controller
      * @date 2023/6/9 15:44
      */
     public function index(Request $request)
+    {
+        $labels = QueryBuilder::for(Label::class)
+            ->allowedFields('category_id')
+            ->paginate();
+        return LabelResource::collection($labels);
+    }
+
+    /**
+     * 标签列表(前台)
+     *
+     * @param Request $request
+     * @return \Illuminate\Http\Resources\Json\AnonymousResourceCollection
+     * @author zhouxufeng <zxf@netsun.com>
+     * @date 2023/6/9 15:44
+     */
+    public function list(Request $request)
     {
         $labels = QueryBuilder::for(Label::class)
             ->allowedFields('category_id')

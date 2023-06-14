@@ -5,8 +5,10 @@ namespace App\Http\Controllers\Api\Web;
 
 use App\Http\Controllers\Api\Controller;
 use App\Http\Requests\Api\Web\CategoryRequest;
+use App\Http\Resources\BaseResource;
 use App\Http\Resources\Web\CategoryResource;
 use App\Models\Web\Category;
+use App\Models\Web\Label;
 use Illuminate\Http\Request;
 use Spatie\QueryBuilder\QueryBuilder;
 
@@ -21,20 +23,50 @@ use Spatie\QueryBuilder\QueryBuilder;
 class CategoriesController extends Controller
 {
     /**
-     * 分类列表
+     * 分类列表(后台)
+     *
+     * @param Request $request
+     * @return \Illuminate\Http\Resources\Json\AnonymousResourceCollection
+     * @author zhouxufeng <zxf@netsun.com>
+     * @date 2023/6/13 16:52
+     */
+    public function index(Request $request)
+    {
+        $categories = QueryBuilder::for(Category::class)
+            ->paginate();
+
+        return CategoryResource::collection($categories);
+    }
+
+    /**
+     * 分类列表(前台)
      *
      * @param Request $request
      * @return \Illuminate\Http\Resources\Json\AnonymousResourceCollection
      * @author zhouxufeng <zxf@netsun.com>
      * @date 2023/6/9 15:44
      */
-    public function index(Request $request)
+    public function list(Request $request)
     {
-        $categories = QueryBuilder::for(Category::query())
-            ->allowedIncludes('labels')
-            ->paginate();
+        $categories = Category::all();
 
         return CategoryResource::collection($categories);
+    }
+
+    /**
+     * @param Category $category
+     * @param Label $label
+     * @return \Illuminate\Http\JsonResponse
+     * @author zhouxufeng <zxf@netsun.com>
+     * @date 2023/6/12 16:11
+     */
+    public function all(Category $category, Label $label)
+    {
+        $categories = $category::all()->toArray();
+        $labels = $label::all()->toArray();
+
+        return (new BaseResource(['categories' => $categories, 'labels' => $labels]))
+            ->response()->setStatusCode(200);
     }
 
     /**
@@ -91,6 +123,4 @@ class CategoriesController extends Controller
 
         return response(null, 204);
     }
-
-
 }
