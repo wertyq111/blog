@@ -57,7 +57,8 @@ Route::name('api')->group(function() {
         Route::get('web-labels', [LabelsController::class, 'list'])->name('web-labels.list');
 
         // 文章列表
-        Route::get('web-articles', [ArticlesController::class, 'list'])->name('web-articles.list');
+        Route::get('web-articles', [ArticlesController::class, 'list'])
+            ->name('web-articles.list')->middleware('filter.process:'. Article::class);
         // 文章详情
         Route::get('web-article/{article}', [ArticlesController::class, 'show'])->name('web-article.show');
 
@@ -79,6 +80,8 @@ Route::name('api')->group(function() {
             Route::patch('users/status', [UsersController::class, 'status'])->name('users.status');
             // 修改会员打赏
             Route::patch('member/admire', [AdminMemberController::class, 'updateAdmire'])->name('member.admire');
+            // 用户上传头像
+            Route::post('member/avatar', [MembersController::class, 'avatar'])->name('member.avatar');
             /** 用户信息结束 */
             /** 分类标签开始 */
             // 分类列表

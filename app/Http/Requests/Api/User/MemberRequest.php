@@ -3,6 +3,8 @@
 namespace App\Http\Requests\Api\User;
 
 use App\Http\Requests\Api\FormRequest;
+use App\Rules\AvatarUrl;
+use Illuminate\Support\Facades\Validator;
 
 class MemberRequest extends FormRequest
 {
@@ -12,7 +14,7 @@ class MemberRequest extends FormRequest
         switch ($this->method()) {
             case 'POST':
                 return [
-
+                    'avatar' => new AvatarUrl()
                 ];
             case 'PATCH':
                 return [
@@ -21,5 +23,12 @@ class MemberRequest extends FormRequest
             default:
                 return [];
         }
+    }
+
+    public function attributes()
+    {
+        return [
+            'avatar' => '头像'
+        ];
     }
 }
