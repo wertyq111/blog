@@ -22,7 +22,8 @@ class CategoryResource extends BaseResource
             'description' => $this->description,
             'priority' => $this->priority,
             'type' => $this->type,
-            'labels' => $this->labels,
+            'labels' => new LabelResource($this->whenLoaded('labels')),
+            'articles' => $this->whenLoaded('articles'),
             'created_at' => (string) $this->created_at,
             'updated_at' => (string) $this->updated_at,
         ];

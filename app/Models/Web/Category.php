@@ -24,4 +24,15 @@ class Category extends BaseModel
     {
         return $this->hasMany(Label::class);
     }
+
+    /**
+     * 一对多关联
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany
+     * @author zhouxufeng <zxf@netsun.com>
+     * @date 2023/6/12 10:51
+     */
+    public function articles()
+    {
+        return $this->hasMany(Article::class);
+    }
 }

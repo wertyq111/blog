@@ -38,14 +38,24 @@ class ArticlesController extends Controller
     /**
      * 文章列表(前台)
      *
+     * @param FormRequest $request
      * @param Article $article
      * @return \Illuminate\Http\Resources\Json\AnonymousResourceCollection
      * @author zhouxufeng <zxf@netsun.com>
-     * @date 2023/6/12 10:12
+     * @date 2023/6/14 14:57
      */
-    public function list(Article $article)
+    public function list(FormRequest $request, Article $article)
     {
-        return ArticleResource::collection($article::paginate());
+        // 生成允许过滤字段数组
+        $allowedFilters = $request->generateAllowedFilters($article->getRequestFilters());
+
+        $articles = QueryBuilder::for($article)
+            ->allowedIncludes('member', 'category', 'label')
+            ->allowedFilters($allowedFilters)
+            ->paginate();
+
+
+        return ArticleResource::collection($articles);
     }
 
     /**

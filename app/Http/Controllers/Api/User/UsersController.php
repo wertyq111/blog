@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\User;
 
 use App\Http\Requests\Api\User\AuthorizationRequest;
+use App\Http\Resources\BaseResource;
 use App\Models\User\User;
 use App\Http\Controllers\Api\Controller;
 use App\Http\Resources\User\UserResource;
@@ -87,9 +88,9 @@ class UsersController extends Controller
      * 用户登录
      *
      * @param AuthorizationRequest $request
-     * @return UserResource
+     * @return BaseResource
      * @author zhouxufeng <zxf@netsun.com>
-     * @date 2023/6/2 15:00
+     * @date 2023/6/14 14:43
      */
     public function login(AuthorizationRequest $request)
     {
@@ -99,7 +100,7 @@ class UsersController extends Controller
 
         $phoneValid->isValid() ? $credentials['phone'] = $username :
             (filter_var($username, FILTER_VALIDATE_EMAIL) ? $credentials['email'] = $username :
-                $credentials['email'] = $username);
+                $credentials['username'] = $username);
 
         $credentials['password'] = $request->get('password');
 
@@ -115,7 +116,7 @@ class UsersController extends Controller
         ];
 
 
-        return new UserResource($data);
+        return new BaseResource($data);
 
     }
 }
