@@ -2,6 +2,7 @@
 
 namespace App\Http;
 
+use App\Http\Middleware\FilterProcess;
 use Illuminate\Foundation\Http\Kernel as HttpKernel;
 use PHPOpenSourceSaver\JWTAuth\Http\Middleware\AuthenticateAndRenew;
 use App\Http\Middleware\JwtRefreshToken;
@@ -67,6 +68,7 @@ class Kernel extends HttpKernel
         'throttle' => \Illuminate\Routing\Middleware\ThrottleRequests::class,
         'verified' => \Illuminate\Auth\Middleware\EnsureEmailIsVerified::class,
         'renew.token' => AuthenticateAndRenew::class,
-        'refresh.token' => JwtRefreshToken::class
+        'refresh.token' => JwtRefreshToken::class,
+        'filter.process' => FilterProcess::class,
     ];
 }

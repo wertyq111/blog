@@ -13,6 +13,7 @@ use App\Http\Controllers\Api\CaptchasController;
 use App\Http\Controllers\Api\QiNiuController;
 use App\Http\Controllers\Api\ResourceController;
 use App\Http\Controllers\Api\User\MembersController as AdminMemberController;
+use App\Models\Web\Article;
 
 /*
 |--------------------------------------------------------------------------
@@ -50,13 +51,15 @@ Route::name('api')->group(function() {
         Route::get('web-info', [InfoController::class, 'index'])->name('web-info.index');
 
         // 网站分类
-        Route::get('web-categories', [CategoriesController::class, 'index'])->name('web-categories.index');
+        Route::get('web-categories', [CategoriesController::class, 'list'])->name('web-categories.list');
 
         // 网站标签
-        Route::get('web-labels', [LabelsController::class, 'index'])->name('web-labels.index');
+        Route::get('web-labels', [LabelsController::class, 'list'])->name('web-labels.list');
 
         // 文章列表
-        Route::get('articles', [ArticlesController::class, 'index'])->name('articles.index');
+        Route::get('web-articles', [ArticlesController::class, 'list'])->name('web-articles.list');
+        // 文章详情
+        Route::get('web-article/{article}', [ArticlesController::class, 'show'])->name('web-article.show');
 
         // 会员打赏列表
         Route::get('web-members/admires', [MembersController::class, 'admires'])->name('web-members.admires');
@@ -71,26 +74,47 @@ Route::name('api')->group(function() {
             /** 基本信息结束 */
             /** 用户会员信息开始 */
             // 用户列表
-            Route::get('users/list', [UsersController::class, 'index'])->name('users.index');
+            Route::post('users/list', [UsersController::class, 'index'])->name('users.index');
             // 修改用户状态
             Route::patch('users/status', [UsersController::class, 'status'])->name('users.status');
             // 修改会员打赏
             Route::patch('member/admire', [AdminMemberController::class, 'updateAdmire'])->name('member.admire');
             /** 用户信息结束 */
             /** 分类标签开始 */
+            // 分类列表
+            Route::post('web/categories', [CategoriesController::class, 'index'])->name('web.category.index');
             // 添加分类
             Route::post('web/category', [CategoriesController::class, 'add'])->name('web.category.add');
             // 修改分类
             Route::patch('web/category/{category}', [CategoriesController::class, 'edit'])->name('web.category.edit');
             // 删除分类
             Route::delete('web/category/{category}', [CategoriesController::class, 'delete'])->name('web.category.delete');
+            // 标签列表
+            Route::get('web/labels', [LabelsController::class, 'index'])->name('web.label.index');
             // 添加标签
             Route::post('web/label', [LabelsController::class, 'add'])->name('web.label.add');
             // 修改标签
             Route::patch('web/label/{label}', [LabelsController::class, 'edit'])->name('web.label.edit');
             // 删除标签
             Route::delete('web/label/{label}', [LabelsController::class, 'delete'])->name('web.label.delete');
+            // 获取所有分类和标签
+            Route::get('web/categories-labels', [CategoriesController::class, 'all'])->name('web.category.all');
             /** 分类标签结束 */
+            /** 文章开始 */
+            // 文章列表
+            Route::post('web/articles', [ArticlesController::class, 'index'])
+                ->name('web.articles.index')->middleware('filter.process:'. Article::class);
+            // 文章详情
+            Route::get('web/article/{article}', [ArticlesController::class, 'detail'])->name('web.article.detail');
+            // 添加文章
+            Route::post('web/article', [ArticlesController::class, 'add'])->name('web.article.add');
+            // 修改文章
+            Route::patch('web/article/{article}', [ArticlesController::class, 'edit'])->name('web.article.edit');
+            // 删除文章
+            Route::delete('web/article/{article}', [ArticlesController::class, 'delete'])->name('web.article.delete');
+            // 文章状态
+            Route::patch('web/article/status/{article}', [ArticlesController::class, 'status'])->name('web.article.status');
+            /** 文章结束 */
         });
     });
 
