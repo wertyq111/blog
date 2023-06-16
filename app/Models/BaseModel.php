@@ -18,6 +18,12 @@ class BaseModel extends Authenticatable
     public $timestamps = true;
 
     /**
+     * 请求过滤数组
+     * @var null
+     */
+    protected $requestFilters = null;
+
+    /**
      * The attributes that should be hidden for serialization.
      *
      * @var array<int, string>
@@ -93,5 +99,17 @@ class BaseModel extends Authenticatable
         }
 
         $this->save();
+    }
+
+    /**
+     * 外部调用过滤参数数组
+     *
+     * @return string[]
+     * @author zhouxufeng <zxf@netsun.com>
+     * @date 2023/6/14 09:04
+     */
+    public function getRequestFilters()
+    {
+        return $this->requestFilters;
     }
 }

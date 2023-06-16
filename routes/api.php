@@ -13,7 +13,9 @@ use App\Http\Controllers\Api\CaptchasController;
 use App\Http\Controllers\Api\QiNiuController;
 use App\Http\Controllers\Api\ResourceController;
 use App\Http\Controllers\Api\User\MembersController as AdminMemberController;
+use App\Http\Controllers\Api\Web\CommentsController;
 use App\Models\Web\Article;
+use App\Models\Web\Comment;
 
 /*
 |--------------------------------------------------------------------------
@@ -75,7 +77,7 @@ Route::name('api')->group(function() {
             /** 基本信息结束 */
             /** 用户会员信息开始 */
             // 用户列表
-            Route::post('users/list', [UsersController::class, 'index'])->name('users.index');
+            Route::get('users/list', [UsersController::class, 'index'])->name('users.index');
             // 修改用户状态
             Route::patch('users/status', [UsersController::class, 'status'])->name('users.status');
             // 修改会员打赏
@@ -118,6 +120,22 @@ Route::name('api')->group(function() {
             // 文章状态
             Route::patch('web/article/status/{article}', [ArticlesController::class, 'status'])->name('web.article.status');
             /** 文章结束 */
+            /** 评论开始 */
+            // 评论列表
+            Route::get('web/comments', [CommentsController::class, 'index'])
+                ->name('web.comments.index')->middleware('filter.process:'. Comment::class);
+            // 评论数组
+            Route::get('web/comments/list', [CommentsController::class, 'list'])
+                ->name('web.comments.list')->middleware('filter.process:'. Comment::class);
+            // 评论详情
+            Route::get('web/comment/{comment}', [CommentsController::class, 'detail'])->name('web.comment.detail');
+            // 添加评论
+            Route::post('web/comment', [CommentsController::class, 'add'])->name('web.comment.add');
+            // 修改评论
+            Route::patch('web/comment/{comment}', [CommentsController::class, 'edit'])->name('web.comment.edit');
+            // 删除评论
+            Route::delete('web/comment/{comment}', [CommentsController::class, 'delete'])->name('web.comment.delete');
+            /** 评论结束 */
         });
     });
 
