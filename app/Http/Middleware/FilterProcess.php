@@ -11,7 +11,7 @@ class FilterProcess
     {
         $model = new $modelClass();
         // 判断类中是否存在获取请求过滤字段数组的方法, 存在就进行过滤字段处理
-        if(method_exists($model, 'getRequestFilters')) {
+        if(method_exists($model, 'getRequestFilters') && $model->getRequestFilters() != null) {
             $filters = $request->request->get('filter') ?: [];
             foreach($model->getRequestFilters() as $key => $value) {
                 // 将下划线格式的数据存入数组中中
@@ -19,6 +19,7 @@ class FilterProcess
                     $filters[$value['column']] = $request->get($key);
                 }
             }
+
             $request->request->set('filter', $filters);
         }
 

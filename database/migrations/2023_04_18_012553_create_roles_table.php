@@ -24,6 +24,7 @@ class CreateRolesTable extends Migration
             $table->unsignedInteger('created_at')->default(0)->comment("添加时间");
             $table->unsignedInteger('update_user')->default(0)->comment("更新人");
             $table->unsignedInteger('updated_at')->default(0)->comment("更新时间");
+            $table->unsignedInteger('deleted_at')->default(0)->comment("删除时间");
         });
     }
 
