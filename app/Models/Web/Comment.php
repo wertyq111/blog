@@ -6,20 +6,18 @@ use App\Models\BaseModel;
 use App\Models\User\Member;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 
-class Article extends BaseModel
+class Comment extends BaseModel
 {
     use HasFactory;
 
     protected $fillable = [
-        'title',
+        'source',
+        'type',
+        'comment_id',
+        'parent_id',
+        'like_count',
         'content',
-        'category_id',
-        'label_id',
-        'cover',
-        'view_status',
-        'password',
-        'recommend_status',
-        'comment_status'
+        'info'
     ];
 
     /**
@@ -28,19 +26,16 @@ class Article extends BaseModel
      * @var string[]
      */
     protected $requestFilters = [
-        'title' => ['column' => 'title'],
-        'categoryId' => ['column' => 'category.id'],
-        'labelId' => ['column' => 'label.id'],
-        'viewStatus' => [
-            'column' => 'view_status',
+        'type' => [
+            'column' => 'type',
             'filterType' => 'exact'
         ],
-        'recommendStatus' => [
-            'column' => 'recommend_status',
+        'source' => [
+            'column' => 'source',
             'filterType' => 'exact'
         ],
-        'commentStatus' => [
-            'column' => 'comment_status',
+        'commentId' => [
+            'column' => 'comment_id',
             'filterType' => 'exact'
         ]
     ];
@@ -56,22 +51,27 @@ class Article extends BaseModel
     }
 
     /**
+     * 父级评论
+     *
      * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
      * @author zhouxufeng <zxf@netsun.com>
-     * @date 2023/6/12 17:25
+     * @date 2023/6/15 14:33
      */
-    public function category()
+    public function parent()
     {
-        return $this->belongsTo(Category::class);
+        return $this->belongsTo(Comment::class);
     }
 
     /**
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
+     * 子级评论
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany
      * @author zhouxufeng <zxf@netsun.com>
-     * @date 2023/6/12 17:25
+     * @date 2023/6/15 14:35
      */
-    public function label()
+    public function children()
     {
-        return $this->belongsTo(Label::class);
+        return $this->hasMany(Comment::class);
     }
+
 }

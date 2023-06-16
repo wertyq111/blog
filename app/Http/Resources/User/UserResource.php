@@ -23,8 +23,8 @@ class UserResource extends BaseResource
             'unionid' => $this->unionid,
             'phone' => (int)$this->phone,
             'status' => $this->status ? true : false,
-            'created_at' => (string) $this->created_at,
-            'updated_at' => (string) $this->updated_at,
+            'createdAt' => (string) $this->created_at,
+            'updatedAt' => (string) $this->updated_at,
             'member' => $this->whenLoaded('member'),
             'roles' => $this->whenLoaded('roles')
         ];
