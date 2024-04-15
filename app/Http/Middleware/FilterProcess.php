@@ -20,7 +20,8 @@ class FilterProcess
                 }
             }
 
-            $request->request->set('filter', $filters);
+            $request->query->set('filter', $filters);
+            //dd(QueryBuilderRequest::fromRequest($request)->filters());
         }
 
 

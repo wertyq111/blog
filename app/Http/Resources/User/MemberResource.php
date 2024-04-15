@@ -14,6 +14,18 @@ class MemberResource extends BaseResource
      */
     public function toArray(Request $request): array
     {
-        return parent::toArray($request);
+        // 显示时间
+        static::showTime();
+
+        $data = parent::toArray($request);
+        $data['user'] = new UserResource($this->whenLoaded('user'));
+        $city = [];
+        $city[] = $this->province_code ?? "";
+        $city[] = $this->city_code ?? "";
+        $city[] = $this->district_code ?? "";
+        $data['city'] = $city;
+
+
+        return $this->transformCamel($data);
     }
 }

@@ -16,6 +16,8 @@ class AuthorizationRequest extends FormRequest
         return [
             'username' => 'required|string',
             'password' => 'required|alpha_dash',
+            //'captcha_key' => 'required|string',
+            //'captcha' => 'required|string'
         ];
     }
 }

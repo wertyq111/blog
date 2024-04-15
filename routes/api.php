@@ -1,21 +1,25 @@
 <?php
 
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\Api\Web\InfoController;
-use App\Http\Controllers\Api\Web\CategoriesController;
-use \App\Http\Controllers\Api\Web\LabelsController;
-use App\Http\Controllers\Api\Web\ArticlesController;
-use App\Http\Controllers\Api\Web\MembersController;
-use App\Http\Controllers\Api\User\VerificationCodesController;
-use App\Http\Controllers\Api\User\UsersController;
+use App\Http\Controllers\Api\Admin\MenuController;
+use App\Http\Controllers\Api\WeatherController;
+use App\Http\Controllers\Api\Admin\RoleController;
 use App\Http\Controllers\Api\CaptchasController;
 use App\Http\Controllers\Api\QiNiuController;
-use App\Http\Controllers\Api\ResourceController;
-use App\Http\Controllers\Api\User\MembersController as AdminMemberController;
-use App\Http\Controllers\Api\Web\CommentsController;
-use App\Models\Web\Article;
-use App\Models\Web\Comment;
+use App\Http\Controllers\Api\User\UsersController;
+use App\Http\Controllers\Api\User\MembersController;
+use App\Http\Controllers\Api\User\MemberLevelController;
+use App\Http\Controllers\Api\User\VerificationCodesController;
+use App\Http\Controllers\Api\AuthorizationsController;
+use App\Http\Controllers\Api\MiniProgram\WallpaperController;
+use App\Http\Controllers\Api\MiniProgram\WallpaperClassifyController;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Route;
+use App\Models\User\Member;
+use App\Models\User\MemberLevel;
+use App\Models\Permission\Role;
+use App\Models\Permission\Menu;
+use App\Models\MiniProgram\WallpaperClassify;
+use App\Models\MiniProgram\Wallpaper;
 
 /*
 |--------------------------------------------------------------------------
@@ -34,7 +38,7 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 
 Route::name('api')->group(function() {
     // 登录类路由组
-    Route::middleware('throttle:'. config('api.rate_limits.sign'))->group(function () {
+    //Route::middleware('throttle:'. config('api.rate_limits.sign'))->group(function () {
         // 获取验证码
         Route::post('verification-code/send', [VerificationCodesController::class, 'send'])
             ->name('verification-code.send');
@@ -42,109 +46,177 @@ Route::name('api')->group(function() {
         // 用户注册
         Route::post('user/register', [UsersController::class, 'register'])->name('user.register');
 
+        // socials 第三方登录
+        Route::post('socials/{social_type}/authorizations', [AuthorizationsController::class, 'socialStore'])
+            ->where('social_type', 'wechat')
+            ->name('socials.authorizations.store');
+
+        // easywechat 第三方登录
+        Route::post('easywechat/{type}/authorizations', [AuthorizationsController::class, 'easywechatStore'])
+            ->where('type', 'mini_program')
+            ->name('easywechat.authorizations.store');
+
         // 用户登录
-        Route::post('user/login', [UsersController::class, 'login'])->name('user.login');
+        Route::post('user/login', [AuthorizationsController::class, 'login'])->name('user.login');
 
-    });
+        // 刷新登录
+        Route::get('user/refresh', [AuthorizationsController::class, 'refresh'])->name('user.refresh');
 
-    // 访问类路由组
-    Route::middleware('throttle:'. config('api.rate_limits.access'))->group(function () {
-        // 网站信息
-        Route::get('web-info', [InfoController::class, 'index'])->name('web-info.index');
+        // 用户退出登录
+        Route::delete('user/logout', [AuthorizationsController::class, 'logout'])->name('user.logout');
 
-        // 网站分类
-        Route::get('web-categories', [CategoriesController::class, 'list'])->name('web-categories.list');
+    //});
 
-        // 网站标签
-        Route::get('web-labels', [LabelsController::class, 'list'])->name('web-labels.list');
-
-        // 文章列表
-        Route::get('web-articles', [ArticlesController::class, 'list'])
-            ->name('web-articles.list')->middleware('filter.process:'. Article::class);
-        // 文章详情
-        Route::get('web-article/{article}', [ArticlesController::class, 'show'])->name('web-article.show');
-
-        // 会员打赏列表
-        Route::get('web-members/admires', [MembersController::class, 'admires'])->name('web-members.admires');
+    // 访问类路由组 - 限制访问次数
+    //Route::middleware('throttle:'. config('api.rate_limits.access'))->group(function () {
+        // 天气信息
+        Route::get('weather', [WeatherController::class, 'index'])->name('weather.index');
 
         // 后台功能组 - 登录后才能访问的接口 - 验证 token 后会刷新 token 前端需要从响应 Header 中找到新的 token 进行替换
         Route::middleware('auth:api')->middleware('refresh.token')->group(function() {
-            /** 基本信息开始 */
-            // 编辑资源接口
-            Route::patch('resource/edit', [ResourceController::class, 'edit'])->name('resource.edit');
-            // 编辑网站信息
-            Route::patch('web-info/edit', [InfoController::class, 'edit'])->name('web-info.edit');
-            /** 基本信息结束 */
-            /** 用户会员信息开始 */
+            /** 用户接口开始 */
+            // 获取用户信息
+            Route::get('users/getUserInfo', [UsersController::class, 'getUserInfo'])->name('users.getUserInfo');
             // 用户列表
             Route::get('users/list', [UsersController::class, 'index'])->name('users.index');
-            // 修改用户状态
-            Route::patch('users/status', [UsersController::class, 'status'])->name('users.status');
-            // 修改会员打赏
-            Route::patch('member/admire', [AdminMemberController::class, 'updateAdmire'])->name('member.admire');
-            // 用户上传头像
-            Route::post('member/avatar', [MembersController::class, 'avatar'])->name('member.avatar');
-            /** 用户信息结束 */
-            /** 分类标签开始 */
-            // 分类列表
-            Route::post('web/categories', [CategoriesController::class, 'index'])->name('web.category.index');
-            // 添加分类
-            Route::post('web/category', [CategoriesController::class, 'add'])->name('web.category.add');
-            // 修改分类
-            Route::patch('web/category/{category}', [CategoriesController::class, 'edit'])->name('web.category.edit');
-            // 删除分类
-            Route::delete('web/category/{category}', [CategoriesController::class, 'delete'])->name('web.category.delete');
-            // 标签列表
-            Route::get('web/labels', [LabelsController::class, 'index'])->name('web.label.index');
-            // 添加标签
-            Route::post('web/label', [LabelsController::class, 'add'])->name('web.label.add');
-            // 修改标签
-            Route::patch('web/label/{label}', [LabelsController::class, 'edit'])->name('web.label.edit');
-            // 删除标签
-            Route::delete('web/label/{label}', [LabelsController::class, 'delete'])->name('web.label.delete');
-            // 获取所有分类和标签
-            Route::get('web/categories-labels', [CategoriesController::class, 'all'])->name('web.category.all');
-            /** 分类标签结束 */
-            /** 文章开始 */
-            // 文章列表
-            Route::post('web/articles', [ArticlesController::class, 'index'])
-                ->name('web.articles.index')->middleware('filter.process:'. Article::class);
-            // 文章详情
-            Route::get('web/article/{article}', [ArticlesController::class, 'detail'])->name('web.article.detail');
-            // 添加文章
-            Route::post('web/article', [ArticlesController::class, 'add'])->name('web.article.add');
-            // 修改文章
-            Route::patch('web/article/{article}', [ArticlesController::class, 'edit'])->name('web.article.edit');
-            // 删除文章
-            Route::delete('web/article/{article}', [ArticlesController::class, 'delete'])->name('web.article.delete');
-            // 文章状态
-            Route::patch('web/article/status/{article}', [ArticlesController::class, 'status'])->name('web.article.status');
-            /** 文章结束 */
-            /** 评论开始 */
-            // 评论列表
-            Route::get('web/comments', [CommentsController::class, 'index'])
-                ->name('web.comments.index')->middleware('filter.process:'. Comment::class);
-            // 评论数组
-            Route::get('web/comments/list', [CommentsController::class, 'list'])
-                ->name('web.comments.list')->middleware('filter.process:'. Comment::class);
-            // 评论详情
-            Route::get('web/comment/{comment}', [CommentsController::class, 'detail'])->name('web.comment.detail');
-            // 添加评论
-            Route::post('web/comment', [CommentsController::class, 'add'])->name('web.comment.add');
-            // 修改评论
-            Route::patch('web/comment/{comment}', [CommentsController::class, 'edit'])->name('web.comment.edit');
-            // 删除评论
-            Route::delete('web/comment/{comment}', [CommentsController::class, 'delete'])->name('web.comment.delete');
-            /** 评论结束 */
+            // 验证用户
+            Route::get('users/checkUser', [UsersController::class, 'checkUser'])->name('users.checkUser');
+            // 创建用户
+            Route::post('users/add', [UsersController::class, 'add'])->name('users.add');
+            // 重置密码
+            Route::post('users/resetPwd/{user}', [UsersController::class, 'resetPwd'])->name('users.resetPwd');
+            // 修改用户
+            Route::post('users/status/{user}', [UsersController::class, 'status'])->name('users.status');
+            // 修改用户
+            Route::post('users/{user}', [UsersController::class, 'edit'])->name('users.edit');
+            // 删除用户
+            Route::delete('users/{user}', [UsersController::class, 'delete'])->name('users.delete');
+            /** 用户接口结束 */
+
+            /** 会员接口开始 */
+            // 会员列表
+            Route::get('members/index', [MembersController::class, 'index'])->name('members.index')
+                ->middleware('filter.process:'. Member::class);
+            // 会员信息
+            Route::get('members/info', [MembersController::class, 'info'])->name('members.info');
+            // 当前会员信息
+            Route::get('members/user', [MembersController::class, 'user'])->name('members.user');
+            // 添加会员
+            Route::post('members/add', [MembersController::class, 'add'])->name('members.add');
+            // 修改状态
+            Route::post('members/status/{member}', [MembersController::class, 'status'])->name('members.status');
+            // 修改会员
+            Route::post('members/{member}', [MembersController::class, 'edit'])->name('members.edit');
+            // 删除会员
+            Route::delete('members/{member}', [MembersController::class, 'delete'])->name('members.delete');
+
+            // 会员等级列表
+            Route::get('member-level/index', [MemberLevelController::class, 'index'])->name('member-level.index')
+                ->middleware('filter.process:'. MemberLevel::class);
+            // 会员等级列表
+            Route::get('member-level/list', [MemberLevelController::class, 'list'])->name('member-level.list');
+            // 添加会员等级
+            Route::post('member-level/add', [MemberLevelController::class, 'add'])->name('member-level.add');
+            Route::delete('member-level/batchDelete', [MemberLevelController::class, 'batchDelete'])->name('member-level.batchDelete');
+            // 修改状态
+            Route::post('member-level/status/{memberLevel}', [MemberLevelController::class, 'status'])->name('member-level.status');
+            // 修改会员等级
+            Route::post('member-level/{memberLevel}', [MemberLevelController::class, 'edit'])->name('member-level.edit');
+            // 删除会员等级
+            Route::delete('member-level/{memberLevel}', [MemberLevelController::class, 'delete'])->name('member-level.delete');
+            /** 会员接口结束 */
+
+            /** 角色接口开始 */
+            // 获取角色列表
+            Route::get('role/getRoleList', [RoleController::class, 'getRoleList'])->name('role.getRoleList');
+            // 角色列表
+            Route::get('role/index', [RoleController::class, 'index'])->name('role.index')
+                ->middleware('filter.process:'. Role::class);
+            // 角色权限列表
+            Route::get('role/permission/{role}', [RoleController::class, 'getPermissionList'])->name('role.getPermissionList');
+            // 添加角色
+            Route::post('role/add', [RoleController::class, 'add'])->name('role.add');
+            // 批量删除角色
+            Route::post('role/batchDelete', [RoleController::class, 'batchDelete'])->name('role.batchDelete');
+            // 角色权限更新
+            Route::post('role/permission/{role}', [RoleController::class, 'savePermissionList'])->name('role.savePermissionList');
+            // 修改角色
+            Route::post('role/{role}', [RoleController::class, 'edit'])->name('role.edit');
+            // 修改角色状态
+            Route::post('role/status/{role}', [RoleController::class, 'status'])->name('role.status');
+            // 删除角色
+            Route::delete('role/{role}', [RoleController::class, 'delete'])->name('role.delete');
+            /** 角色接口结束 */
+
+            /** 菜单接口开始 */
+            // 菜单列表
+            Route::get('menu/index', [MenuController::class, 'index'])->name('menu.index')
+                ->middleware('filter.process:'. Menu::class);
+            // 获取菜单列表
+            Route::get('index/getMenuList', [MenuController::class, 'getMenuList'])->name('menu.getMenuList');
+            // 菜单详情
+            Route::get('menu/info/{menu}', [MenuController::class, 'info'])->name('menu.info');
+            // 添加菜单
+            Route::post('menu/add', [MenuController::class, 'add'])->name('menu.add');
+            // 修改菜单
+            Route::post('menu/{menu}', [MenuController::class, 'edit'])->name('menu.edit');
+            // 删除菜单
+            Route::delete('menu/{menu}', [MenuController::class, 'delete'])->name('menu.delete');
+            /** 菜单接口结束 */
+
+            /** 壁纸接口开始 */
+            // 获取壁纸分类列表
+            Route::get('wallpaper-classify/index', [WallpaperClassifyController::class, 'index'])
+                ->name('wallpaper-classify.index')->middleware('filter.process:'. WallpaperClassify::class);
+            // 获取壁纸分类
+            Route::get('wallpaper-classify/list', [WallpaperClassifyController::class, 'list'])
+                ->name('wallpaper-classify.list')->middleware('filter.process:'. WallpaperClassify::class);
+            // 壁纸分类详情
+            Route::get('wallpaper-classify/info/{classify}', [WallpaperClassifyController::class, 'info'])
+                ->name('wall_pager.classify');
+            // 添加壁纸分类
+            Route::post('wallpaper-classify/add', [WallpaperClassifyController::class, 'add'])->name('wallpaper-classify.add');
+            // 修改壁纸分类
+            Route::post('wallpaper-classify/{classify}', [WallpaperClassifyController::class, 'edit'])->name('wallpaper-classify.edit');
+            // 删除壁纸分类
+            Route::delete('wallpaper-classify/{classify}', [WallpaperClassifyController::class, 'delete'])->name('wallpaper-classify.delete');
+            // 获取壁纸列表
+            Route::get('wallpaper/index', [WallpaperController::class, 'index'])->name('wallpaper.index')
+                ->middleware('filter.process:'. Wallpaper::class);
+            // 获取当前会员壁纸列表
+            Route::get('wallpaper/user', [WallpaperController::class, 'user'])->name('wallpaper.user')
+                ->middleware('filter.process:'. Wallpaper::class);
+            // 获取随机壁纸
+            Route::get('wallpaper/random', [WallpaperController::class, 'random'])->name('wallpaper.random');
+            // 壁纸分类详情
+            Route::get('wallpaper/info/{wallpaper}', [WallpaperController::class, 'info'])
+                ->name('wall_pager.classify');
+            // 壁纸下载
+            Route::get('wallpaper/download/{wallpaper}', [WallpaperController::class, 'download'])->name('wallpaper.download');
+            // 壁纸评分
+            Route::post('wallpaper/score/{wallpaper}', [WallpaperController::class, 'score'])->name('wallpaper.score');
+            // 添加壁纸分类
+            Route::post('wallpaper/add', [WallpaperController::class, 'add'])->name('wallpaper.add');
+            // 修改壁纸分类
+            Route::post('wallpaper/{wallpaper}', [WallpaperController::class, 'edit'])->name('wallpaper.edit');
+            // 删除壁纸分类
+            Route::delete('wallpaper/{wallpaper}', [WallpaperController::class, 'delete'])->name('wallpaper.delete');
+            /** 壁纸接口结束 */
         });
-    });
+    //});
 
     // 图片验证码
-    Route::post('captcha', [CaptchasController::class, 'store'])->name('captcha.store');
+    Route::get('captcha', [CaptchasController::class, 'store'])->name('captcha.store');
 
     // 后台功能组 - 登录后才能访问的接口 - 验证 token 后会刷新 token 前端需要从响应 Header 中找到新的 token 进行替换
     Route::middleware('auth:api')->middleware('refresh.token')->group(function() {
         // 七牛云上传 token
         Route::get('qiniu/up-token', [QiNiuController::class, 'upToken'])->name('qiniu.up-token');
+    });
+
+    // 处理访问不存在的请求
+    Route::fallback(function(){
+        return response()->json([
+            'message' => 'Page Not Found. If error persists, contact info@website.com'], 404);
     });
 });
