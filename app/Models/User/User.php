@@ -3,6 +3,7 @@
 namespace App\Models\User;
 
 use App\Models\BaseModel;
+use App\Models\Permission\Menu;
 use App\Models\Permission\Role;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -24,8 +25,10 @@ class User extends BaseModel implements MustVerifyEmail, JWTSubject
         'username',
         'phone',
         'email',
+        'openid',
+        'unionid',
         'password',
-        'statue',
+        'status',
     ];
 
     /**
@@ -80,5 +83,25 @@ class User extends BaseModel implements MustVerifyEmail, JWTSubject
     public function roles()
     {
         return $this->belongsToMany(Role::class);
+    }
+
+    public function permissions()
+    {
+        $permissions = [];
+        if(count($this->roles) > 0) {
+            foreach($this->roles as $role) {
+                // 超级管理员获取全部权限
+                if($role->code === 'super') {
+                    $menus = (new Menu())->all();
+                    $permissions = array_filter(array_unique(array_column($menus->toArray(), 'permission')));
+                    break;
+                } else {
+                    $array_column = array_filter(array_unique(array_column($role->menus->toArray(), 'permission')));
+                    $permissions = array_merge($permissions, $array_column);
+                }
+            }
+        }
+
+        return array_unique($permissions);
     }
 }

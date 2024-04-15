@@ -14,6 +14,8 @@
         "laravel/tinker": "^2.8",
         "overtrue/easy-sms": "^2.4",
         "overtrue/laravel-filesystem-qiniu": "^2.2",
+        "overtrue/laravel-socialite": "^4.1",
+        "overtrue/laravel-wechat": "^7.3",
         "php-open-source-saver/jwt-auth": "^2.1",
         "propaganistas/laravel-phone": "^5.0",
         "spatie/laravel-query-builder": "^5.2"

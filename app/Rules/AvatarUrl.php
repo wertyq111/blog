@@ -17,7 +17,7 @@ class AvatarUrl implements Rule
     public function passes($attribute, $value)
     {
         $qiniuDomain = env('QINIU_DOMAIN', null);
-        if($qiniuDomain != null && preg_match('/^(http|https):\/\/'. $qiniuDomain. '(.*)\.jpg$/', $value)) {
+        if($qiniuDomain != null && preg_match('/^(http|https):\/\/'. $qiniuDomain. '(.*)\.(jpg|jpeg|gif|webp)$/', $value)) {
             return filter_var($value, FILTER_VALIDATE_URL);
         }
         return false;

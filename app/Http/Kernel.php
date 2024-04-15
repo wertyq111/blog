@@ -2,6 +2,7 @@
 
 namespace App\Http;
 
+use App\Http\Middleware\After;
 use App\Http\Middleware\FilterProcess;
 use Illuminate\Foundation\Http\Kernel as HttpKernel;
 use PHPOpenSourceSaver\JWTAuth\Http\Middleware\AuthenticateAndRenew;
@@ -45,7 +46,8 @@ class Kernel extends HttpKernel
         'api' => [
             \App\Http\Middleware\AcceptHeader::class,
             'throttle:60,1',
-            \Illuminate\Routing\Middleware\SubstituteBindings::class
+            \Illuminate\Routing\Middleware\SubstituteBindings::class,
+            'after'
         ],
     ];
 
@@ -70,5 +72,12 @@ class Kernel extends HttpKernel
         'renew.token' => AuthenticateAndRenew::class,
         'refresh.token' => JwtRefreshToken::class,
         'filter.process' => FilterProcess::class,
+    ];
+
+    /**
+     * @var string[]
+     */
+    protected $routeMiddleware = [
+        'after' => After::class
     ];
 }

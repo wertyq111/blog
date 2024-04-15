@@ -19,9 +19,13 @@ class CaptchasController extends Controller
         \Cache::put($cacheKey, ['phone' => $phone, 'code' => $captcha->getPhrase()], $expiredAt);
 
         $result = [
-            'captcha_key' => $key,
-            'expired_at' => $expiredAt->toDateTimeString(),
-            'captcha_image_content' => $captcha->inline()
+            'code' => 0,
+            'msg' => "操作成功",
+            'data' => [
+                'captcha_key' => $key,
+                'expired_at' => $expiredAt->toDateTimeString(),
+                'captcha_image_content' => $captcha->inline()
+            ]
         ];
 
         return response()->json($result)->setStatusCode(201);

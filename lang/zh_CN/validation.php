@@ -133,5 +133,6 @@ return [
             'rule-name' => 'custom-message',
         ],
     ],
-    'avatar_url' => ':attribute 不是在本站上传的头像图片地址'
+    'avatar_url' => ':attribute 不是在本站上传的头像图片地址',
+    'phone_format_error' => ':attribute 手机号码格式错误',
 ];

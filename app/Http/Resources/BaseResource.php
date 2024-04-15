@@ -9,6 +9,11 @@ use Illuminate\Support\Str;
 class BaseResource extends JsonResource
 {
     /**
+     * @var bool
+     */
+    public static $isShowTime = false;
+
+    /**
      * Transform the resource into an array.
      *
      * @return array|\JsonSerializable
@@ -17,6 +22,13 @@ class BaseResource extends JsonResource
     {
         // 转换为小驼峰输出
         $array = parent::toArray($request);
+
+        if(static::$isShowTime) {
+            $this->resource->makeVisible(['created_at', 'updated_at', 'deleted_at']);
+            $array['createTime'] = $this->diffDateTime($this->created_at) ? (string) $this->created_at : null;
+            $array['updateTime'] = $this->diffDateTime($this->updated_at) ? (string) $this->updated_at : null;
+        }
+
         return is_array($array) ? $this->transformCamel($array) : $array;
     }
 
@@ -62,5 +74,28 @@ class BaseResource extends JsonResource
          * Not all prerequisites were met.
          */
         $response->setStatusCode(201);
+    }
+
+    /**
+     * 对比时间戳是否相同
+     *
+     * @param $time
+     * @return bool
+     * @author zhouxufeng <zxf@netsun.com>
+     * @date 2024/3/8 11:16
+     */
+    public function diffDateTime($time)
+    {
+        return strtotime($time) > 0 && (new \DateTime($time))->getTimestamp() == strtotime($time);
+    }
+
+    /**
+     * @return void
+     * @author zhouxufeng <zxf@netsun.com>
+     * @date 2024/4/10 15:30
+     */
+    public static function showTime()
+    {
+        static::$isShowTime = true;
     }
 }
