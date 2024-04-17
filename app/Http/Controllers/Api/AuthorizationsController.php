@@ -12,7 +12,6 @@ use Illuminate\Support\Facades\Auth;
 use Overtrue\LaravelSocialite\Socialite;
 use Overtrue\LaravelWeChat\EasyWeChat;
 use Propaganistas\LaravelPhone\PhoneNumber;
-use Spatie\QueryBuilder\QueryBuilder;
 
 class AuthorizationsController extends Controller
 {
@@ -125,52 +124,58 @@ class AuthorizationsController extends Controller
             throw new AuthenticationException('参数错误，未获取用户信息');
         }
 
-        // 找到 openid 对应的用户
-        $user = User::where('openid', $oauthUser['openid'])->first();
+        try{
+            // 找到 openid 对应的用户
+            $user = User::where('openid', $oauthUser['openid'])->first();
 
-        $attributes['weixin_session_key'] = $oauthUser['session_key'];
+            $attributes['weixin_session_key'] = $oauthUser['session_key'];
 
 
-        if(!$user){
-            //添加用户信息
-            $user = new User();
-            $data = [
-                'openid' => $oauthUser['openid'],
-                'weixin_session_key' => $oauthUser['session_key'],
-            ];
-            $user->fill($data);
-            $user->edit();
+            if(!$user){
+                //添加用户信息
+                $user = new User();
+                $data = [
+                    'openid' => $oauthUser['openid'],
+                    'weixin_session_key' => $oauthUser['session_key'],
+                ];
+                $user->fill($data);
+                $user->edit();
 
-            // 添加用户账号及密码
-            $user->fill([
-                'username' => self::ACCOUNT_GROUP['mini_program']. str_pad($user->id, 6, 0, STR_PAD_LEFT),
-                'password' => self::DEFAULT_PASSWORD
-            ]);
+                if($user->id) {
+                    // 添加用户账号及密码
+                    $user->fill([
+                        'username' => self::ACCOUNT_GROUP['mini_program']. str_pad($user->id, 6, 0, STR_PAD_LEFT),
+                        'password' => self::DEFAULT_PASSWORD
+                    ]);
 
-            // 更新用户组
-            $user->roles()->sync(self::DEFAULT_ROLES,false);
+                    // 更新用户组
+                    $user->roles()->sync(self::DEFAULT_ROLES,false);
 
-            $user->edit();
+                    $user->edit();
 
-            // 创建用户会员记录
-            $member = new Member();
-            $memberInfo = array_merge([
-                'user' => $user->id,
-                'nickname' => "微信小程序用户"
-            ], self::DEFAULT_MEMBER);
-            $member->fill($memberInfo);
-            $member->edit();
-        }else{
-            // 更新用户数据
-            $user->fill($attributes);
-            $user->edit();
+                    // 创建用户会员记录
+                    $member = new Member();
+                    $memberInfo = array_merge([
+                        'user_id' => $user->id,
+                        'nickname' => "微信小程序用户"
+                    ], self::DEFAULT_MEMBER);
+                    $member->fill($memberInfo);
+                    $member->edit();
+                }
+            } else {
+                // 更新用户数据
+                $user->fill($attributes);
+                $user->edit();
+            }
+
+
+            // 为对应用户创建 JWT
+            $token = auth('api')->login($user);
+
+            return $this->respondWithToken($user, $token);
+        } catch (\Exception $e) {
+            throw $e;
         }
-
-
-        // 为对应用户创建 JWT
-        $token = auth('api')->login($user);
-
-        return $this->respondWithToken($user, $token);
     }
 
     /**
