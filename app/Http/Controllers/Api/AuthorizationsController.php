@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Auth;
 use Overtrue\LaravelSocialite\Socialite;
 use Overtrue\LaravelWeChat\EasyWeChat;
 use Propaganistas\LaravelPhone\PhoneNumber;
+use Spatie\QueryBuilder\QueryBuilder;
 
 class AuthorizationsController extends Controller
 {
@@ -142,7 +143,7 @@ class AuthorizationsController extends Controller
 
             // 添加用户账号及密码
             $user->fill([
-                'username' => self::ACCOUNT_GROUP['mini_program']. $user->created_at,
+                'username' => self::ACCOUNT_GROUP['mini_program']. str_pad($user->id, 6, 0, STR_PAD_LEFT),
                 'password' => self::DEFAULT_PASSWORD
             ]);
 
@@ -155,7 +156,7 @@ class AuthorizationsController extends Controller
             $member = new Member();
             $memberInfo = array_merge([
                 'user' => $user->id,
-                'nickname' => $oauthUser['nickname']
+                'nickname' => "微信小程序用户"
             ], self::DEFAULT_MEMBER);
             $member->fill($memberInfo);
             $member->edit();
