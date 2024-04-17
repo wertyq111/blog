@@ -85,10 +85,10 @@ class BaseModel extends Authenticatable
             // 如果对应的数据表中定义了create_user并且不存在 id 则填充创建者 id
             if(!$this->id) {
                 if(Schema::hasColumn($tableName, 'create_user')) {
-                    $this->create_user = Auth('api')->user()->id;
+                    $this->create_user = Auth('api')->user()->id ?? 0;
                 }
                 if(Schema::hasColumn($tableName, 'update_user')) {
-                    $this->update_user = Auth('api')->user()->id;
+                    $this->update_user = Auth('api')->user()->id ?? 0;
                 }
             }
 
