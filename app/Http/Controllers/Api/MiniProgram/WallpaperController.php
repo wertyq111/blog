@@ -48,7 +48,7 @@ class WallpaperController extends Controller
         foreach ($wallpapers as &$wallpaper) {
             $wallpaper['small_pic_url'] = strstr($wallpaper['url'], env("QINIU_DOMAIN", null))
                 ? $wallpaper['url'] . "?imageMogr2/thumbnail/!10p"
-                : "http://" . env("QINIU_DOMAIN", null) . "/" . $wallpaper['url'] . "?imageMogr2/thumbnail/!10p";
+                : "http://" . env("QINIU_DOMAIN", null) . "/" . $wallpaper['url'] . "?imageMogr2/thumbnail/!30p";
             $wallpaper['tags'] = json_decode($wallpaper['tags'], true);
         }
 
@@ -83,7 +83,7 @@ class WallpaperController extends Controller
         foreach ($wallpapers as &$wallpaper) {
             $wallpaper['small_pic_url'] = strstr($wallpaper['url'], env("QINIU_DOMAIN", null))
                 ? $wallpaper['url'] . "?imageMogr2/thumbnail/!10p"
-                : "http://" . env("QINIU_DOMAIN", null) . "/" . $wallpaper['url'] . "?imageMogr2/thumbnail/!10p";
+                : "http://" . env("QINIU_DOMAIN", null) . "/" . $wallpaper['url'] . "?imageMogr2/thumbnail/!30p";
             $wallpaper['tags'] = json_decode($wallpaper['tags'], true);
         }
 
@@ -118,7 +118,7 @@ class WallpaperController extends Controller
         foreach ($wallpapers as &$wallpaper) {
             $wallpaper['small_pic_url'] = strstr($wallpaper['url'], env("QINIU_DOMAIN", null))
                 ? $wallpaper['url'] . "?imageMogr2/thumbnail/!10p"
-                : "http://" . env("QINIU_DOMAIN", null) . "/" . $wallpaper['url'] . "?imageMogr2/thumbnail/!10p";
+                : "http://" . env("QINIU_DOMAIN", null) . "/" . $wallpaper['url'] . "?imageMogr2/thumbnail/!30p";
             $wallpaper['tags'] = json_decode($wallpaper['tags'], true);
         }
         unset($wallpaper);
