@@ -230,7 +230,7 @@ class AuthorizationsController extends Controller
 
         if (!hash_equals(strtolower($captchaData['code']), strtolower($request->get('captcha')))) {
             \Cache::forget($captchaCacheKey);
-            throw new AuthenticationException('验证码错误');
+            abort(403, '验证码错误');
         }
 
         // 清除图片验证码
@@ -243,7 +243,7 @@ class AuthorizationsController extends Controller
         $credentials['password'] = $request->get('password');
 
         if (!$token = Auth::guard('api')->attempt($credentials)) {
-            throw new AuthenticationException('用户名或密码错误');
+            abort(403, '用户名或密码错误');
         }
 
 
