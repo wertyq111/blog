@@ -221,20 +221,20 @@ class AuthorizationsController extends Controller
         $phoneValid = new PhoneNumber($username, 'CN');
         $credentials = [];
 
-//        $captchaCacheKey = 'captcha_'. $request->get('captcha_key');
-//        $captchaData = \Cache::get($captchaCacheKey);
-//
-//        if(!$captchaData) {
-//            abort(403, '图片验证码已失效');
-//        }
-//
-//        if (!hash_equals(strtolower($captchaData['code']), strtolower($request->get('captcha')))) {
-//            \Cache::forget($captchaCacheKey);
-//            throw new AuthenticationException('验证码错误');
-//        }
-//
-//        // 清除图片验证码
-//        \Cache::forget($captchaCacheKey);
+        $captchaCacheKey = 'captcha_'. $request->get('captcha_key');
+        $captchaData = \Cache::get($captchaCacheKey);
+
+        if(!$captchaData) {
+            abort(403, '图片验证码已失效');
+        }
+
+        if (!hash_equals(strtolower($captchaData['code']), strtolower($request->get('captcha')))) {
+            \Cache::forget($captchaCacheKey);
+            throw new AuthenticationException('验证码错误');
+        }
+
+        // 清除图片验证码
+        \Cache::forget($captchaCacheKey);
 
         $phoneValid->isValid() ? $credentials['phone'] = $username :
             (filter_var($username, FILTER_VALIDATE_EMAIL) ? $credentials['email'] = $username :
