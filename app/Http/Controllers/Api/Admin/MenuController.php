@@ -52,7 +52,7 @@ class MenuController extends Controller
         $menu = QueryBuilder::for($menu)->findOrFail($menu->id);
 
         $info = $menu->toArray();
-        if($menu->children) {
+        if($info['pid'] > 0 &&  $menu->children) {
             $info['checkedList'] = array_column($menu->children->toArray(), 'sort');
         }
 
