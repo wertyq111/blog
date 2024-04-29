@@ -12,6 +12,8 @@ use App\Http\Controllers\Api\User\VerificationCodesController;
 use App\Http\Controllers\Api\AuthorizationsController;
 use App\Http\Controllers\Api\MiniProgram\WallpaperController;
 use App\Http\Controllers\Api\MiniProgram\WallpaperClassifyController;
+use App\Http\Controllers\Api\Admin\ServerPathController;
+use App\Http\Controllers\Api\Admin\InitModelController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Models\User\Member;
@@ -20,6 +22,8 @@ use App\Models\Permission\Role;
 use App\Models\Permission\Menu;
 use App\Models\MiniProgram\WallpaperClassify;
 use App\Models\MiniProgram\Wallpaper;
+use App\Models\Admin\ServerPath;
+use App\Models\Admin\InitModel;
 
 /*
 |--------------------------------------------------------------------------
@@ -202,6 +206,35 @@ Route::name('api')->group(function() {
             // 删除壁纸分类
             Route::delete('wallpaper/{wallpaper}', [WallpaperController::class, 'delete'])->name('wallpaper.delete');
             /** 壁纸接口结束 */
+
+            /** 开发助手接口开始 */
+            // 服务器路径列表
+            Route::get('server-path/index', [ServerPathController::class, 'index'])->name('server-path.index')
+                ->middleware('filter.process:'. ServerPath::class);
+            // 服务器路径详情
+            Route::get('server-path/{serverPath}', [ServerPathController::class, 'info'])->name('server-path.info');
+            // 添加服务器路径
+            Route::post('server-path/add', [ServerPathController::class, 'add'])->name('server-path.add');
+            // 修改服务器路径
+            Route::post('server-path/{serverPath}', [ServerPathController::class, 'edit'])->name('server-path.edit');
+            // 删除服务器路径
+            Route::delete('server-path/{serverPath}', [ServerPathController::class, 'delete'])->name('server-path.delete');
+            // 服务器路径转换
+            Route::post('server-path/convert/{serverPath}', [ServerPathController::class, 'convert'])->name('server-path.convert');
+            // 模型初始化列表
+            Route::get('init-model/index', [InitModelController::class, 'index'])->name('init-model.index')
+                ->middleware('filter.process:'. InitModel::class);
+            // 模型初始化详情
+            Route::get('init-model/{initModel}', [InitModelController::class, 'info'])->name('init-model.info');
+            // 添加模型初始化
+            Route::post('init-model/add', [InitModelController::class, 'add'])->name('init-model.add');
+            // 修改模型初始化
+            Route::post('init-model/{initModel}', [InitModelController::class, 'edit'])->name('init-model.edit');
+            // 删除模型初始化
+            Route::delete('init-model/{initModel}', [InitModelController::class, 'delete'])->name('init-model.delete');
+            // 模型初始化转换
+            Route::post('init-model/convert/{initModel}', [InitModelController::class, 'convert'])->name('init-model.convert');
+            /** 开发助手接口结束 */
         });
     //});
 

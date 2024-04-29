@@ -7,10 +7,7 @@ use App\Http\Requests\Api\FormRequest;
 use App\Http\Requests\Api\MiniProgram\WallpaperRequest;
 use App\Http\Resources\BaseResource;
 use App\Models\MiniProgram\Wallpaper;
-use App\Models\User\User;
 use App\Services\Api\MiniProgram\WallpaperService;
-use Spatie\QueryBuilder\AllowedFilter;
-use Spatie\QueryBuilder\QueryBuilder;
 
 class WallpaperController extends Controller
 {
