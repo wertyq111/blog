@@ -18,6 +18,7 @@
         "overtrue/laravel-wechat": "^7.3",
         "php-open-source-saver/jwt-auth": "^2.1",
         "propaganistas/laravel-phone": "^5.0",
+        "spatie/laravel-backup": "^8.8",
         "spatie/laravel-query-builder": "^5.2"
     },
     "require-dev": {
