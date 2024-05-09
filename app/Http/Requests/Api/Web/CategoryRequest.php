@@ -16,30 +16,31 @@ class CategoryRequest extends FormRequest
     {
         switch ($this->method()) {
             case 'POST':
-                return [
-                    'name' => [
-                        'required',
-                        'string',
+                list($class, $method) = explode('@', $this->route()->getActionName());
+                if($method == 'add') {
+                    return [
+                        'name' => [
+                            'required',
+                            'string',
 //                        Rule::exists('categories')->where(function ($query) {
 //                            $query->where('name', '=', 'Vue');
 //                        }),
-                        Rule::unique('categories')->where(function ($query) {
-                            $query->where('deleted_at', '=', 0);
-                        }),
-                    ],
-                    'description' => 'string',
-                    'type' => 'int',
-                    'priority' => 'int'
-                ];
-                break;
-            case 'PATCH':
-                return [
-                    'name' => 'string|min:1',
-                    'description' => 'string',
-                    'type' => 'int',
-                    'priority' => 'int'
-                ];
-                break;
+                            Rule::unique('categories')->where(function ($query) {
+                                $query->where('deleted_at', '=', 0);
+                            }),
+                        ],
+                        'description' => 'string',
+                        'type' => 'int',
+                        'priority' => 'int'
+                    ];
+                } else {
+                    return [
+                        'name' => 'string|min:1',
+                        'description' => 'string',
+                        'type' => 'int',
+                        'priority' => 'int'
+                    ];
+                }
         }
     }
 

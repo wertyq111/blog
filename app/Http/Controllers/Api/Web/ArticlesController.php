@@ -7,9 +7,7 @@ use App\Http\Requests\Api\FormRequest;
 use App\Http\Requests\Api\Web\ArticleRequest;
 use App\Http\Resources\Web\ArticleResource;
 use App\Models\Web\Article;
-use Doctrine\DBAL\Query;
 use Illuminate\Http\Request;
-use Spatie\QueryBuilder\QueryBuilder;
 
 class ArticlesController extends Controller
 {
@@ -23,13 +21,16 @@ class ArticlesController extends Controller
      */
     public function index(FormRequest $request, Article $article)
     {
+        $data = $request->all();
+
         // 生成允许过滤字段数组
         $allowedFilters = $request->generateAllowedFilters($article->getRequestFilters());
 
-        $articles = QueryBuilder::for($article)
-            ->allowedIncludes('member', 'category', 'label')
-            ->allowedFilters($allowedFilters)
-            ->paginate();
+        $config = [
+            'includes' => ['member', 'category', 'label'],
+            'allowedFilters' => $allowedFilters
+        ];
+        $articles = $this->queryBuilder($article, true, $config);
 
 
         return ArticleResource::collection($articles);
@@ -49,11 +50,11 @@ class ArticlesController extends Controller
         // 生成允许过滤字段数组
         $allowedFilters = $request->generateAllowedFilters($article->getRequestFilters());
 
-        $articles = QueryBuilder::for($article)
-            ->allowedIncludes('member', 'category', 'label')
-            ->allowedFilters($allowedFilters)
-            ->paginate();
-
+        $config = [
+            'includes' => ['member', 'category', 'label'],
+            'allowedFilters' => $allowedFilters
+        ];
+        $articles = $this->queryBuilder($article, true, $config);
 
         return ArticleResource::collection($articles);
     }
@@ -62,38 +63,30 @@ class ArticlesController extends Controller
      * 文章详情(前台)
      *
      * @param Article $article
-     * @return \Illuminate\Http\JsonResponse
+     * @return ArticleResource
      * @author zhouxufeng <zxf@netsun.com>
-     * @date 2023/6/13 09:15
+     * @date 2024/5/8 15:35
      */
-    public function show($articleId)
+    public function show(Article $article)
     {
-
-        $article = QueryBuilder::for(Article::class)
-            ->allowedIncludes('member', 'category', 'label')
-            ->findOrFail($articleId);
-
         // 前台访问文章时增加阅读数量
         $article->view_count += 1;
         $article->edit(false);
 
-        return (new ArticleResource($article))->response()->setStatusCode(200);
+        return new ArticleResource($article);
     }
 
     /**
      * 文章详情(后台)
      *
-     * @param $articleId
-     * @return \Illuminate\Http\JsonResponse
+     * @param Article $article
+     * @return ArticleResource
      * @author zhouxufeng <zxf@netsun.com>
      * @date 2023/6/13 09:15
      */
-    public function detail($articleId)
+    public function info(Article $article)
     {
-        $article = QueryBuilder::for(Article::class)
-            ->allowedIncludes('member')
-            ->findOrFail($articleId);
-        return (new ArticleResource($article))->response()->setStatusCode(200);
+        return new ArticleResource($article);
     }
 
     /**
@@ -110,7 +103,7 @@ class ArticlesController extends Controller
         $data = $request->getSnakeRequest();
 
         $article->fill($data);
-        $article->member_id = $request->user()->member->id;
+        $article->member_id = $request->user()->member ? $request->user()->member->id : 0;
 
         $article->edit();
 
@@ -140,15 +133,15 @@ class ArticlesController extends Controller
      * 删除文章
      *
      * @param Article $article
-     * @return \Illuminate\Contracts\Foundation\Application|\Illuminate\Contracts\Routing\ResponseFactory|\Illuminate\Foundation\Application|\Illuminate\Http\Response
+     * @return \Illuminate\Http\JsonResponse
      * @author zhouxufeng <zxf@netsun.com>
-     * @date 2023/6/12 15:26
+     * @date 2024/5/8 15:36
      */
     public function delete(Article $article)
     {
         $article->delete();
 
-        return response(null, 204);
+        return response()->json([]);
     }
 
     /**

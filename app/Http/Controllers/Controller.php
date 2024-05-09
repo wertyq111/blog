@@ -67,7 +67,7 @@ class Controller extends BaseController
 
         // 如果存在 member 值,添加新的查询条件
         if(isset($config['type'])) {
-            //$queryBuilder->allowedFilters("downloads.member_id", 1);
+            $queryBuilder->allowedFilters("downloads.member_id", 1);
         }
 
         if(isset($config['orderBy'])) {

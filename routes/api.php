@@ -14,6 +14,9 @@ use App\Http\Controllers\Api\MiniProgram\WallpaperController;
 use App\Http\Controllers\Api\MiniProgram\WallpaperClassifyController;
 use App\Http\Controllers\Api\Admin\ServerPathController;
 use App\Http\Controllers\Api\Admin\InitModelController;
+use App\Http\Controllers\Api\Web\ArticlesController;
+use App\Http\Controllers\Api\Web\CategoriesController;
+use App\Http\Controllers\Api\Web\LabelsController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Models\User\Member;
@@ -24,6 +27,9 @@ use App\Models\MiniProgram\WallpaperClassify;
 use App\Models\MiniProgram\Wallpaper;
 use App\Models\Admin\ServerPath;
 use App\Models\Admin\InitModel;
+use App\Models\Web\Article;
+use App\Models\Web\Category;
+use App\Models\Web\Label;
 
 /*
 |--------------------------------------------------------------------------
@@ -235,6 +241,47 @@ Route::name('api')->group(function() {
             // 模型初始化转换
             Route::post('init-model/convert/{initModel}', [InitModelController::class, 'convert'])->name('init-model.convert');
             /** 开发助手接口结束 */
+            /** 笔记接口开始 */
+            // 文章列表
+            Route::get('articles/index', [ArticlesController::class, 'index'])->name('articles.index')
+                ->middleware('filter.process:'. Article::class);
+            // 文章详情
+            Route::get('articles/{article}', [ArticlesController::class, 'info'])->name('articles.info');
+            // 文章详情(前端)
+            Route::get('articles/show/{article}', [ArticlesController::class, 'show'])->name('articles.show');
+            // 添加文章
+            Route::post('articles/add', [ArticlesController::class, 'add'])->name('articles.add');
+            // 修改文章
+            Route::post('articles/{article}', [ArticlesController::class, 'edit'])->name('articles.edit');
+            // 删除文章
+            Route::delete('articles/{article}', [ArticlesController::class, 'delete'])->name('articles.delete');
+            // 文章分类列表
+            Route::get('categories/index', [CategoriesController::class, 'index'])->name('categories.index')
+                ->middleware('filter.process:'. Category::class);
+            // 文章分类所有列表
+            Route::get('categories/list', [CategoriesController::class, 'list'])->name('categories.list');
+            // 所有分类标签
+            Route::get('categories/all', [CategoriesController::class, 'all'])->name('categories.all');
+            // 文章分类详情
+            Route::get('categories/{category}', [CategoriesController::class, 'info'])->name('categories.info');
+            // 添加文章分类
+            Route::post('categories/add', [CategoriesController::class, 'add'])->name('categories.add');
+            // 修改文章分类
+            Route::post('categories/{category}', [CategoriesController::class, 'edit'])->name('categories.edit');
+            // 删除文章分类
+            Route::delete('categories/{category}', [CategoriesController::class, 'delete'])->name('categories.delete');
+            // 文章标签列表
+            Route::get('labels/index', [LabelsController::class, 'index'])->name('labels.index')
+                ->middleware('filter.process:'. Label::class);
+            // 文章标签详情
+            Route::get('labels/{label}', [LabelsController::class, 'info'])->name('labels.info');
+            // 添加标签标签
+            Route::post('labels/add', [LabelsController::class, 'add'])->name('labels.add');
+            // 修改文章标签
+            Route::post('labels/{label}', [LabelsController::class, 'edit'])->name('labels.edit');
+            // 删除文章标签
+            Route::delete('labels/{label}', [LabelsController::class, 'delete'])->name('labels.delete');
+            /** 笔记接口结束 */
         });
     //});
 
