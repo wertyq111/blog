@@ -29,8 +29,8 @@ class ArticleResource extends BaseResource
             'commentStatus' => $this->comment_status ? true : false,
             'categoryId' => $this->category_id,
             'labelId' => $this->label_id,
-            'createdAt' => (string)$this->created_at,
-            'updatedAt' => (string)$this->updated_at,
+            'createTime' => (string)$this->created_at,
+            'updateTime' => (string)$this->updated_at,
             'category' => new CategoryResource($this->whenLoaded('category')),
             'label' => new LabelResource($this->whenLoaded('label'))
         ];

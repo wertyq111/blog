@@ -16,45 +16,46 @@ class LabelRequest extends FormRequest
     {
         switch($this->method()) {
             case 'POST':
-                return [
-                    'categoryId' => [
-                        'required',
-                        'int',
-                        Rule::exists('categories', 'id')->where(function ($query) {
-                            $query->where('deleted_at', '=', 0);
-                        }),
-                    ],
-                    'name' => [
-                        'required',
-                        'string',
-                        'min:1',
-                        Rule::unique('labels')->where(function ($query) {
-                            $query->where('deleted_at', '=', 0)
-                                ->where('category_id', '=', $this->request->get('categoryId'));
-                        }),
-                    ],
-                    'description' => 'required|string|min:1'
-                ];
-                break;
-            case 'PATCH':
-                return [
-                    'categoryId' => [
-                        'int',
-                        Rule::exists('categories', 'id')->where(function ($query) {
-                            $query->where('deleted_at', '=', 0);
-                        }),
-                    ],
-                    'name' => [
-                        'string',
-                        'min:1',
-                        Rule::unique('labels')->where(function ($query) {
-                            $query->where('deleted_at', '=', 0)
-                                ->where('category_id', '=', $this->request->get('categoryId'));
-                        }),
-                    ],
-                    'description' => 'string|min:1'
-                ];
-                break;
+                list($class, $method) = explode('@', $this->route()->getActionName());
+                if($method == 'add') {
+                    return [
+                        'categoryId' => [
+                            'required',
+                            'int',
+                            Rule::exists('categories', 'id')->where(function ($query) {
+                                $query->where('deleted_at', '=', 0);
+                            }),
+                        ],
+                        'name' => [
+                            'required',
+                            'string',
+                            'min:1',
+                            Rule::unique('labels')->where(function ($query) {
+                                $query->where('deleted_at', '=', 0)
+                                    ->where('category_id', '=', $this->request->get('categoryId'));
+                            }),
+                        ],
+                        'description' => 'required|string|min:1'
+                    ];
+                } else {
+                    return [
+                        'categoryId' => [
+                            'int',
+                            Rule::exists('categories', 'id')->where(function ($query) {
+                                $query->where('deleted_at', '=', 0);
+                            }),
+                        ],
+                        'name' => [
+                            'string',
+                            'min:1',
+                            Rule::unique('labels')->where(function ($query) {
+                                $query->where('deleted_at', '=', 0)
+                                    ->where('category_id', '=', $this->request->get('categoryId'));
+                            }),
+                        ],
+                        'description' => 'string|min:1'
+                    ];
+                }
         }
     }
 

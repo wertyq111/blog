@@ -4,13 +4,11 @@ namespace App\Http\Controllers\Api\Web;
 
 
 use App\Http\Controllers\Api\Controller;
+use App\Http\Requests\Api\FormRequest;
 use App\Http\Requests\Api\Web\CategoryRequest;
-use App\Http\Resources\BaseResource;
 use App\Http\Resources\Web\CategoryResource;
 use App\Models\Web\Category;
 use App\Models\Web\Label;
-use Illuminate\Http\Request;
-use Spatie\QueryBuilder\QueryBuilder;
 
 /**
  * 分类
@@ -23,35 +21,40 @@ use Spatie\QueryBuilder\QueryBuilder;
 class CategoriesController extends Controller
 {
     /**
-     * 分类列表(后台)
+     * 分类列表
      *
-     * @param Request $request
+     *
+     * @param FormRequest $request
+     * @param Category $category
      * @return \Illuminate\Http\Resources\Json\AnonymousResourceCollection
      * @author zhouxufeng <zxf@netsun.com>
-     * @date 2023/6/13 16:52
+     * @date 2024/5/9 10:23
      */
-    public function index(Request $request)
+    public function index(FormRequest $request, Category $category)
     {
-        $categories = QueryBuilder::for(Category::class)
-            ->allowedIncludes('articles', 'labels')
-            ->paginate();
+        $config = [
+            'includes' => ['articles', 'labels']
+        ];
+        $categories = $this->queryBuilder($category, true, $config);
 
         return CategoryResource::collection($categories);
     }
 
     /**
-     * 分类列表(前台)
+     * 分类所有列表
      *
-     * @param Request $request
+     * @param FormRequest $request
+     * @param Category $category
      * @return \Illuminate\Http\Resources\Json\AnonymousResourceCollection
      * @author zhouxufeng <zxf@netsun.com>
-     * @date 2023/6/9 15:44
+     * @date 2024/5/9 10:24
      */
-    public function list(Request $request)
+    public function list(FormRequest $request, Category $category)
     {
-        $categories = QueryBuilder::for(Category::class)
-            ->allowedIncludes('articles', 'labels')
-            ->get();
+        $config = [
+            'includes' => ['articles', 'labels']
+        ];
+        $categories = $this->queryBuilder($category, true, $config);
 
         return CategoryResource::collection($categories);
     }
@@ -68,8 +71,7 @@ class CategoriesController extends Controller
         $categories = $category::all()->toArray();
         $labels = $label::all()->toArray();
 
-        return (new BaseResource(['categories' => $categories, 'labels' => $labels]))
-            ->response()->setStatusCode(200);
+        return $this->resource(['categories' => $categories, 'labels' => $labels]);
     }
 
     /**
@@ -116,14 +118,14 @@ class CategoriesController extends Controller
      * 删除分类
      *
      * @param Category $category
-     * @return \Illuminate\Contracts\Foundation\Application|\Illuminate\Contracts\Routing\ResponseFactory|\Illuminate\Foundation\Application|\Illuminate\Http\Response
+     * @return \Illuminate\Http\JsonResponse
      * @author zhouxufeng <zxf@netsun.com>
-     * @date 2023/6/9 14:28
+     * @date 2024/5/9 09:52
      */
     public function delete(Category $category)
     {
         $category->delete();
 
-        return response(null, 204);
+        return response()->json([]);
     }
 }

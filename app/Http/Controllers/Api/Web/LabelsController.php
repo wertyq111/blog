@@ -3,11 +3,12 @@
 namespace App\Http\Controllers\Api\Web;
 
 use App\Http\Controllers\Api\Controller;
+use App\Http\FormRequests\Api\Web\LabelFormRequest;
 use App\Http\Requests\Api\Web\LabelRequest;
 use App\Http\Resources\Web\LabelResource;
 use App\Models\Web\Label;
 use Spatie\QueryBuilder\QueryBuilder;
-use Illuminate\Http\Request;
+use App\Http\Requests\Api\FormRequest;
 
 /**
  * 标签
@@ -20,35 +21,38 @@ use Illuminate\Http\Request;
 class LabelsController extends Controller
 {
     /**
-     * 标签列表(后台)
+     * 标签列表
      *
-     * @param Request $request
+     * @param FormRequest $request
      * @return \Illuminate\Http\Resources\Json\AnonymousResourceCollection
      * @author zhouxufeng <zxf@netsun.com>
      * @date 2023/6/9 15:44
      */
-    public function index(Request $request)
+    public function index(FormRequest $request, Label $label)
     {
-        $labels = QueryBuilder::for(Label::class)
-            ->allowedFields('category_id')
-            ->paginate();
+        $config = [
+            'includes' => ['category_id']
+        ];
+        $labels = $this->queryBuilder($label, true, $config);
+
         return LabelResource::collection($labels);
     }
 
     /**
-     * 标签列表(前台)
+     * 标签所有列表
      *
-     * @param Request $request
+     * @param FormRequest $request
      * @return \Illuminate\Http\Resources\Json\AnonymousResourceCollection
      * @author zhouxufeng <zxf@netsun.com>
      * @date 2023/6/9 15:44
      */
-    public function list(Request $request)
+    public function list(FormRequest $request, Label $label)
     {
-        $labels = QueryBuilder::for(Label::class)
-            ->allowedFields('category_id')
-            ->paginate();
-        return LabelResource::collection($labels);
+        $config = [
+            'includes' => ['category_id']
+        ];
+        $labels = $this->queryBuilder($label, false, $config);
+        return $this->resource($labels, ['time' => true, 'collection' => true]);
     }
 
     /**
@@ -69,7 +73,7 @@ class LabelsController extends Controller
 
         $label->edit();
 
-        return new LabelResource($label);
+        return $this->resource($label);
 
     }
 
@@ -88,21 +92,21 @@ class LabelsController extends Controller
 
         $label->edit();
 
-        return new LabelResource($label);
+        return $this->resource($label);
     }
 
     /**
      * 删除标签
      *
      * @param Label $label
-     * @return \Illuminate\Contracts\Foundation\Application|\Illuminate\Contracts\Routing\ResponseFactory|\Illuminate\Foundation\Application|\Illuminate\Http\Response
+     * @return \Illuminate\Http\JsonResponse
      * @author zhouxufeng <zxf@netsun.com>
-     * @date 2023/6/12 09:27
+     * @date 2024/5/9 10:31
      */
     public function delete(Label $label)
     {
         $label->delete();
 
-        return response(null, 204);
+        return response()->json([]);
     }
 }
