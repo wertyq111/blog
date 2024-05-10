@@ -14,6 +14,7 @@ class LabelRequest extends FormRequest
      */
     public function rules()
     {
+        $label = $this->route('label');
         switch($this->method()) {
             case 'POST':
                 list($class, $method) = explode('@', $this->route()->getActionName());
@@ -35,7 +36,7 @@ class LabelRequest extends FormRequest
                                     ->where('category_id', '=', $this->request->get('categoryId'));
                             }),
                         ],
-                        'description' => 'required|string|min:1'
+                        'description' => 'string|min:1'
                     ];
                 } else {
                     return [
@@ -48,9 +49,10 @@ class LabelRequest extends FormRequest
                         'name' => [
                             'string',
                             'min:1',
-                            Rule::unique('labels')->where(function ($query) {
-                                $query->where('deleted_at', '=', 0)
-                                    ->where('category_id', '=', $this->request->get('categoryId'));
+                            Rule::unique('labels')->where(function ($query) use ($label) {
+                                $query->where(
+                                    'id', '!=', $label->id
+                                );
                             }),
                         ],
                         'description' => 'string|min:1'

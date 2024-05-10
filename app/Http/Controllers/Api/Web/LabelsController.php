@@ -31,7 +31,7 @@ class LabelsController extends Controller
     public function index(FormRequest $request, Label $label)
     {
         $config = [
-            'includes' => ['category_id']
+            'includes' => ['articles', 'category']
         ];
         $labels = $this->queryBuilder($label, true, $config);
 
@@ -49,7 +49,7 @@ class LabelsController extends Controller
     public function list(FormRequest $request, Label $label)
     {
         $config = [
-            'includes' => ['category_id']
+            'includes' => ['category']
         ];
         $labels = $this->queryBuilder($label, false, $config);
         return $this->resource($labels, ['time' => true, 'collection' => true]);

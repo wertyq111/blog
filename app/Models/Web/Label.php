@@ -10,18 +10,17 @@ class Label extends BaseModel
     use HasFactory;
 
     protected $fillable = [
-        'name', 'description'
+        'name', 'category_id', 'description'
     ];
 
     /**
-     * 一对一关联
-     * @return void
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
      * @author zhouxufeng <zxf@netsun.com>
-     * @date 2023/6/12 10:54
+     * @date 2024/5/10 16:40
      */
     public function category()
     {
-        $this->belongsTo(Category::class);
+        return $this->belongsTo(Category::class);
     }
 
     /**

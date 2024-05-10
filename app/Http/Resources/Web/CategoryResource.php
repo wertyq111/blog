@@ -21,11 +21,8 @@ class CategoryResource extends BaseResource
             'name' => $this->name,
             'description' => $this->description,
             'priority' => $this->priority,
-            'type' => $this->type,
-            'labels' => new LabelResource($this->whenLoaded('labels')),
-            'articles' => $this->whenLoaded('articles'),
-            'createTime' => (string) $this->created_at,
-            'updateTime' => (string) $this->updated_at,
+            'labels' => LabelResource::collection($this->whenLoaded('labels')),
+            'articles' => ArticleResource::collection($this->whenLoaded('articles'))
         ];
     }
 }

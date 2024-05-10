@@ -88,7 +88,6 @@ class CategoriesController extends Controller
         $data = $request->getSnakeRequest();
 
         $category->fill($data);
-        $category->type = $data['type'];
 
         $category->edit();
 
