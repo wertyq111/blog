@@ -14,6 +14,13 @@ class LabelResource extends BaseResource
      */
     public function toArray(Request $request): array
     {
-        return parent::toArray($request);
+        return [
+            'id' => $this->id,
+            'categoryId' => $this->category_id,
+            'name' => $this->name,
+            'description' => $this->description,
+            'category' => new CategoryResource($this->whenLoaded('category')),
+            'articles' => ArticleResource::collection($this->whenLoaded('articles')),
+        ];
     }
 }
