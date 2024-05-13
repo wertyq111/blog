@@ -61,7 +61,7 @@ class WallpaperController extends Controller
      * @author zhouxufeng <zxf@netsun.com>
      * @date 2024/4/8 14:33
      */
-    public function user(FormRequest $request, Wallpaper $wallpaper)
+    public function userList(FormRequest $request, Wallpaper $wallpaper)
     {
         $data = $request->all();
 
@@ -72,8 +72,7 @@ class WallpaperController extends Controller
             'includes' => ['classify'],
             'allowedFilters' => $allowedFilters,
             'perPage' => $data['perPage'] ?? null,
-            'orderBy' => $data['orderBy'] ?? null,
-            'type' => $data['type']
+            'orderBy' => $data['orderBy'] ?? null
         ];
         $wallpapers = $this->queryBuilder($wallpaper, true, $config);
 
