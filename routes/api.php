@@ -244,6 +244,9 @@ Route::name('api')->group(function() {
             // 文章列表
             Route::get('articles/index', [ArticlesController::class, 'index'])->name('articles.index')
                 ->middleware('filter.process:'. Article::class);
+            // 文章所有列表
+            Route::get('articles/list', [ArticlesController::class, 'list'])->name('articles.list')
+                ->middleware('filter.process:'. Article::class);
             // 文章详情
             Route::get('articles/{article}', [ArticlesController::class, 'info'])->name('articles.info');
             // 文章详情(前端)

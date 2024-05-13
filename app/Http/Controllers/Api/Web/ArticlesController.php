@@ -72,8 +72,9 @@ class ArticlesController extends Controller
         // 前台访问文章时增加阅读数量
         $article->view_count += 1;
         $article->edit(false);
+        $article->author = $article->member->nickname;
 
-        return new ArticleResource($article);
+        return $this->resource($article, ['time' => true]);
     }
 
     /**

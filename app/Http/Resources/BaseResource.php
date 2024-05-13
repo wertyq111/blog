@@ -26,7 +26,11 @@ class BaseResource extends JsonResource
         if(static::$isShowTime) {
             $this->resource->makeVisible(['created_at', 'updated_at', 'deleted_at']);
             $array['createTime'] = $this->diffDateTime($this->created_at) ? (string) $this->created_at : null;
+            $createTime = new \DateTime($array['createTime']);
+            $array['createTimestamp'] = $createTime->getTimestamp();
             $array['updateTime'] = $this->diffDateTime($this->updated_at) ? (string) $this->updated_at : null;
+            $updateTime = new \DateTime($array['createTime']);
+            $array['updateTimestamp'] = $updateTime->getTimestamp();
         }
 
         return is_array($array) ? $this->transformCamel($array) : $array;
