@@ -19,7 +19,9 @@ class Article extends BaseModel
         'view_status',
         'password',
         'recommend_status',
-        'comment_status'
+        'comment_status',
+        'view_count',
+        'like_count'
     ];
 
     /**
