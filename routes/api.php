@@ -255,6 +255,8 @@ Route::name('api')->group(function() {
             Route::post('articles/add', [ArticlesController::class, 'add'])->name('articles.add');
             // 修改文章
             Route::post('articles/{article}', [ArticlesController::class, 'edit'])->name('articles.edit');
+            // 点赞文章
+            Route::post('articles/good/{article}', [ArticlesController::class, 'good'])->name('articles.good');
             // 删除文章
             Route::delete('articles/{article}', [ArticlesController::class, 'delete'])->name('articles.delete');
             // 文章分类列表

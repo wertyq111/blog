@@ -76,4 +76,15 @@ class Article extends BaseModel
     {
         return $this->belongsTo(Label::class);
     }
+
+    /**
+     * 点赞数
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsToMany
+     * @author zhouxufeng <zxf@netsun.com>
+     * @date 2024/5/14 15:52
+     */
+    public function goods() {
+        return $this->belongsToMany(Member::class, 'article_member_goods');
+    }
 }
