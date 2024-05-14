@@ -5,6 +5,7 @@ namespace App\Models\User;
 use App\Models\BaseModel;
 use App\Models\MiniProgram\WallpaperDownload;
 use App\Models\MiniProgram\WallpaperScore;
+use App\Models\Web\Article;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class Member extends BaseModel
@@ -84,5 +85,16 @@ class Member extends BaseModel
     public function scores()
     {
         return $this->hasMany(WallpaperScore::class);
+    }
+
+    /**
+     * 点赞数
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsToMany
+     * @author zhouxufeng <zxf@netsun.com>
+     * @date 2024/5/14 15:52
+     */
+    public function goods() {
+        return $this->belongsToMany(Article::class, 'article_member_goods');
     }
 }

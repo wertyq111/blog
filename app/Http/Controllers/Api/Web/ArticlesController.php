@@ -73,6 +73,7 @@ class ArticlesController extends Controller
         $article->view_count += 1;
         $article->edit(false);
         $article->author = $article->member->nickname;
+        $article->goods;
 
         return $this->resource($article, ['time' => true]);
     }
@@ -88,6 +89,26 @@ class ArticlesController extends Controller
     public function info(Article $article)
     {
         return new ArticleResource($article);
+    }
+
+    /**
+     * 点赞
+     *
+     * @param Article $article
+     * @return mixed|string
+     * @author zhouxufeng <zxf@netsun.com>
+     * @date 2024/5/14 15:56
+     */
+    public function good(Article $article)
+    {
+        // 添加点赞记录
+        $member = auth()->user()->member;
+        $article->goods()->sync($member->id, false);
+
+        $article->like_count = count($article->goods);
+        $article->edit();
+
+        return $this->resource($article);
     }
 
     /**
