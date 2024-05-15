@@ -191,7 +191,8 @@ Route::name('api')->group(function() {
             // 删除壁纸分类
             Route::delete('wallpaper-classify/{classify}', [WallpaperClassifyController::class, 'delete'])->name('wallpaper-classify.delete');
             // 获取壁纸列表
-            Route::get('wallpaper/index', [WallpaperController::class, 'index'])->name('wallpaper.index');
+            Route::get('wallpaper/index', [WallpaperController::class, 'index'])->name('wallpaper.index')
+                ->middleware('filter.process:'. Wallpaper::class);
             // 获取当前会员壁纸列表
             Route::get('wallpaper/user-list', [WallpaperController::class, 'userList'])->name('wallpaper.user-list')
                 ->middleware('filter.process:'. Wallpaper::class);
