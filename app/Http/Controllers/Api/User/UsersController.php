@@ -58,53 +58,6 @@ class UsersController extends Controller
     }
 
     /**
-     * 注册账号
-     *
-     * @param UserRequest $request
-     * @return UserResource
-     * @author zhouxufeng <zxf@netsun.com>
-     * @date 2023/6/1 14:05
-     */
-    public function register(UserRequest $request)
-    {
-        $cacheKey = 'verificationCode_' . $request->verification_key;
-        $verifyData = \Cache::get($cacheKey);
-
-//        if (!$verifyData) {
-//            abort(403, '验证码已失效');
-//        }
-//
-//        if (!hash_equals($verifyData['code'], $request->verification_code)) {
-//            // 返回401
-//            throw new AuthenticationException('验证码错误');
-//        }
-
-        $user = User::create([
-            'username' => $request->get('username'),
-            'phone' => $verifyData['phone'] ?? "",
-            'password' => $request->get('password'),
-            'status' => true
-        ]);
-
-        // 清除验证码缓存
-        \Cache::forget($cacheKey);
-
-        $credentials = [
-            'username' => $user->username,
-            'password' => $request->get('password')
-        ];
-
-        if (!$token = Auth::guard('api')->attempt($credentials)) {
-            abort(403, '用户名或密码错误');
-        }
-
-        // 初始化会员信息
-
-
-        return $this->respondWithToken(auth('api')->user(), $token);
-    }
-
-    /**
      * 创建用户
      *
      * @param UserRequest $request
@@ -225,23 +178,5 @@ class UsersController extends Controller
         } else {
             return new BaseResource([]);
         }
-    }
-
-    /**
-     * 返回报文
-     *
-     * @param $token
-     * @return \Illuminate\Http\JsonResponse
-     * @author zhouxufeng <zxf@netsun.com>
-     * @date 2024/3/19 10:32
-     */
-    protected function respondWithToken(User $user, $token)
-    {
-        return response()->json([
-            'access_token' => $token,
-            'token_type' => 'Bearer',
-            'expires_in' => auth('api')->factory()->getTTL() * 60,
-            'member' => $user->member
-        ]);
     }
 }
