@@ -10,6 +10,7 @@ use App\Http\Resources\User\UserResource;
 use App\Http\Requests\Api\User\UserRequest;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Spatie\QueryBuilder\AllowedFilter;
 use Spatie\QueryBuilder\QueryBuilder;
 
@@ -88,7 +89,17 @@ class UsersController extends Controller
         // 清除验证码缓存
         \Cache::forget($cacheKey);
 
-        return new UserResource($user);
+        $credentials = [
+            'username' => $user->username,
+            'password' => $user->password
+        ];
+
+        if (!$token = Auth::guard('api')->attempt($credentials)) {
+            abort(403, '用户名或密码错误');
+        }
+
+
+        return $this->respondWithToken(auth('api')->user(), $token);
     }
 
     /**
@@ -212,5 +223,23 @@ class UsersController extends Controller
         } else {
             return new BaseResource([]);
         }
+    }
+
+    /**
+     * 返回报文
+     *
+     * @param $token
+     * @return \Illuminate\Http\JsonResponse
+     * @author zhouxufeng <zxf@netsun.com>
+     * @date 2024/3/19 10:32
+     */
+    protected function respondWithToken(User $user, $token)
+    {
+        return response()->json([
+            'access_token' => $token,
+            'token_type' => 'Bearer',
+            'expires_in' => auth('api')->factory()->getTTL() * 60,
+            'member' => $user->member
+        ]);
     }
 }
