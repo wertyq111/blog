@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Requests\Api\EasywechatAuthorizationRequest;
 use App\Http\Requests\Api\User\AuthorizationRequest;
+use App\Http\Requests\Api\WebAuthorizationRequest;
 use App\Models\User\Member;
 use App\Models\User\User;
 use Illuminate\Auth\AuthenticationException;
@@ -168,7 +169,6 @@ class AuthorizationsController extends Controller
                 $user->edit();
             }
 
-
             // 为对应用户创建 JWT
             $token = auth('api')->login($user);
 
@@ -176,6 +176,66 @@ class AuthorizationsController extends Controller
         } catch (\Exception $e) {
             throw $e;
         }
+    }
+
+    /**
+     * 注册账号
+     *
+     * @param WebAuthorizationRequest $request
+     * @return \Illuminate\Http\JsonResponse
+     * @author zhouxufeng <zxf@netsun.com>
+     * @date 2024/5/16 16:22
+     */
+    public function register(WebAuthorizationRequest $request)
+    {
+        $cacheKey = 'verificationCode_' . $request->get('captcha_key');
+        $verifyData = \Cache::get($cacheKey);
+
+        if (!$verifyData) {
+            abort(403, '验证码已失效');
+        }
+
+        if (!hash_equals($verifyData['code'], $request->get('captcha'))) {
+            // 返回401
+            throw new AuthenticationException('验证码错误');
+        }
+
+        $user = User::create([
+            'username' => $request->get('username'),
+            'phone' => $verifyData['phone'] ?? "",
+            'password' => $request->get('password'),
+            'status' => true
+        ]);
+
+        // 清除验证码缓存
+        \Cache::forget($cacheKey);
+
+        // 初始化会员信息
+        if($user->id) {
+            // 更新用户组
+            $user->roles()->sync(self::DEFAULT_ROLES,false);
+            $user->edit();
+
+            // 创建用户会员记录
+            $member = new Member();
+            $memberInfo = array_merge([
+                'user_id' => $user->id,
+                'nickname' => "普通注册用户"
+            ], self::DEFAULT_MEMBER);
+            $member->fill($memberInfo);
+            $member->edit();
+        }
+
+        $credentials = [
+            'username' => $user->username,
+            'password' => $request->get('password')
+        ];
+
+        if (!$token = Auth::guard('api')->attempt($credentials)) {
+            abort(403, '用户名或密码错误');
+        }
+
+        return $this->respondWithToken(auth('api')->user(), $token);
     }
 
     /**
