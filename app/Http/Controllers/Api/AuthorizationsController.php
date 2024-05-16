@@ -188,17 +188,20 @@ class AuthorizationsController extends Controller
      */
     public function register(WebAuthorizationRequest $request)
     {
-        $cacheKey = 'verificationCode_' . $request->get('captcha_key');
-        $verifyData = \Cache::get($cacheKey);
+        $captchaCacheKey = 'captcha_'. $request->get('captcha_key');
+        $captchaData = \Cache::get($captchaCacheKey);
 
-        if (!$verifyData) {
-            abort(403, '验证码已失效');
+        if(!$captchaData) {
+            abort(403, '图片验证码已失效');
         }
 
-        if (!hash_equals($verifyData['code'], $request->get('captcha'))) {
-            // 返回401
-            throw new AuthenticationException('验证码错误');
+        if (!hash_equals(strtolower($captchaData['code']), strtolower($request->get('captcha')))) {
+            \Cache::forget($captchaCacheKey);
+            abort(403, '验证码错误');
         }
+
+        // 清除图片验证码
+        \Cache::forget($captchaCacheKey);
 
         $user = User::create([
             'username' => $request->get('username'),
@@ -206,9 +209,6 @@ class AuthorizationsController extends Controller
             'password' => $request->get('password'),
             'status' => true
         ]);
-
-        // 清除验证码缓存
-        \Cache::forget($cacheKey);
 
         // 初始化会员信息
         if($user->id) {
