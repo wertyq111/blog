@@ -70,18 +70,18 @@ class UsersController extends Controller
         $cacheKey = 'verificationCode_' . $request->verification_key;
         $verifyData = \Cache::get($cacheKey);
 
-        if (!$verifyData) {
-            abort(403, '验证码已失效');
-        }
-
-        if (!hash_equals($verifyData['code'], $request->verification_code)) {
-            // 返回401
-            throw new AuthenticationException('验证码错误');
-        }
+//        if (!$verifyData) {
+//            abort(403, '验证码已失效');
+//        }
+//
+//        if (!hash_equals($verifyData['code'], $request->verification_code)) {
+//            // 返回401
+//            throw new AuthenticationException('验证码错误');
+//        }
 
         $user = User::create([
             'username' => $request->get('username'),
-            'phone' => $verifyData['phone'],
+            'phone' => $verifyData['phone'] ?? "",
             'password' => $request->get('password'),
             'status' => true
         ]);
@@ -91,12 +91,14 @@ class UsersController extends Controller
 
         $credentials = [
             'username' => $user->username,
-            'password' => $user->password
+            'password' => $request->get('password')
         ];
 
         if (!$token = Auth::guard('api')->attempt($credentials)) {
             abort(403, '用户名或密码错误');
         }
+
+        // 初始化会员信息
 
 
         return $this->respondWithToken(auth('api')->user(), $token);
