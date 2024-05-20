@@ -70,6 +70,9 @@ Route::name('api')->group(function () {
     // 忘记密码
     Route::post('user/forget', [AuthorizationsController::class, 'forget'])->name('user.forget');
 
+    // 查询账号
+    Route::get('user/query-username', [AuthorizationsController::class, 'queryUsername'])->name('user.query-username');
+
     // 用户登录
     Route::post('user/login', [AuthorizationsController::class, 'login'])->name('user.login');
 
