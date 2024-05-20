@@ -34,7 +34,7 @@ class VerificationCodesController extends Controller
             // 验证手机号是否已经被注册过
             $user = User::where('phone', $phone)->first();
             if($user) {
-                throw new \Exception("手机号码已存在");
+                throw new AuthenticationException('手机号码已被注册');
             }
         }
 
