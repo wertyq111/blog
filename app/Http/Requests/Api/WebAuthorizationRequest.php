@@ -26,6 +26,7 @@ class WebAuthorizationRequest extends FormRequest
     public function attributes()
     {
         return [
+            'username' => '用户名不存在',
             'captcha_key' => '短信验证码必要字段',
             'captcha' => '短信验证码',
             'phone.mobile' => '电话格式不对',

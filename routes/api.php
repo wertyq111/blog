@@ -67,6 +67,9 @@ Route::name('api')->group(function () {
     // 用户注册
     Route::post('user/register', [AuthorizationsController::class, 'register'])->name('user.register');
 
+    // 忘记密码
+    Route::post('user/forget', [AuthorizationsController::class, 'forget'])->name('user.forget');
+
     // 用户登录
     Route::post('user/login', [AuthorizationsController::class, 'login'])->name('user.login');
 
