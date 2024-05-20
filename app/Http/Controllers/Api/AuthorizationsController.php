@@ -206,7 +206,7 @@ class AuthorizationsController extends Controller
 
         $user = User::create([
             'username' => $request->get('username'),
-            'phone' => $verifyData['phone'] ?? "",
+            'phone' => $captchaData['phone'] ?? "",
             'password' => $request->get('password'),
             'status' => true
         ]);
