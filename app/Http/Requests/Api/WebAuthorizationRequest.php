@@ -15,12 +15,28 @@ class WebAuthorizationRequest extends FormRequest
      */
     public function rules()
     {
-        return [
-            'username' => 'required|between:3,25|regex:/^[A-Za-z0-9\-\_]+$/|unique:users,username',
-            'password' => 'required|alpha_dash|min:6',
-            'captcha_key' => 'required|string',
-            'captcha' => 'required|string',
-        ];
+        switch($this->method()) {
+            case 'POST':
+                list($class, $method) = explode('@', $this->route()->getActionName());
+                if($method == 'register') {
+                    return [
+                        'username' => 'required|between:3,25|regex:/^[A-Za-z0-9\-\_]+$/|unique:users,username',
+                        'password' => 'required|alpha_dash|min:6',
+                        'captcha_key' => 'required|string',
+                        'captcha' => 'required|string',
+                    ];
+                } else {
+                    return [
+                        'username' => 'required|between:3,25|regex:/^[A-Za-z0-9\-\_]+$/',
+                        'password' => 'required|alpha_dash|min:6',
+                        'captcha_key' => 'required|string',
+                        'captcha' => 'required|string',
+                    ];
+                }
+                break;
+            default:
+                break;
+        }
     }
 
     public function attributes()

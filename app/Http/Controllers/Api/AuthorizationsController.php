@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Requests\Api\EasywechatAuthorizationRequest;
+use App\Http\Requests\Api\FormRequest;
 use App\Http\Requests\Api\User\AuthorizationRequest;
 use App\Http\Requests\Api\WebAuthorizationRequest;
 use App\Models\User\Member;
@@ -125,14 +126,14 @@ class AuthorizationsController extends Controller
             throw new AuthenticationException('参数错误，未获取用户信息');
         }
 
-        try{
+        try {
             // 找到 openid 对应的用户
             $user = User::where('openid', $oauthUser['openid'])->first();
 
             $attributes['weixin_session_key'] = $oauthUser['session_key'];
 
 
-            if(!$user){
+            if (!$user) {
                 //添加用户信息
                 $user = new User();
                 $data = [
@@ -142,15 +143,15 @@ class AuthorizationsController extends Controller
                 $user->fill($data);
                 $user->edit();
 
-                if($user->id) {
+                if ($user->id) {
                     // 添加用户账号及密码
                     $user->fill([
-                        'username' => self::ACCOUNT_GROUP['mini_program']. str_pad($user->id, 6, 0, STR_PAD_LEFT),
+                        'username' => self::ACCOUNT_GROUP['mini_program'] . str_pad($user->id, 6, 0, STR_PAD_LEFT),
                         'password' => self::DEFAULT_PASSWORD
                     ]);
 
                     // 更新用户组
-                    $user->roles()->sync(self::DEFAULT_ROLES,false);
+                    $user->roles()->sync(self::DEFAULT_ROLES, false);
 
                     $user->edit();
 
@@ -188,10 +189,10 @@ class AuthorizationsController extends Controller
      */
     public function register(WebAuthorizationRequest $request)
     {
-        $captchaCacheKey = 'verificationCode_'. $request->get('captcha_key');
+        $captchaCacheKey = 'verificationCode_' . $request->get('captcha_key');
         $captchaData = \Cache::get($captchaCacheKey);
 
-        if(!$captchaData) {
+        if (!$captchaData) {
             abort(403, '短信验证码已失效');
         }
 
@@ -211,9 +212,9 @@ class AuthorizationsController extends Controller
         ]);
 
         // 初始化会员信息
-        if($user->id) {
+        if ($user->id) {
             // 更新用户组
-            $user->roles()->sync(self::DEFAULT_ROLES,false);
+            $user->roles()->sync(self::DEFAULT_ROLES, false);
             $user->edit();
 
             // 创建用户会员记录
@@ -239,6 +240,75 @@ class AuthorizationsController extends Controller
     }
 
     /**
+     * 忘记密码
+     *
+     * @param WebAuthorizationRequest $request
+     * @return \Illuminate\Http\JsonResponse
+     * @author zhouxufeng <zxf@netsun.com>
+     * @date 2024/5/20 16:18
+     */
+    public function forget(WebAuthorizationRequest $request)
+    {
+        $captchaCacheKey = 'verificationCode_' . $request->get('captcha_key');
+        $captchaData = \Cache::get($captchaCacheKey);
+
+        if (!$captchaData) {
+            abort(403, '短信验证码已失效');
+        }
+
+        if (!hash_equals(strtolower($captchaData['code']), strtolower($request->get('captcha')))) {
+            \Cache::forget($captchaCacheKey);
+            abort(403, '短信验证码错误');
+        }
+
+        // 清除短信验证码
+        \Cache::forget($captchaCacheKey);
+
+        $username = $request->get('username');
+
+        $user = User::where('username', $username)->first();
+
+        // 修改会员密码
+        if ($user->id) {
+            $user->fill([
+                'password' => $request->get('password')
+            ]);
+
+            $user->edit();
+        }
+
+        return response()->json([]);
+    }
+
+    /**
+     * 查询账号
+     *
+     * @param FormRequest $request
+     * @return \Illuminate\Http\JsonResponse
+     * @author zhouxufeng <zxf@netsun.com>
+     * @date 2024/5/20 16:52
+     */
+    public function queryUsername(FormRequest $request)
+    {
+        $phone = $request->get('phone');
+        $openid = $request->get('openid');
+        $email = $request->get('email');
+
+        $condition = null;
+        if($phone) {
+            $condition = ['phone' => $phone];
+        } elseif($openid) {
+            $condition = ['openid' => $openid];
+        }elseif($email) {
+            $condition = ['email' => $email];
+        }
+
+        $user = $condition ? User::where($condition)->first() : null;
+
+        return response()->json(['username' => $user ? $user->username : '']);
+    }
+
+    /**
      * 获取用户信息(暂时没用)
      *
      * @param EasywechatAuthorizationRequest $request
@@ -257,7 +327,7 @@ class AuthorizationsController extends Controller
             $encryptedData = $request->encryptedData;
             if ($sessionKey && $iv && $encryptedData) {
                 $utils = $miniProgram->getUtils();
-                $userInfo = $utils->decryptSession($sessionKey, $iv,  $encryptedData);
+                $userInfo = $utils->decryptSession($sessionKey, $iv, $encryptedData);
                 dd($userInfo);
             } else {
                 throw new AuthenticationException('参数错误，未获取用户信息');
@@ -281,10 +351,10 @@ class AuthorizationsController extends Controller
         $phoneValid = new PhoneNumber($username, 'CN');
         $credentials = [];
 
-        $captchaCacheKey = 'captcha_'. $request->get('captcha_key');
+        $captchaCacheKey = 'captcha_' . $request->get('captcha_key');
         $captchaData = \Cache::get($captchaCacheKey);
 
-        if(!$captchaData) {
+        if (!$captchaData) {
             abort(403, '图片验证码已失效');
         }
 
