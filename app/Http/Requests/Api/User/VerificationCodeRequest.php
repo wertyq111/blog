@@ -15,7 +15,7 @@ class VerificationCodeRequest extends FormRequest
     {
         return [
             'captcha_key' => 'required|string',
-            'captcha_code' => 'required|string',
+            'captcha' => 'required|string',
         ];
     }
 
@@ -23,7 +23,7 @@ class VerificationCodeRequest extends FormRequest
      {
          return [
              'captcha_key' => '图片验证码必要字段',
-             'captcha_code' => '图片验证码',
+             'captcha' => '图片验证码',
          ];
      }
 }

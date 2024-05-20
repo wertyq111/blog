@@ -20,14 +20,14 @@ class VerificationCodesController extends Controller
             abort(403, '图片验证码已失效');
         }
 
-        if (!hash_equals(strtolower($captchaData['code']), strtolower($request->get('captcha_code')))) {
+        if (!hash_equals(strtolower($captchaData['code']), strtolower($request->get('captcha')))) {
             \Cache::forget($captchaCacheKey);
             throw new AuthenticationException('验证码错误');
         }
 
         $phone = $captchaData['phone'];
 
-        if(!app()->environment('production')) {
+        if(!app()->environment('productions')) {
             $code = '1234';
         } else {
             // 生成随机4位数, 左侧补 0
@@ -57,6 +57,6 @@ class VerificationCodesController extends Controller
         return response()->json([
             'key' => $key,
             'expired_at' => $expiredAt->toDateTimeString()
-        ])->setStatusCode(201);
+        ]);
     }
 }
