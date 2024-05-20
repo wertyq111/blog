@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\User;
 
 use App\Http\Controllers\Api\Controller;
 use App\Http\Requests\Api\User\VerificationCodeRequest;
+use App\Models\User\User;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Support\Str;
 use Overtrue\EasySms\EasySms;
@@ -13,6 +14,7 @@ class VerificationCodesController extends Controller
 {
     public function send(VerificationCodeRequest $request, EasySms $easySms)
     {
+        $type = $request->get('type');
         $captchaCacheKey = 'captcha_'. $request->get('captcha_key');
         $captchaData = \Cache::get($captchaCacheKey);
 
@@ -26,6 +28,15 @@ class VerificationCodesController extends Controller
         }
 
         $phone = $captchaData['phone'];
+
+        // 根据类型进行处理
+        if($type == 'register') {
+            // 验证手机号是否已经被注册过
+            $user = User::where('phone', $phone)->first();
+            if($user) {
+                throw new \Exception("手机号码已存在");
+            }
+        }
 
         if(!app()->environment('production')) {
             $code = '1234';
