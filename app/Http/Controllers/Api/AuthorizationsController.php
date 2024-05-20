@@ -188,16 +188,16 @@ class AuthorizationsController extends Controller
      */
     public function register(WebAuthorizationRequest $request)
     {
-        $captchaCacheKey = 'captcha_'. $request->get('captcha_key');
+        $captchaCacheKey = 'verificationCode_'. $request->get('captcha_key');
         $captchaData = \Cache::get($captchaCacheKey);
 
         if(!$captchaData) {
-            abort(403, '图片验证码已失效');
+            abort(403, '短信验证码已失效');
         }
 
         if (!hash_equals(strtolower($captchaData['code']), strtolower($request->get('captcha')))) {
             \Cache::forget($captchaCacheKey);
-            abort(403, '验证码错误');
+            abort(403, '短信验证码错误');
         }
 
         // 清除图片验证码
