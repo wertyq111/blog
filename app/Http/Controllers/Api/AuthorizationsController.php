@@ -351,11 +351,32 @@ class AuthorizationsController extends Controller
         $phoneValid = new PhoneNumber($username, 'CN');
         $credentials = [];
 
-        $captchaCacheKey = 'captcha_' . $request->get('captcha_key');
+        // 根据账号验证判断登录方式
+        $phoneValid->isValid() ? $credentials['phone'] = $username :
+            (filter_var($username, FILTER_VALIDATE_EMAIL) ? $credentials['email'] = $username :
+                $credentials['username'] = $username);
+
+        // 根据登录类型对验证码进行处理
+        $types = [
+            'image' => [
+                'name' => 'captcha',
+                'tip' => '图片',
+                'isPassword' => true
+            ],
+            'phone' => [
+                'name' => 'verificationCode',
+                'tip' => '短信',
+                'isPassword' => false
+            ]
+        ];
+
+        $type = $types[$request->get('type')] ?? $types['image'];
+
+        $captchaCacheKey = "{$type['name']}_" . $request->get('captcha_key');
         $captchaData = \Cache::get($captchaCacheKey);
 
         if (!$captchaData) {
-            abort(403, '图片验证码已失效');
+            abort(403, "{$type['tip']}验证码已失效");
         }
 
         if (!hash_equals(strtolower($captchaData['code']), strtolower($request->get('captcha')))) {
@@ -366,16 +387,28 @@ class AuthorizationsController extends Controller
         // 清除图片验证码
         \Cache::forget($captchaCacheKey);
 
-        $phoneValid->isValid() ? $credentials['phone'] = $username :
-            (filter_var($username, FILTER_VALIDATE_EMAIL) ? $credentials['email'] = $username :
-                $credentials['username'] = $username);
+        if($type['isPassword']) {
+            $credentials['password'] = $request->get('password');
 
-        $credentials['password'] = $request->get('password');
+            if (!$token = Auth::guard('api')->attempt($credentials)) {
+                abort(403, '用户名或密码错误');
+            }
+        } else {
+            // 验证手机号是否相同
+            if ($captchaData['phone'] != $username) {
+                abort(403, "手机号码错误");
+            }
 
-        if (!$token = Auth::guard('api')->attempt($credentials)) {
-            abort(403, '用户名或密码错误');
+            $user = User::where('phone', $username)->first();
+            if($user) {
+                // 登录
+                if(Auth::guard('api')->onceUsingId($user->id)) {
+                    $token = Auth::guard('api')->tokenById($user->id);
+                }
+            } else {
+                abort(403, '用户不存在');
+            }
         }
-
 
         return $this->respondWithToken(auth('api')->user(), $token);
 

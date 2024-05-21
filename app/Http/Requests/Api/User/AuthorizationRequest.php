@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Api\User;
 
 use App\Http\Requests\Api\FormRequest;
+use Illuminate\Validation\Rules\RequiredIf;
 
 class AuthorizationRequest extends FormRequest
 {
@@ -13,11 +14,17 @@ class AuthorizationRequest extends FormRequest
      */
     public function rules(): array
     {
+        // 其他登录方式不需要密码
+        $otherTypes = ['phone'];
+
         return [
             'username' => 'required|string',
-            'password' => 'required|alpha_dash',
-            //'captcha_key' => 'required|string',
-            //'captcha' => 'required|string'
+            'password' => [
+                new RequiredIf(!$this->type || !in_array($this->type, $otherTypes)),
+                'alpha_dash'
+            ],
+            'captcha_key' => 'required|string',
+            'captcha' => 'required|string'
         ];
     }
 }
