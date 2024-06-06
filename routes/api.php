@@ -12,6 +12,8 @@ use App\Http\Controllers\Api\User\VerificationCodesController;
 use App\Http\Controllers\Api\AuthorizationsController;
 use App\Http\Controllers\Api\MiniProgram\WallpaperController;
 use App\Http\Controllers\Api\MiniProgram\WallpaperClassifyController;
+use App\Http\Controllers\Api\MiniProgram\PhotoController;
+use App\Http\Controllers\Api\MiniProgram\PhotoCategoryController;
 use App\Http\Controllers\Api\Admin\ServerPathController;
 use App\Http\Controllers\Api\Admin\InitModelController;
 use App\Http\Controllers\Api\Web\ArticlesController;
@@ -25,6 +27,8 @@ use App\Models\Permission\Role;
 use App\Models\Permission\Menu;
 use App\Models\MiniProgram\WallpaperClassify;
 use App\Models\MiniProgram\Wallpaper;
+use App\Models\MiniProgram\Photo;
+use App\Models\MiniProgram\PhotoCategory;
 use App\Models\Admin\ServerPath;
 use App\Models\Admin\InitModel;
 use App\Models\Web\Article;
@@ -294,6 +298,41 @@ Route::name('api')->group(function () {
         // 删除文章标签
         Route::delete('labels/{label}', [LabelsController::class, 'delete'])->name('labels.delete');
         /** 笔记接口结束 */
+
+        /** 相册接口开始 */
+        // 相册列表
+        Route::get('photo/index', [PhotoController::class, 'index'])->name('photo.index')
+            ->middleware('filter.process:' . Photo::class);
+        // 相册所有列表
+        Route::get('photo/list', [PhotoController::class, 'list'])->name('photo.list');
+        // 精选照片
+        Route::get('photo/refine', [PhotoController::class, 'refine'])->name('photo.refine');
+        // 相册详情
+        Route::get('photo/{photo}', [PhotoController::class, 'info'])->name('photo.info');
+        // 添加相册
+        Route::post('photo/add', [PhotoController::class, 'add'])->name('photo.add');
+        // 修改相册
+        Route::post('photo/{photo}', [PhotoController::class, 'edit'])->name('photo.edit');
+        // 删除相册
+        Route::delete('photo/{photo}', [PhotoController::class, 'delete'])->name('photo.delete');
+        // 相册分类列表
+        Route::get('photo-categories/index', [PhotoCategoryController::class, 'index'])->name('photo-categories.index')
+            ->middleware('filter.process:' . PhotoCategory::class);
+        // 相册分类所有列表
+        Route::get('photo-categories/list', [PhotoCategoryController::class, 'list'])->name('photo-categories.list');
+        // 置顶相册
+        Route::get('photo-categories/new', [PhotoCategoryController::class, 'new'])->name('photo-categories.new');
+        // 校验相册分类
+        Route::get('photo-categories/check', [PhotoCategoryController::class, 'check'])->name('photo-categories.check');
+        // 相册分类详情
+        Route::get('photo-categories/{category}', [PhotoCategoryController::class, 'info'])->name('photo-categories.info');
+        // 添加相册分类
+        Route::post('photo-categories/add', [PhotoCategoryController::class, 'add'])->name('photo-categories.add');
+        // 修改相册分类
+        Route::post('photo-categories/{category}', [PhotoCategoryController::class, 'edit'])->name('photo-categories.edit');
+        // 删除相册分类
+        Route::delete('photo-categories/{category}', [PhotoCategoryController::class, 'delete'])->name('photo-categories.delete');
+        /** 相册接口结束 */
     });
     //});
 

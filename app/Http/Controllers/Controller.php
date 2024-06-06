@@ -61,8 +61,14 @@ class Controller extends BaseController
             $queryBuilder->allowedIncludes($config['includes']);
         }
 
+        // 允许字段筛选
         if(isset($config['allowedFilters'])) {
             $queryBuilder->allowedFilters($config['allowedFilters']);
+        }
+
+        // 额外的查询条件
+        if(isset($config['conditions'])) {
+            $queryBuilder->where($config['conditions']);
         }
 
         if(isset($config['orderBy'])) {
