@@ -100,6 +100,7 @@ class PhotoService  extends BaseService
 
         $photosTemp = $photos->toArray();
         foreach($photosTemp as &$photo) {
+            $photo['thumbnailUrl'] = $photo['url']. "?imageMogr2/thumbnail/!30p";
             $photo['url'] = $this->convertFormat($photo['url']);
         }
 
