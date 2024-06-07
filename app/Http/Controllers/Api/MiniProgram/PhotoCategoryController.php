@@ -8,9 +8,16 @@ use App\Http\Requests\Api\MiniProgram\PhotoCategoryRequest;
 use App\Http\Resources\BaseResource;
 use App\Http\Resources\MiniProgram\PhotoResource;
 use App\Models\MiniProgram\PhotoCategory;
+use App\Services\Api\MiniProgram\PhotoService;
 
 class PhotoCategoryController extends Controller
 {
+    public function __construct()
+    {
+        parent::__construct();
+        $this->service = new PhotoService();
+    }
+
     /**
      * 相册分类列表
      *
@@ -73,10 +80,11 @@ class PhotoCategoryController extends Controller
             return response()->json([]);
         }
         $category->num = count($category->photos);
+        //$category->photosList = [];
         foreach($category->photos as $photo) {
             $photo->date = $photo->created_at;
         }
-        $photos = $category->photos->toArray();
+        $photos = $this->service->sift($category->photos);
 
         // 根据创建日期进行排序
         $photosTemp = array_column($photos,'date'); //返回数组中指定的一列
@@ -174,13 +182,13 @@ class PhotoCategoryController extends Controller
         ];
 
         $classifies = $this->queryBuilder($category, false, $config);
+
         foreach($classifies as $classify) {
             if(count($classify->photos) > 0) {
-                $classify->photo = new PhotoResource($classify->photos[count($classify->photos) - 1]);
+                $classify->photoList = PhotoResource::collection($classify->photos);
+                $classify->photo = $classify->photoList[count($classify->photos) - 1];
             }
-            $classify->photos = PhotoResource::collection($classify->photos);
         }
-        unset($classify);
 
         return $this->resource($classifies, ['time' => true, 'collection' => true]);
     }
@@ -203,4 +211,5 @@ class PhotoCategoryController extends Controller
             ? $this->resource($photoCategory, ['time' => true, 'collection' => true])
             : response()->json([]);
     }
+
 }
