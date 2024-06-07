@@ -81,4 +81,44 @@ class PhotoService  extends BaseService
 
         return $category;
     }
+
+    /**
+     * 筛选照片数据
+     *
+     * @param $photos
+     * @param $isArray
+     * @return mixed
+     * @author zhouxufeng <zxf@netsun.com>
+     * @date 2024/6/7 11:14
+     */
+    public function sift($photos, $isArray = true)
+    {
+        $photosTemp = [];
+        if($isArray == false) {
+            $photosTemp[] = $photos->toArray();
+        }
+
+        $photosTemp = $photos->toArray();
+        foreach($photosTemp as &$photo) {
+            $photo['url'] = $this->convertFormat($photo['url']);
+        }
+
+        return $photosTemp;
+    }
+
+    /**
+     * 格式转换
+     *
+     * @param $url
+     * @return string
+     * @author zhouxufeng <zxf@netsun.com>
+     * @date 2024/6/7 11:12
+     */
+    public function convertFormat($url)
+    {
+        $convertFormat = ['heic'];
+
+        $imageFormat = str_replace(".", "", strtolower(strrchr($url,'.')));
+        return in_array($imageFormat, $convertFormat) ? $url. "?imageMogr2/format/jpg" : $url;
+    }
 }
