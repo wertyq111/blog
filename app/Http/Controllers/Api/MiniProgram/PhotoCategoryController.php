@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\Controller;
 use App\Http\Requests\Api\FormRequest;
 use App\Http\Requests\Api\MiniProgram\PhotoCategoryRequest;
 use App\Http\Resources\BaseResource;
+use App\Http\Resources\MiniProgram\PhotoResource;
 use App\Models\MiniProgram\PhotoCategory;
 
 class PhotoCategoryController extends Controller
@@ -175,8 +176,9 @@ class PhotoCategoryController extends Controller
         $classifies = $this->queryBuilder($category, false, $config);
         foreach($classifies as $classify) {
             if(count($classify->photos) > 0) {
-                $classify->photo = $classify->photos[count($classify->photos) - 1];
+                $classify->photo = new PhotoResource($classify->photos[count($classify->photos) - 1]);
             }
+            $classify->photos = PhotoResource::collection($classify->photos);
         }
         unset($classify);
 
