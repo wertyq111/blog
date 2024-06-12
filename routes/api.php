@@ -313,6 +313,8 @@ Route::name('api')->group(function () {
         Route::post('photo/add', [PhotoController::class, 'add'])->name('photo.add');
         // 修改相册
         Route::post('photo/{photo}', [PhotoController::class, 'edit'])->name('photo.edit');
+        // 批量删除
+        Route::delete('photo/batch-delete', [PhotoController::class, 'batchDelete'])->name('photo.batch-delete');
         // 删除相册
         Route::delete('photo/{photo}', [PhotoController::class, 'delete'])->name('photo.delete');
         // 相册分类列表

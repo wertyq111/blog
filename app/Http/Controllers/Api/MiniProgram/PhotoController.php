@@ -174,13 +174,33 @@ class PhotoController extends Controller
             return response()->json([]);
         }
 
-        $photo->delete();
+        // 物理删除
+        $photo->forceDelete();
 
         $imagePath = preg_replace("/http(s):\/\/" . env("QINIU_DOMAIN", null) . "\//", "", $photo->url);
 
         // 删除原先的图片
         if ($imagePath !== null) {
             $result = $this->qiniuService->delete($imagePath);
+        }
+
+        return response()->json([]);
+    }
+
+    /**
+     * 批量删除照片
+     *
+     * @param FormRequest $request
+     * @param Photo $photo
+     * @return \Illuminate\Http\JsonResponse
+     * @author zhouxufeng <zxf@netsun.com>
+     * @date 2024/6/12 14:02
+     */
+    public function batchDelete(FormRequest $request, Photo $photo)
+    {
+        $ids = $request->get('id');
+        foreach($ids as $id) {
+            $this->delete($photo->find($id));
         }
 
         return response()->json([]);
