@@ -76,9 +76,8 @@ class PhotoCategoryController extends Controller
      */
     public function info(PhotoCategory $category)
     {
-        if(!$this->authorizeForMember($category)) {
-            return response()->json([]);
-        }
+        $this->authorize('update', $category);
+
         $category->num = count($category->photos);
         //$category->photosList = [];
         foreach($category->photos as $photo) {
@@ -127,9 +126,7 @@ class PhotoCategoryController extends Controller
      */
     public function edit(PhotoCategory $category, FormRequest $request)
     {
-        if(!$this->authorizeForMember($category)) {
-            return response()->json([]);
-        }
+        $this->authorize('update', $category);
 
         $data = $request->getSnakeRequest();
 
@@ -150,9 +147,7 @@ class PhotoCategoryController extends Controller
      */
     public function delete(PhotoCategory $category)
     {
-        if(!$this->authorizeForMember($category)) {
-            return response()->json([]);
-        }
+        $this->authorize('update', $category);
 
         if(count($category->photos) == 0) {
             $category->delete();
@@ -205,7 +200,7 @@ class PhotoCategoryController extends Controller
     {
         $name = $request->get('name');
 
-        $photoCategory = PhotoCategory::where('name', $name)->get();
+        $photoCategory = $this->memberExistCheck(PhotoCategory::class, ['name' => $name]);
 
         return $photoCategory && $name
             ? $this->resource($photoCategory, ['time' => true, 'collection' => true])

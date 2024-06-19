@@ -85,6 +85,13 @@ class User extends BaseModel implements MustVerifyEmail, JWTSubject
         return $this->belongsToMany(Role::class);
     }
 
+    /**
+     * 权限列表
+     *
+     * @return array
+     * @author zhouxufeng <zxf@netsun.com>
+     * @date 2024/6/17 15:40
+     */
     public function permissions()
     {
         $permissions = [];
@@ -103,5 +110,18 @@ class User extends BaseModel implements MustVerifyEmail, JWTSubject
         }
 
         return array_unique($permissions);
+    }
+
+    /**
+     * 验证登录用户
+     *
+     * @param $model
+     * @return bool
+     * @author zhouxufeng <zxf@netsun.com>
+     * @date 2024/6/17 15:40
+     */
+    public function isAuthorOf($model)
+    {
+        return $this->member->id == $model->member_id;
     }
 }
