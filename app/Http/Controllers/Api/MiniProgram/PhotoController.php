@@ -64,34 +64,9 @@ class PhotoController extends Controller
      */
     public function info(Photo $photo)
     {
-        if(!$this->authorizeForMember($photo)) {
-            return response()->json([]);
-        }
+        $this->authorize('update', $photo);
 
         return $this->resource($photo);
-    }
-
-    /**
-     * 获取随机 9 张照片
-     *
-     * @param Photo $photo
-     * @return BaseResource
-     * @author zhouxufeng <zxf@netsun.com>
-     * @date 2024/4/9 14:06
-     */
-    public function random(Photo $photo)
-    {
-        $photos = $photo->inRandomOrder()->limit(9)->get();
-
-        foreach ($photos as &$photo) {
-            $photo['small_pic_url'] = strstr($photo['url'], env("QINIU_DOMAIN", null))
-                ? $photo['url'] . "?imageMogr2/thumbnail/!30p"
-                : "http://" . env("QINIU_DOMAIN", null) . "/" . $photo['url'] . "?imageMogr2/thumbnail/!30p";
-            $photo['tags'] = json_decode($photo['tags'], true);
-        }
-        unset($photo);
-
-        return $this->resource($photos);
     }
 
     /**
@@ -134,9 +109,7 @@ class PhotoController extends Controller
      */
     public function edit(Photo $photo, FormRequest $request)
     {
-        if(!$this->authorizeForMember($photo)) {
-            return response()->json([]);
-        }
+        $this->authorize('update', $photo);
 
         $data = $request->getSnakeRequest();
 
@@ -170,9 +143,7 @@ class PhotoController extends Controller
      */
     public function delete(Photo $photo)
     {
-        if(!$this->authorizeForMember($photo)) {
-            return response()->json([]);
-        }
+        $this->authorize('update', $photo);
 
         // 物理删除
         $photo->forceDelete();

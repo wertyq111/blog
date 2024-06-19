@@ -13,19 +13,33 @@ class Controller extends BaseController
     }
 
     /**
-     * 验证是否是登录用户或增加登录用户查询条件
+     * 增加登录用户查询条件
      *
      * @param $opponent
      * @return array|bool
      * @author zhouxufeng <zxf@netsun.com>
      * @date 2024/5/30 14:31
      */
-    public function authorizeForMember($opponent = null)
+    public function authorizeForMember()
     {
-        if($opponent) {
-            return $opponent->member_id && $opponent->member_id == auth('api')->user()->member->id;
-        } else {
-            return ['member_id' => auth('api')->user()->member->id];
-        }
+        return ['member_id' => auth('api')->user()->member->id];
+    }
+
+    /**
+     * 会员信息校验
+     *
+     * @param $model
+     * @param $where
+     * @return \Illuminate\Contracts\Pagination\LengthAwarePaginator|\Illuminate\Database\Eloquent\Collection|\Illuminate\Support\Collection|mixed[]|\Spatie\QueryBuilder\QueryBuilder[]
+     * @author zhouxufeng <zxf@netsun.com>
+     * @date 2024/6/19 13:56
+     */
+    public function memberExistCheck($model, $where)
+    {
+        $config = [
+            'conditions' => array_merge($this->authorizeForMember(), $where)
+        ];
+
+        return $this->queryBuilder($model, false, $config);
     }
 }

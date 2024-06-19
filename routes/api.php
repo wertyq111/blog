@@ -14,6 +14,9 @@ use App\Http\Controllers\Api\MiniProgram\WallpaperController;
 use App\Http\Controllers\Api\MiniProgram\WallpaperClassifyController;
 use App\Http\Controllers\Api\MiniProgram\PhotoController;
 use App\Http\Controllers\Api\MiniProgram\PhotoCategoryController;
+use App\Http\Controllers\Api\MiniProgram\MaterialController;
+use App\Http\Controllers\Api\MiniProgram\HouseController;
+use App\Http\Controllers\Api\MiniProgram\ImageController;
 use App\Http\Controllers\Api\Admin\ServerPathController;
 use App\Http\Controllers\Api\Admin\InitModelController;
 use App\Http\Controllers\Api\Web\ArticlesController;
@@ -29,6 +32,8 @@ use App\Models\MiniProgram\WallpaperClassify;
 use App\Models\MiniProgram\Wallpaper;
 use App\Models\MiniProgram\Photo;
 use App\Models\MiniProgram\PhotoCategory;
+use App\Models\MiniProgram\Material;
+use App\Models\MiniProgram\House;
 use App\Models\Admin\ServerPath;
 use App\Models\Admin\InitModel;
 use App\Models\Web\Article;
@@ -335,6 +340,46 @@ Route::name('api')->group(function () {
         // 删除相册分类
         Route::delete('photo-categories/{category}', [PhotoCategoryController::class, 'delete'])->name('photo-categories.delete');
         /** 相册接口结束 */
+        /** 房屋接口开始 */
+        Route::get('house/index', [HouseController::class, 'index'])->name('house.index')
+            ->middleware('filter.process:' . House::class);
+        // 所有列表
+        Route::get('house/list', [HouseController::class, 'list'])->name('house.list');
+        // 校验
+        Route::get('house/check', [HouseController::class, 'check'])->name('house.check');
+        // 详情
+        Route::get('house/{house}', [HouseController::class, 'info'])->name('house.info');
+        // 添加
+        Route::post('house/add', [HouseController::class, 'add'])->name('house.add');
+        // 修改
+        Route::post('house/{house}', [HouseController::class, 'edit'])->name('house.edit');
+        // 删除
+        Route::delete('house/{house}', [HouseController::class, 'delete'])->name('house.delete');
+        /** 房屋接口结束 */
+        /** 物料接口开始 */
+        // 列表
+        Route::get('material/index', [MaterialController::class, 'index'])->name('material.index')
+            ->middleware('filter.process:' . Material::class);
+        // 所有列表
+        Route::get('material/list', [MaterialController::class, 'list'])->name('material.list');
+        // 校验
+        Route::get('material/check', [MaterialController::class, 'check'])->name('material.check');
+        // 详情
+        Route::get('material/{material}', [MaterialController::class, 'info'])->name('material.info');
+        // 添加
+        Route::post('material/add', [MaterialController::class, 'add'])->name('material.add');
+        // 修改
+        Route::post('material/{material}', [MaterialController::class, 'edit'])->name('material.edit');
+        // 批量删除
+        Route::delete('material/batch-delete', [MaterialController::class, 'batchDelete'])->name('material.batch-delete');
+        // 删除
+        Route::delete('material/{material}', [MaterialController::class, 'delete'])->name('material.delete');
+        /** 物料接口结束 */
+
+        /** 图片处理接口开始 */
+        // 删除
+        Route::delete('image/delete', [ImageController::class, 'delete'])->name('image.delete');
+        /** 图片处理接口结束 */
     });
     //});
 
