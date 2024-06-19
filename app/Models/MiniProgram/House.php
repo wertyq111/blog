@@ -20,6 +20,7 @@ class House extends BaseModel
         'name',
         'pic_url',
         'coordinate',
+        'level',
         'remark'
     ];
 
