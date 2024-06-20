@@ -35,7 +35,7 @@ class HouseController extends Controller
         $allowedFilters = $request->generateAllowedFilters($house->getRequestFilters());
 
         $config = [
-            'includes' => ['member', 'parents', 'materials'],
+            'includes' => ['member', 'parents', 'children', 'materials'],
             'allowedFilters' => $allowedFilters,
             'perPage' => $data['perPage'] ?? null,
             'orderBy' => $data['orderBy'] ?? null,
@@ -61,7 +61,7 @@ class HouseController extends Controller
         $allowedFilters = $request->generateAllowedFilters($house->getRequestFilters());
 
         $config = [
-            'includes' => ['member', 'parent', 'house'],
+            'includes' => ['member', 'parent', 'children', 'materials'],
             'allowedFilters' => $allowedFilters,
             'conditions' => $this->authorizeForMember()
         ];
@@ -150,6 +150,16 @@ class HouseController extends Controller
     {
         $this->authorize('delete', $house);
 
+        // 如果有图片就删除图片
+        if($house->pic_url) {
+            $imagePath = preg_replace("/http(s):\/\/" . env("QINIU_DOMAIN", null) . "\//", "", $house->pic_url);
+
+            // 删除原先的图片
+            if ($imagePath !== null) {
+                $this->qiniuService->delete($imagePath);
+            }
+        }
+
         $house->delete();
 
         return response()->json([]);
@@ -185,8 +195,9 @@ class HouseController extends Controller
     public function check(FormRequest $request)
     {
         $name = $request->get('name');
+        $pid = $request->get('pid') ?: 0;
 
-        $house = $this->memberExistCheck(House::class, ['name' => $name]);
+        $house = $this->memberExistCheck(House::class, ['name' => $name, 'pid' => $pid]);
 
         return $house && $name
             ? $this->resource($house, ['time' => true, 'collection' => true])

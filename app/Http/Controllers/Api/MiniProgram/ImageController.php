@@ -26,6 +26,7 @@ class ImageController extends Controller
     {
         $url = $request->get('url');
         $type = $request->get('type');
+        $data = $request->all();
 
         // 防盗链访问图片
 //        $refer = $configpub['site'];
@@ -34,7 +35,7 @@ class ImageController extends Controller
 //        $file_contents = file_get_contents($url, false, $context);//将整个文件读入一个字符串
 //        $thumb_size = getimagesizefromstring($file_contents);//从字符串中获取图像尺寸信息
 
-        $imagePath = $this->service->generateImagePath($url, $type);
+        $imagePath = $this->service->generateImagePath($url, $type, $data);
 
         // 删除原先的图片
         if ($imagePath !== null) {
