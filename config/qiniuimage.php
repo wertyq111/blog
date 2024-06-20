@@ -8,6 +8,10 @@ return [
         'home' => [
             'dir' => 'homes/%member%/',
             'params' => ['member']
+        ],
+        'area' => [
+            'dir' => 'homes/%member%/%pid%/',
+            'params' => ['member', 'pid']
         ]
     ],
 ];
