@@ -68,6 +68,10 @@ class MaterialController extends Controller
         ];
         $materials = $this->queryBuilder($material, false, $config);
 
+        if(count($materials) == 0) {
+            return response()->json(['data' => []]);
+        }
+
         return $this->resource($materials, ['time' => true, 'collection' => true]);
     }
 
