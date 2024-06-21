@@ -37,6 +37,10 @@ class Material extends BaseModel
             'column' => 'pid',
             'filterType' => 'exact'
         ],
+        'houseId' => [
+            'column' => 'house_id',
+            'filterType' => 'exact'
+        ],
         'name' => ['column' => 'name']
     ];
 
