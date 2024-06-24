@@ -17,7 +17,6 @@ return new class extends Migration
             $table->integer('pid')->index('index_pid')->default(0)->comment('上级ID');
             $table->string('name')->comment('名称');
             $table->string('pic_url')->comment('图片地址');
-            $table->string('coordinate')->nullable()->comment('坐标');
             $table->integer('level')->default(1)->comment('1 - 房间， 2 - 具体位置， 3 - 详细坐标');
             $table->string('remark')->nullable()->comment('备注');
             $table->unsignedInteger('created_at')->default(0)->comment("添加时间");
