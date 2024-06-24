@@ -16,6 +16,7 @@ class Material extends BaseModel
      */
     protected $fillable = [
         'member_id',
+        'house_id',
         'pid',
         'name',
         'style',
