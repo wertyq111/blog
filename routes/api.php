@@ -361,7 +361,8 @@ Route::name('api')->group(function () {
         Route::get('material/index', [MaterialController::class, 'index'])->name('material.index')
             ->middleware('filter.process:' . Material::class);
         // 所有列表
-        Route::get('material/list', [MaterialController::class, 'list'])->name('material.list');
+        Route::get('material/list', [MaterialController::class, 'list'])->name('material.list')
+            ->middleware('filter.process:' . Material::class);
         // 校验
         Route::get('material/check', [MaterialController::class, 'check'])->name('material.check');
         // 详情
