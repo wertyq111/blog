@@ -19,6 +19,7 @@ class Material extends BaseModel
         'pid',
         'name',
         'style',
+        'coordinate',
         'num'
     ];
 

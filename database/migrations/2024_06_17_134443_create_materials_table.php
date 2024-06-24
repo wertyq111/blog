@@ -19,6 +19,7 @@ return new class extends Migration
             $table->string('name')->index('index_num')->comment('名称');
             $table->integer('num')->default(0)->comment('数量');
             $table->string('style')->nullable()->comment('风格');
+            $table->string('coordinate')->nullable()->comment('坐标');
             $table->unsignedInteger('created_at')->default(0)->comment("添加时间");
             $table->unsignedInteger('update_user')->default(0)->comment("更新人");
             $table->unsignedInteger('updated_at')->default(0)->comment("更新时间");
