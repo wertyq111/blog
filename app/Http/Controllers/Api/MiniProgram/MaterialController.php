@@ -46,7 +46,7 @@ class MaterialController extends Controller
 
         if(isset($data['topHouse'])) {
             foreach($materials as $material) {
-                $material->topHouse = $material->house->parent;
+                $material->topHouse = $material->house ? $material->house->parents[0] : null;
             }
         }
 
