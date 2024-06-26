@@ -44,6 +44,12 @@ class MaterialController extends Controller
         ];
         $materials = $this->queryBuilder($material, true, $config);
 
+        if(isset($data['topHouse'])) {
+            foreach($materials as $material) {
+                $material->topHouse = $material->house->parent;
+            }
+        }
+
         return $this->resource($materials, ['time' => true, 'collection' => true]);
     }
 
