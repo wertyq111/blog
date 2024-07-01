@@ -30,13 +30,13 @@ class MaterialService  extends BaseService
     {
         $model = new MaterialShared();
 
-        $sharedMembers = $model->where('member_id', auth('api')->user()->member->id)->get();
+        $sharedMembers = $model->where('shared_member_id', auth('api')->user()->member->id)->get();
 
         $memberIds = null;
 
         if($sharedMembers) {
             foreach($sharedMembers as $sharedMember) {
-                $memberIds[] = $sharedMember->shared_member_id;
+                $memberIds[] = $sharedMember->member_id;
             }
         }
         return $memberIds;
