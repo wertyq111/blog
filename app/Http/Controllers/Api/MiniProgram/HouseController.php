@@ -34,12 +34,23 @@ class HouseController extends Controller
         // 生成允许过滤字段数组
         $allowedFilters = $request->generateAllowedFilters($house->getRequestFilters());
 
+        // 共享表
+        $sharedMembers = $this->service->getSharedMembers();
+
+        if($sharedMembers) {
+            $currentMember = $this->authorizeForMember();
+            $conditions = ['in' => ['member_id', 'in', array_merge($sharedMembers, [$currentMember['member_id']])]];
+        } else {
+            $conditions = $this->authorizeForMember();
+        }
+//        dd($conditions);
+
         $config = [
             'includes' => ['member', 'parents', 'children', 'materials'],
             'allowedFilters' => $allowedFilters,
             'perPage' => $data['perPage'] ?? null,
             'orderBy' => $data['orderBy'] ?? null,
-            'conditions' => $this->authorizeForMember()
+            'conditions' => $conditions
         ];
         $houses = $this->queryBuilder($house, true, $config);
 
@@ -60,10 +71,20 @@ class HouseController extends Controller
         // 生成允许过滤字段数组
         $allowedFilters = $request->generateAllowedFilters($house->getRequestFilters());
 
+        // 共享表
+        $sharedMembers = $this->service->getSharedMembers();
+
+        if($sharedMembers) {
+            $currentMember = $this->authorizeForMember();
+            $conditions = ['in' => ['member_id', 'in', array_merge($sharedMembers, [$currentMember['member_id']])]];
+        } else {
+            $conditions = $this->authorizeForMember();
+        }
+
         $config = [
             'includes' => ['member', 'parent', 'children', 'materials'],
             'allowedFilters' => $allowedFilters,
-            'conditions' => $this->authorizeForMember()
+            'conditions' => $conditions
         ];
         $houses = $this->queryBuilder($house, false, $config);
 

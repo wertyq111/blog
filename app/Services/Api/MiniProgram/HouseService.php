@@ -17,4 +17,17 @@ class HouseService  extends BaseService
 
         return $house;
     }
+
+    /**
+     * 获取共享会员
+     *
+     * @return mixed
+     * @author zhouxufeng <zxf@netsun.com>
+     * @date 2024/7/1 14:46
+     */
+    public function getSharedMembers()
+    {
+        $materialService = new MaterialService();
+        return $materialService->getSharedMembers();
+    }
 }
