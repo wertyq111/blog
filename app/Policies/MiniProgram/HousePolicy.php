@@ -9,7 +9,14 @@ use App\Services\Api\MiniProgram\MaterialService;
 
 class HousePolicy extends BasePolicy
 {
-    protected $materialService = new MaterialService();
+    protected $materialService = null;
+
+    public function __construct()
+    {
+        parent::__construct();
+
+        $this->materialService = new MaterialService();
+    }
 
     /**
      * 更新
