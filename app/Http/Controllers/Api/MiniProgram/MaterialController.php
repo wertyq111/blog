@@ -6,7 +6,6 @@ use App\Http\Controllers\Api\Controller;
 use App\Http\Requests\Api\FormRequest;
 use App\Http\Requests\Api\MiniProgram\MaterialRequest;
 use App\Http\Resources\BaseResource;
-use App\Http\Resources\MiniProgram\MaterialResource;
 use App\Models\MiniProgram\Material;
 use App\Services\Api\MiniProgram\MaterialService;
 
@@ -35,12 +34,22 @@ class MaterialController extends Controller
         // 生成允许过滤字段数组
         $allowedFilters = $request->generateAllowedFilters($material->getRequestFilters());
 
+        // 共享表
+        $sharedMembers = $this->service->getSharedMembers();
+
+        if($sharedMembers) {
+            $currentMember = $this->authorizeForMember();
+            $conditions = ['in' => ['member_id', 'in', array_merge($sharedMembers, [$currentMember['member_id']])]];
+        } else {
+            $conditions = $this->authorizeForMember();
+        }
+
         $config = [
             'includes' => ['member', 'parent', 'house'],
             'allowedFilters' => $allowedFilters,
             'perPage' => $data['perPage'] ?? null,
             'orderBy' => $data['orderBy'] ?? null,
-            'conditions' => $this->authorizeForMember()
+            'conditions' => $conditions
         ];
         $materials = $this->queryBuilder($material, true, $config);
 
@@ -67,10 +76,20 @@ class MaterialController extends Controller
         // 生成允许过滤字段数组
         $allowedFilters = $request->generateAllowedFilters($material->getRequestFilters());
 
+        // 共享表
+        $sharedMembers = $this->service->getSharedMembers();
+
+        if($sharedMembers) {
+            $currentMember = $this->authorizeForMember();
+            $conditions = ['in' => ['member_id', 'in', array_merge($sharedMembers, [$currentMember['member_id']])]];
+        } else {
+            $conditions = $this->authorizeForMember();
+        }
+
         $config = [
             'includes' => ['member', 'parent', 'house'],
             'allowedFilters' => $allowedFilters,
-            'conditions' => $this->authorizeForMember()
+            'conditions' => $conditions
         ];
         $materials = $this->queryBuilder($material, false, $config);
 

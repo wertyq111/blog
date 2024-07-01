@@ -68,7 +68,17 @@ class Controller extends BaseController
 
         // 额外的查询条件
         if(isset($config['conditions'])) {
-            $queryBuilder->where($config['conditions']);
+            foreach($config['conditions'] as $key => $value) {
+                if(is_array($value)) {
+                    if($key == 'in') {
+                        $queryBuilder->whereIn($value[0], $value[2]);
+                    } else {
+                        $queryBuilder->where($value[0], $value[1], $value[2]);
+                    }
+                } else {
+                    $queryBuilder->where($key, $value);
+                }
+            }
         }
 
         if(isset($config['orderBy'])) {
