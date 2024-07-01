@@ -4,6 +4,7 @@ namespace App\Services\Api\MiniProgram;
 
 use App\Models\MiniProgram\Material;
 use App\Models\MiniProgram\MaterialShared;
+use App\Models\User\User;
 use App\Services\Api\BaseService;
 
 class MaterialService  extends BaseService
@@ -26,11 +27,13 @@ class MaterialService  extends BaseService
      * @author zhouxufeng <zxf@netsun.com>
      * @date 2024/7/1 14:45
      */
-    public function getSharedMembers()
+    public function getSharedMembers(User $user = null)
     {
         $model = new MaterialShared();
 
-        $sharedMembers = $model->where('shared_member_id', auth('api')->user()->member->id)->get();
+        $memberId = $user ? $user->member->id : auth('api')->user()->member->id;
+
+        $sharedMembers = $model->where('shared_member_id', $memberId)->get();
 
         $memberIds = null;
 
