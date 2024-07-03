@@ -176,16 +176,16 @@ class PhotoCategoryController extends Controller
             'conditions' => $this->authorizeForMember()
         ];
 
-        $classifies = $this->queryBuilder($category, false, $config);
+        $categories = $this->queryBuilder($category, false, $config);
 
-        foreach($classifies as $classify) {
-            if(count($classify->photos) > 0) {
-                $classify->photoList = PhotoResource::collection($classify->photos);
-                $classify->photo = $classify->photoList[count($classify->photos) - 1];
+        foreach($categories as $category) {
+            if(count($category->photos) > 0) {
+                $category->photoList = $this->service->sift($category->photos);
+                $category->photo = $category->photoList[count($category->photos) - 1];
             }
         }
 
-        return $this->resource($classifies, ['time' => true, 'collection' => true]);
+        return $this->resource($categories, ['time' => true, 'collection' => true]);
     }
 
     /**
