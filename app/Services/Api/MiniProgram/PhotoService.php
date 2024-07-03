@@ -5,6 +5,7 @@ namespace App\Services\Api\MiniProgram;
 use App\Models\MiniProgram\Photo;
 use App\Models\MiniProgram\PhotoCategory;
 use App\Services\Api\BaseService;
+use App\Services\Api\QiniuService;
 
 class PhotoService  extends BaseService
 {
@@ -93,6 +94,8 @@ class PhotoService  extends BaseService
      */
     public function sift($photos, $isArray = true)
     {
+        $qiniuService = new QiniuService();
+
         $photosTemp = [];
         if($isArray == false) {
             $photosTemp[] = $photos->toArray();
@@ -100,9 +103,11 @@ class PhotoService  extends BaseService
 
         $photosTemp = $photos->toArray();
         foreach($photosTemp as &$photo) {
-            $photo['thumbnailUrl'] = $photo['url']. "?imageMogr2/thumbnail/!30p";
-            $photo['url'] = $this->convertFormat($photo['url']);
+            $photo['thumbnailUrl'] = $qiniuService->getPrivateUrl($photo['url']. "?imageMogr2/thumbnail/!30p");
+            $photo['url'] = $qiniuService->getPrivateUrl($this->convertFormat($photo['url']));
         }
+
+
 
         return $photosTemp;
     }
