@@ -43,9 +43,10 @@ class WallpaperController extends Controller
         $wallpapers = $this->queryBuilder($wallpaper, true, $config);
 
         foreach ($wallpapers as &$wallpaper) {
-            $wallpaper['small_pic_url'] = strstr($wallpaper['url'], env("QINIU_DOMAIN", null))
-                ? $wallpaper['url'] . "?imageMogr2/thumbnail/!10p"
-                : "http://" . env("QINIU_DOMAIN", null) . "/" . $wallpaper['url'] . "?imageMogr2/thumbnail/!30p";
+            $wallpaper['url'] = strstr($wallpaper['url'], env("QINIU_DOMAIN", null)) ? $wallpaper['url'] : "https://" . env("QINIU_DOMAIN", null) . "/" . $wallpaper['url'];
+            $wallpaper['small_pic_url'] = $wallpaper['url'] . "?imageMogr2/thumbnail/!30p";
+            $wallpaper['url'] = $this->qiniuService->getPrivateUrl($wallpaper['url']);
+            $wallpaper['small_pic_url'] = $this->qiniuService->getPrivateUrl($wallpaper['small_pic_url']);
             $wallpaper['tags'] = json_decode($wallpaper['tags'], true);
         }
 
@@ -77,9 +78,10 @@ class WallpaperController extends Controller
         $wallpapers = $this->queryBuilder($wallpaper, true, $config);
 
         foreach ($wallpapers as &$wallpaper) {
-            $wallpaper['small_pic_url'] = strstr($wallpaper['url'], env("QINIU_DOMAIN", null))
-                ? $wallpaper['url'] . "?imageMogr2/thumbnail/!10p"
-                : "http://" . env("QINIU_DOMAIN", null) . "/" . $wallpaper['url'] . "?imageMogr2/thumbnail/!30p";
+            $wallpaper['url'] = strstr($wallpaper['url'], env("QINIU_DOMAIN", null)) ? $wallpaper['url'] : "https://" . env("QINIU_DOMAIN", null) . "/" . $wallpaper['url'];
+            $wallpaper['small_pic_url'] = $wallpaper['url'] . "?imageMogr2/thumbnail/!30p";
+            $wallpaper['url'] = $this->qiniuService->getPrivateUrl($wallpaper['url']);
+            $wallpaper['small_pic_url'] = $this->qiniuService->getPrivateUrl($wallpaper['small_pic_url']);
             $wallpaper['tags'] = json_decode($wallpaper['tags'], true);
         }
 
@@ -96,6 +98,10 @@ class WallpaperController extends Controller
      */
     public function info(Wallpaper $wallpaper)
     {
+        $wallpaper->url = $this->qiniuService->getPrivateUrl(
+            strstr($wallpaper->url, env("QINIU_DOMAIN", null)) ? $wallpaper->url : "https://" . env("QINIU_DOMAIN", null) . "/" . $wallpaper->url
+        );
+
         return $this->resource($wallpaper);
     }
 
@@ -112,9 +118,10 @@ class WallpaperController extends Controller
         $wallpapers = $wallpaper->inRandomOrder()->limit(9)->get();
 
         foreach ($wallpapers as &$wallpaper) {
-            $wallpaper['small_pic_url'] = strstr($wallpaper['url'], env("QINIU_DOMAIN", null))
-                ? $wallpaper['url'] . "?imageMogr2/thumbnail/!10p"
-                : "http://" . env("QINIU_DOMAIN", null) . "/" . $wallpaper['url'] . "?imageMogr2/thumbnail/!30p";
+            $wallpaper['url'] = strstr($wallpaper['url'], env("QINIU_DOMAIN", null)) ? $wallpaper['url'] : "https://" . env("QINIU_DOMAIN", null) . "/" . $wallpaper['url'];
+            $wallpaper['small_pic_url'] = $wallpaper['url'] . "?imageMogr2/thumbnail/!30p";
+            $wallpaper['url'] = $this->qiniuService->getPrivateUrl($wallpaper['url']);
+            $wallpaper['small_pic_url'] = $this->qiniuService->getPrivateUrl($wallpaper['small_pic_url']);
             $wallpaper['tags'] = json_decode($wallpaper['tags'], true);
         }
         unset($wallpaper);
@@ -171,7 +178,7 @@ class WallpaperController extends Controller
         $data = $request->getSnakeRequest();
 
         $imagePath = $wallpaper->url != $data['url']
-            ? str_replace("http://" . env("QINIU_DOMAIN", null) . "/", "", $wallpaper->url)
+            ? str_replace("https://" . env("QINIU_DOMAIN", null) . "/", "", $wallpaper->url)
             : null;
 
         if (isset($data['tags'])) {
@@ -280,7 +287,7 @@ class WallpaperController extends Controller
     {
         $wallpaper->delete();
 
-        $imagePath = str_replace("http://" . env("QINIU_DOMAIN", null) . "/", "", $wallpaper->url);
+        $imagePath = str_replace("https://" . env("QINIU_DOMAIN", null) . "/", "", $wallpaper->url);
 
         // 删除原先的图片
         if ($imagePath !== null) {

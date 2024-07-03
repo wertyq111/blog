@@ -31,8 +31,8 @@ class WallpaperClassifyController extends Controller
         $classifies = $this->queryBuilder($classify, true, $config);
 
         foreach($classifies as &$classify) {
-            $classify['pic_url'] = strstr($classify['pic_url'], env("QINIU_DOMAIN", null))
-                ? $classify['pic_url'] : "http://". env("QINIU_DOMAIN", null). "/". $classify['pic_url'];
+            $classify['pic_url'] = strstr($classify['pic_url'], env("QINIU_DOMAIN", null)) ? $classify['pic_url'] : "https://" . env("QINIU_DOMAIN", null) . "/" . $classify['pic_url'];
+            $classify['pic_url'] = $this->qiniuService->getPrivateUrl($classify['pic_url']);
         }
         unset($classify);
 
@@ -60,7 +60,8 @@ class WallpaperClassifyController extends Controller
         $classifies = $this->queryBuilder($classify, false, $config);
 
         foreach($classifies as &$classify) {
-            $classify['pic_url'] = "http://". env("QINIU_DOMAIN", null). "/". $classify['pic_url'];
+            $classify['pic_url'] = strstr($classify['pic_url'], env("QINIU_DOMAIN", null)) ? $classify['pic_url'] : "https://" . env("QINIU_DOMAIN", null) . "/" . $classify['pic_url'];
+            $classify['pic_url'] = $this->qiniuService->getPrivateUrl($classify['pic_url']);
         }
         unset($classify);
 
@@ -114,7 +115,7 @@ class WallpaperClassifyController extends Controller
         $data = $request->getSnakeRequest();
 
         $imagePath = $classify->pic_url != $data['pic_url']
-            ? str_replace("http://". env("QINIU_DOMAIN", null). "/", "", $classify->pic_url)
+            ? str_replace("https://". env("QINIU_DOMAIN", null). "/", "", $classify->pic_url)
             : null;
 
         $classify->fill($data);
@@ -142,7 +143,7 @@ class WallpaperClassifyController extends Controller
         if(count($classify->wallpapers) == 0) {
             $classify->delete();
 
-            $imagePath = str_replace("http://". env("QINIU_DOMAIN", null). "/", "", $classify->pic_url);
+            $imagePath = str_replace("https://". env("QINIU_DOMAIN", null). "/", "", $classify->pic_url);
 
             // 删除原先的图片
             if($imagePath !== null) {

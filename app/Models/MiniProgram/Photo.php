@@ -3,6 +3,7 @@
 namespace App\Models\MiniProgram;
 
 use App\Models\BaseModel;
+use App\Models\User\Member;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class Photo extends BaseModel
@@ -46,6 +47,11 @@ class Photo extends BaseModel
      */
     public function category()
     {
-        return $this->belongsTo(PhotoCategory::class, 'category_id');
+        return $this->belongsTo(PhotoCategory::class);
+    }
+
+    public function member()
+    {
+        return $this->belongsTo(Member::class);
     }
 }

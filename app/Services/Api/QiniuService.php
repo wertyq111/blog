@@ -136,4 +136,20 @@ class QiniuService
         readfile($filePath);
     }
 
+    /**
+     * 获取私密空间地址
+     *
+     * @param $url
+     * @return string
+     * @author zhouxufeng <zxf@netsun.com>
+     * @date 2024/7/3 10:59
+     */
+    public function getPrivateUrl($url)
+    {
+        // 构建鉴权对象
+        $auth = $this->config();
+
+        return $auth->privateDownloadUrl($url);
+    }
+
 }

@@ -36,7 +36,7 @@ class PhotoController extends Controller
         $allowedFilters = $request->generateAllowedFilters($photo->getRequestFilters());
 
         $config = [
-            'includes' => ['classify'],
+            'includes' => ['category', 'member'],
             'allowedFilters' => $allowedFilters,
             'perPage' => $data['perPage'] ?? null,
             'orderBy' => $data['orderBy'] ?? null,
@@ -45,9 +45,10 @@ class PhotoController extends Controller
         $photos = $this->queryBuilder($photo, true, $config);
 
         foreach ($photos as &$photo) {
-            $photo['small_pic_url'] = strstr($photo['url'], env("QINIU_DOMAIN", null))
-                ? $photo['url'] . "?imageMogr2/thumbnail/!30p"
-                : "http://" . env("QINIU_DOMAIN", null) . "/" . $photo['url'] . "?imageMogr2/thumbnail/!30p";
+            $photo['url'] = strstr($photo['url'], env("QINIU_DOMAIN", null)) ? $photo['url'] : "https://" . env("QINIU_DOMAIN", null) . "/" . $photo['url'];
+            $photo['small_pic_url'] = $photo['url'] . "?imageMogr2/thumbnail/!30p";
+            $photo['url'] = $this->qiniuService->getPrivateUrl($photo['url']);
+            $photo['small_pic_url'] = $this->qiniuService->getPrivateUrl($photo['small_pic_url']);
             $photo['tags'] = json_decode($photo['tags'], true);
         }
 
@@ -65,6 +66,10 @@ class PhotoController extends Controller
     public function info(Photo $photo)
     {
         $this->authorize('update', $photo);
+
+        $photo->url = $this->qiniuService->getPrivateUrl(
+            strstr($photo->url, env("QINIU_DOMAIN", null)) ? $photo->url : "https://" . env("QINIU_DOMAIN", null) . "/" . $photo->url
+        );
 
         return $this->resource($photo);
     }
@@ -115,7 +120,7 @@ class PhotoController extends Controller
 
         if(isset($data['url'])) {
             $imagePath = $photo->url != $data['url']
-                ? str_replace("http://" . env("QINIU_DOMAIN", null) . "/", "", $photo->url)
+                ? preg_replace("/http(s):\/\/" . env("QINIU_DOMAIN", null) . "\//", "", $photo->url)
                 : null;
         }
 
