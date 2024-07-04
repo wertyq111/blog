@@ -3,7 +3,6 @@
 namespace App\Http\Resources\MiniProgram;
 
 use App\Http\Resources\BaseResource;
-use App\Services\Api\QiniuService;
 use Illuminate\Http\Request;
 
 class PhotoResource extends BaseResource

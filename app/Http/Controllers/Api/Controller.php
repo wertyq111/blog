@@ -15,14 +15,24 @@ class Controller extends BaseController
     /**
      * 增加登录用户查询条件
      *
-     * @param $opponent
-     * @return array|bool
+     * @return array|null
      * @author zhouxufeng <zxf@netsun.com>
-     * @date 2024/5/30 14:31
+     * @date 2024/7/4 10:17
      */
     public function authorizeForMember()
     {
-        return ['member_id' => auth('api')->user()->member->id];
+        $user = auth('api')->user();
+
+        $isManager = false;
+
+        foreach($user->roles as $role) {
+            // 超级管理员获取全部权限
+            if($role->code === 'super') {
+                $isManager = true;
+            }
+        }
+
+        return !$isManager ? ['member_id' => $user->member->id] : null;
     }
 
     /**
