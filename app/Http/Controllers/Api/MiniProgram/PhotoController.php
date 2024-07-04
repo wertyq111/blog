@@ -47,7 +47,7 @@ class PhotoController extends Controller
         foreach ($photos as &$photo) {
             $photo['url'] = strstr($photo['url'], env("QINIU_DOMAIN", null)) ? $photo['url'] : "https://" . env("QINIU_DOMAIN", null) . "/" . $photo['url'];
             $photo['small_pic_url'] = $photo['url'] . "?imageMogr2/thumbnail/!30p";
-            $photo['url'] = $this->qiniuService->getPrivateUrl($photo['url']);
+            $photo['url'] = $this->qiniuService->getPrivateUrl($this->service->convertFormat($photo['url']));
             $photo['small_pic_url'] = $this->qiniuService->getPrivateUrl($photo['small_pic_url']);
             $photo['tags'] = json_decode($photo['tags'], true);
         }
