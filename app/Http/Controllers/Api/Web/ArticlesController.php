@@ -7,10 +7,18 @@ use App\Http\Requests\Api\FormRequest;
 use App\Http\Requests\Api\Web\ArticleRequest;
 use App\Http\Resources\Web\ArticleResource;
 use App\Models\Web\Article;
+use App\Services\Api\MiniProgram\ArticleService;
 use Illuminate\Http\Request;
 
 class ArticlesController extends Controller
 {
+    public function __construct()
+    {
+        parent::__construct();
+
+        $this->service = new ArticleService();
+    }
+
     /**
      * 文章列表(后台)
      *
@@ -32,6 +40,9 @@ class ArticlesController extends Controller
         ];
         $articles = $this->queryBuilder($article, true, $config);
 
+        foreach($articles as $article) {
+            $this->service->handleArticle($article);
+        }
 
         return ArticleResource::collection($articles);
     }
@@ -56,6 +67,10 @@ class ArticlesController extends Controller
         ];
         $articles = $this->queryBuilder($article, true, $config);
 
+        foreach($articles as $article) {
+            $this->service->handleArticle($article);
+        }
+
         return ArticleResource::collection($articles);
     }
 
@@ -74,6 +89,7 @@ class ArticlesController extends Controller
         $article->edit(false);
         $article->author = $article->member->nickname;
         $article->goods;
+        $this->service->handleArticle($article);
 
         return $this->resource($article, ['time' => true]);
     }
@@ -88,6 +104,7 @@ class ArticlesController extends Controller
      */
     public function info(Article $article)
     {
+        $this->service->handleArticle($article);
         return new ArticleResource($article);
     }
 
@@ -124,6 +141,12 @@ class ArticlesController extends Controller
     {
         $data = $request->getSnakeRequest();
 
+        // 将内容中的图片地址进行转换
+        $data['content'] = preg_replace("/<img (.+)\?(.*)\/>/", "<img $1\"/>", $data['content']);
+
+        // 将背景的图片地址进行转换
+        $data['cover'] = preg_replace("/(.+)\?(.*)/", "$1", $data['cover']);
+
         $article->fill($data);
         $article->member_id = $request->user()->member ? $request->user()->member->id : 0;
 
@@ -144,7 +167,15 @@ class ArticlesController extends Controller
      */
     public function edit(Article $article, ArticleRequest $request)
     {
-        $article->fill($request->getSnakeRequest());
+        $data = $request->getSnakeRequest();
+
+        // 将内容中的图片地址进行转换
+        $data['content'] = preg_replace("/<img (.+)\?(.*)\/>/", "<img $1\"/>", $data['content']);
+
+        // 将背景的图片地址进行转换
+        $data['cover'] = preg_replace("/(.+)\?(.*)/", "$1", $data['cover']);
+
+        $article->fill($data);
 
         $article->edit();
 
