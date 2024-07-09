@@ -391,6 +391,8 @@ Route::name('api')->group(function () {
     Route::middleware('auth:api')->middleware('refresh.token')->group(function () {
         // 七牛云上传 token
         Route::get('qiniu/up-token', [QiNiuController::class, 'upToken'])->name('qiniu.up-token');
+        // 七牛云私有图片
+        Route::get('qiniu/private-url', [QiNiuController::class, 'privateUrl'])->name('qiniu.private-url');
     });
 
     // 处理访问不存在的请求
