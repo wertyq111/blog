@@ -199,9 +199,8 @@ class PhotoController extends Controller
         $config = [
             'includes' => ['member'],
             'allowedFilters' => $allowedFilters,
-            'conditions' => array_merge($this->authorizeForMember(), [
-                'show' => true
-            ])
+            'conditions' => $this->authorizeForMember()
+                ? array_merge($this->authorizeForMember(), ['show' => true]) : ['show' => true]
         ];
 
         $photos = $this->queryBuilder($photo, false, $config);
