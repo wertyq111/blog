@@ -25,6 +25,12 @@ class BasePolicy
      */
     public function update(User $currentUser, $model)
     {
+        foreach($currentUser->roles as $role) {
+            // 超级管理员获取全部权限
+            if($role->code === 'super') {
+                return true;
+            }
+        }
         return $currentUser->isAuthorOf($model);
     }
 
@@ -37,6 +43,12 @@ class BasePolicy
      */
     public function delete(User $currentUser, $model)
     {
+        foreach($currentUser->roles as $role) {
+            // 超级管理员获取全部权限
+            if($role->code === 'super') {
+                return true;
+            }
+        }
         return $currentUser->isAuthorOf($model);
     }
 }
