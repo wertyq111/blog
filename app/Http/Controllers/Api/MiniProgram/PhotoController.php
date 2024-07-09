@@ -205,6 +205,12 @@ class PhotoController extends Controller
 
         $photos = $this->queryBuilder($photo, false, $config);
 
+        foreach($photos as $photo) {
+            $photo->url = $this->qiniuService->getPrivateUrl(
+                strstr($photo->url, env("QINIU_DOMAIN", null)) ? $photo->url : "https://" . env("QINIU_DOMAIN", null) . "/" . $photo->url
+            );
+        }
+
         return PhotoResource::collection($photos);
     }
 }
