@@ -73,10 +73,10 @@ class BaseModel extends Authenticatable
     /**
      * 添加/修改记录是填充额外属性
      *
-     * @param $userOperate 是否是用户操作
-     * @return void
+     * @param $userOperate //是否用户操作
+     * @return bool
      * @author zhouxufeng <zxf@netsun.com>
-     * @date 2023/6/13 14:29
+     * @date 2024/12/25 15:09
      */
     public function edit($userOperate = true)
     {
@@ -98,7 +98,7 @@ class BaseModel extends Authenticatable
             }
         }
 
-        $this->save();
+        return $this->save();
     }
 
     /**

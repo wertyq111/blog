@@ -2,7 +2,6 @@
 
 namespace App\Services\Api;
 
-use App\Models\User\Member;
 use GuzzleHttp\Client;
 use GuzzleHttp\Utils;
 
@@ -97,5 +96,91 @@ class BaseService
         } else {
             throw new \Exception($responseData['info']);
         }
+    }
+
+    /**
+     * 获取表格列
+     *
+     * @param $target
+     * @return array|\Illuminate\Config\Repository|\Illuminate\Contracts\Foundation\Application|mixed
+     * @author zhouxufeng <zxf@netsun.com>
+     * @date 2023/9/15 16:10
+     */
+    public function getColumns($target, $customList = null)
+    {
+        $columns = config("tablecolumns.{$target}");
+
+        // 判断列是否需要组装
+        if(isset($columns['assemble'])) {
+            $assembleColumns = [];
+            foreach($columns['assemble'] as $part) {
+                if(is_array($part)) {
+                    $assembleColumns = array_merge($assembleColumns, $part);
+                } elseif ($part == 'custom' && $customList) {
+                    foreach($customList as $key => $value) {
+                        // 已停用的存货自定义默认隐藏
+                        $assembleColumns[] = [
+                            'prop' => $key,
+                            'label' => $value,
+                            'align' => 'center',
+                            'showOverflowTooltip' => true,
+                            'minWidth' => 80,
+                            'isStatistic' => true
+                        ];
+                    }
+                }
+            }
+            $columns = $assembleColumns;
+        }
+
+        return $columns ?? [];
+    }
+
+    /**
+     * 获取档位列表
+     *
+     * @return array
+     * @author zhouxufeng <zxf@netsun.com>
+     * @date 2024/12/27 10:53
+     */
+    public function getStages()
+    {
+        $stages = [];
+        $list = $this->stageModel->get()->toArray();
+        foreach ($list as $l) {
+            $stages['stage' . $l['id']] = $l['name'];
+        }
+
+        return $stages;
+    }
+
+    /**
+     * 获取档位信息
+     *
+     * @param $id
+     * @return null
+     * @author zhouxufeng <zxf@netsun.com>
+     * @date 2024/12/27 14:17
+     */
+    public function getStage($id)
+    {
+        $stage = $this->stageModel->find($id);
+
+        return $stage ? $stage->toArray() : null;
+    }
+
+    /**
+     * 获取客户信息
+     *
+     * @param $id
+     * @return null
+     * @author zhouxufeng <zxf@netsun.com>
+     * @date 2024/12/27 14:17
+     */
+    public function getCustomer($id)
+    {
+        $stage = $this->stageModel->find($id);
+
+        return $stage ? $stage->toArray() : null;
     }
 }
