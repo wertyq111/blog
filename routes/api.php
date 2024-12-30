@@ -22,6 +22,14 @@ use App\Http\Controllers\Api\Admin\InitModelController;
 use App\Http\Controllers\Api\Web\ArticlesController;
 use App\Http\Controllers\Api\Web\CategoriesController;
 use App\Http\Controllers\Api\Web\LabelsController;
+use App\Http\Controllers\Api\Tobacco\TobaccoSupplyController;
+use App\Http\Controllers\Api\Tobacco\TobaccoCustomerController;
+use App\Http\Controllers\Api\Tobacco\TobaccoOrderController;
+use App\Http\Controllers\Api\Tobacco\TobaccoDesignatedController;
+use App\Http\Controllers\Api\Tobacco\TobaccoSupplementController;
+use App\Http\Controllers\Api\Tobacco\TobaccoYunController;
+use App\Http\Controllers\Api\Tobacco\TobaccoOrderInspectController;
+
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Models\User\Member;
@@ -39,6 +47,12 @@ use App\Models\Admin\InitModel;
 use App\Models\Web\Article;
 use App\Models\Web\Category;
 use App\Models\Web\Label;
+use App\Models\Tobacco\TobaccoSupply;
+use App\Models\Tobacco\TobaccoCustomer;
+use App\Models\Tobacco\TobaccoOrder;
+use App\Models\Tobacco\TobaccoDesignated;
+use App\Models\Tobacco\TobaccoSupplement;
+use App\Models\Tobacco\TobaccoYun;
 
 /*
 |--------------------------------------------------------------------------
@@ -381,6 +395,74 @@ Route::name('api')->group(function () {
         // 删除
         Route::delete('image/delete', [ImageController::class, 'delete'])->name('image.delete');
         /** 图片处理接口结束 */
+
+        /** 烟草接口开始 */
+        // 客户
+        Route::group(['prefix'=>'tobacco-customer','as'=>'tobacco-customer.'], function () {
+            // 列表
+            Route::get('index', [TobaccoCustomerController::class, 'index'])->name('index')
+                ->middleware('filter.process:' . TobaccoCustomer::class);
+            // 导入
+            Route::post('import', [TobaccoCustomerController::class, 'import'])->name('import');
+            // 动态列
+            Route::get('getColumns', [TobaccoCustomerController::class, 'getColumns'])->name('getColumns');
+        });
+        // 订货
+        Route::group(['prefix'=>'tobacco-order','as'=>'tobacco-order.'], function () {
+            // 列表
+            Route::get('index', [TobaccoOrderController::class, 'index'])->name('index')
+                ->middleware('filter.process:' . TobaccoOrder::class);
+            // 导入
+            Route::post('import', [TobaccoOrderController::class, 'import'])->name('import');
+            // 动态列
+            Route::get('getColumns', [TobaccoOrderController::class, 'getColumns'])->name('getColumns');
+        });
+        // 1024定点
+        Route::group(['prefix'=>'tobacco-designated','as'=>'tobacco-designated.'], function () {
+            // 列表
+            Route::get('index', [TobaccoDesignatedController::class, 'index'])->name('index')
+                ->middleware('filter.process:' . TobaccoDesignated::class);
+            // 导入
+            Route::post('import', [TobaccoDesignatedController::class, 'import'])->name('import');
+            // 动态列
+            Route::get('getColumns', [TobaccoDesignatedController::class, 'getColumns'])->name('getColumns');
+        });
+        // 补供供货
+        Route::group(['prefix'=>'tobacco-supplement','as'=>'tobacco-supplement.'], function () {
+            // 列表
+            Route::get('index', [TobaccoSupplementController::class, 'index'])->name('index')
+                ->middleware('filter.process:' . TobaccoSupplement::class);
+            // 导入
+            Route::post('import', [TobaccoSupplementController::class, 'import'])->name('import');
+            // 动态列
+            Route::get('getColumns', [TobaccoSupplementController::class, 'getColumns'])->name('getColumns');
+        });
+        // 云烟补供
+        Route::group(['prefix'=>'tobacco-yun','as'=>'tobacco-yun.'], function () {
+            // 列表
+            Route::get('index', [TobaccoYunController::class, 'index'])->name('index')
+                ->middleware('filter.process:' . TobaccoYun::class);
+            // 导入
+            Route::post('import', [TobaccoYunController::class, 'import'])->name('import');
+            // 动态列
+            Route::get('getColumns', [TobaccoYunController::class, 'getColumns'])->name('getColumns');
+        });
+        // 供货限量
+        Route::group(['prefix'=>'tobacco-supply','as'=>'tobacco-supply.'], function () {
+            // 列表
+            Route::get('index', [TobaccoSupplyController::class, 'index'])->name('index')
+                ->middleware('filter.process:' . TobaccoSupply::class);
+            // 导入
+            Route::post('import', [TobaccoSupplyController::class, 'import'])->name('import');
+            // 统计
+            Route::get('statistics', [TobaccoSupplyController::class, 'statistics'])->name('statistics');
+            // 动态列
+            Route::get('getColumns', [TobaccoSupplyController::class, 'getColumns'])->name('getColumns');
+        });
+
+        // 订货检查模型
+        Route::get('tobacco-order-inspect/index', [TobaccoOrderInspectController::class, 'index'])->name('tobacco-order-inspect.index');
+        /** 烟草接口结束 */
     });
     //});
 

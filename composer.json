@@ -12,6 +12,7 @@
         "laravel/framework": "^10.10",
         "laravel/sanctum": "^3.2",
         "laravel/tinker": "^2.8",
+        "maatwebsite/excel": "^3.1",
         "overtrue/easy-sms": "^2.4",
         "overtrue/laravel-filesystem-qiniu": "^2.2",
         "overtrue/laravel-socialite": "^4.1",
@@ -19,7 +20,9 @@
         "php-open-source-saver/jwt-auth": "^2.1",
         "propaganistas/laravel-phone": "^5.0",
         "spatie/laravel-backup": "^8.8",
-        "spatie/laravel-query-builder": "^5.2"
+        "spatie/laravel-query-builder": "^5.2",
+        "ext-simplexml": "*",
+        "ext-curl": "*"
     },
     "require-dev": {
         "fakerphp/faker": "^1.9.1",
@@ -36,11 +39,13 @@
             "App\\": "app/",
             "Database\\Factories\\": "database/factories/",
             "Database\\Seeders\\": "database/seeders/"
-        }
+        },
+        "files": [
+            "app/helpers.php",
+            "app/Helpers/common.php",
+            "app/Helpers/constants.php"
+        ]
     },
-    "files": [
-        "app/helpers.php"
-    ],
     "autoload-dev": {
         "psr-4": {
             "Tests\\": "tests/"
