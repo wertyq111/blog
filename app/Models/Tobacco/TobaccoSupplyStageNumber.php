@@ -19,8 +19,8 @@ class TobaccoSupplyStageNumber extends Model
      * @var array<int, string>
      */
     protected $fillable = [
-        'supply',
-        'stage',
+        'tobacco_supply_id',
+        'tobacco_stage_id',
         'number'
     ];
 
@@ -32,7 +32,7 @@ class TobaccoSupplyStageNumber extends Model
      */
     public function supplies()
     {
-        return $this->hasMany(TobaccoSupply::class, 'supply', 'id');
+
     }
 
 }
