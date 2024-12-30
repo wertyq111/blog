@@ -4,7 +4,6 @@ namespace App\Services\Api\Tobacco;
 
 use App\Models\Tobacco\TobaccoSupply;
 use App\Models\Tobacco\TobaccoSupplyStageNumber;
-use Illuminate\Support\Facades\DB;
 
 class SupplyService extends BaseService
 {
@@ -51,7 +50,7 @@ class SupplyService extends BaseService
         // 写入数量
         if ($stage && $number > 0) {
             //$this->numberModel->fill();
-            $this->numberModel->create(['supply' => $id, 'stage' => $stage->id, 'number' => $number]);
+            $this->numberModel->create(['tobacco_supply_id' => $id, 'tobacco_stage_id' => $stage->id, 'number' => $number]);
         }
     }
 
