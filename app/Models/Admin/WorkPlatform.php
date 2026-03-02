@@ -18,6 +18,7 @@ class WorkPlatform extends BaseModel
         'name',
         'status',
         'sort',
+        'user_id',
     ];
 
     /**
@@ -29,4 +30,15 @@ class WorkPlatform extends BaseModel
         'name' => ['column' => 'name'],
         'status' => ['column' => 'status', 'filterType' => 'exact'],
     ];
+
+    /**
+     * 按用户范围过滤（非 super 仅显示自己的）
+     */
+    public function scopeForUser($query, $user)
+    {
+        if (isset($user->role) && $user->role === 'super') {
+            return $query;
+        }
+        return $query->where('user_id', $user->id);
+    }
 }
