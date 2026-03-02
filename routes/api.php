@@ -19,6 +19,8 @@ use App\Http\Controllers\Api\MiniProgram\HouseController;
 use App\Http\Controllers\Api\MiniProgram\ImageController;
 use App\Http\Controllers\Api\Admin\ServerPathController;
 use App\Http\Controllers\Api\Admin\InitModelController;
+use App\Http\Controllers\Api\Admin\WorkDailyLogController;
+use App\Http\Controllers\Api\Admin\WorkPlatformController;
 use App\Http\Controllers\Api\Web\ArticlesController;
 use App\Http\Controllers\Api\Web\CategoriesController;
 use App\Http\Controllers\Api\Web\LabelsController;
@@ -44,6 +46,8 @@ use App\Models\MiniProgram\Material;
 use App\Models\MiniProgram\House;
 use App\Models\Admin\ServerPath;
 use App\Models\Admin\InitModel;
+use App\Models\Admin\WorkDailyLog;
+use App\Models\Admin\WorkPlatform;
 use App\Models\Web\Article;
 use App\Models\Web\Category;
 use App\Models\Web\Label;
@@ -270,6 +274,38 @@ Route::name('api')->group(function () {
         Route::delete('init-model/{initModel}', [InitModelController::class, 'delete'])->name('init-model.delete');
         // 模型初始化转换
         Route::post('init-model/convert/{initModel}', [InitModelController::class, 'convert'])->name('init-model.convert');
+
+        // 平台列表
+        Route::get('work-platform/index', [WorkPlatformController::class, 'index'])->name('work-platform.index')
+            ->middleware('filter.process:' . WorkPlatform::class);
+        // 平台列表（不分页）
+        Route::get('work-platform/list', [WorkPlatformController::class, 'list'])->name('work-platform.list');
+        // 平台详情
+        Route::get('work-platform/{workPlatform}', [WorkPlatformController::class, 'info'])->name('work-platform.info');
+        // 添加平台
+        Route::post('work-platform/add', [WorkPlatformController::class, 'add'])->name('work-platform.add');
+        // 修改平台
+        Route::post('work-platform/{workPlatform}', [WorkPlatformController::class, 'edit'])->name('work-platform.edit');
+        // 删除平台
+        Route::delete('work-platform/{workPlatform}', [WorkPlatformController::class, 'delete'])->name('work-platform.delete');
+
+        // 牛马日常列表
+        Route::get('work-daily/index', [WorkDailyLogController::class, 'index'])->name('work-daily.index')
+            ->middleware('filter.process:' . WorkDailyLog::class);
+        // 牛马日常详情
+        Route::get('work-daily/{workDailyLog}', [WorkDailyLogController::class, 'info'])->name('work-daily.info');
+        // 添加牛马日常
+        Route::post('work-daily/add', [WorkDailyLogController::class, 'add'])->name('work-daily.add');
+        // 修改牛马日常
+        Route::post('work-daily/{workDailyLog}', [WorkDailyLogController::class, 'edit'])->name('work-daily.edit');
+        // 删除牛马日常
+        Route::delete('work-daily/{workDailyLog}', [WorkDailyLogController::class, 'delete'])->name('work-daily.delete');
+        // 月报导出
+        Route::get('work-daily/report/month', [WorkDailyLogController::class, 'reportMonth'])->name('work-daily.report-month');
+        // 周报导出
+        Route::get('work-daily/report/week', [WorkDailyLogController::class, 'reportWeek'])->name('work-daily.report-week');
+        // 年报导出
+        Route::get('work-daily/report/year', [WorkDailyLogController::class, 'reportYear'])->name('work-daily.report-year');
         /** 开发助手接口结束 */
         /** 笔记接口开始 */
         // 文章列表
