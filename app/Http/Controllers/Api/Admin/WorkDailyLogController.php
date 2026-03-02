@@ -192,7 +192,7 @@ class WorkDailyLogController extends Controller
         $logs = $this->fetchLogs($workDailyLog, $start, $end);
 
         $title = "牛马日常月报 - {$month}";
-        $markdown = $this->buildSummaryMarkdown($title, $logs);
+        $markdown = $this->buildSummaryMarkdown($title, $logs, 'month');
 
         return response($markdown, 200, ['Content-Type' => 'text/markdown; charset=UTF-8']);
     }
@@ -216,7 +216,7 @@ class WorkDailyLogController extends Controller
         $logs = $this->fetchLogs($workDailyLog, $start, $end);
 
         $title = "牛马日常周报 - {$start} ~ {$end}";
-        $markdown = $this->buildSummaryMarkdown($title, $logs);
+        $markdown = $this->buildSummaryMarkdown($title, $logs, 'week');
 
         return response($markdown, 200, ['Content-Type' => 'text/markdown; charset=UTF-8']);
     }
@@ -241,7 +241,7 @@ class WorkDailyLogController extends Controller
         $logs = $this->fetchLogs($workDailyLog, $start, $end);
 
         $title = "牛马日常年报 - {$year}";
-        $markdown = $this->buildSummaryMarkdown($title, $logs);
+        $markdown = $this->buildSummaryMarkdown($title, $logs, 'year');
 
         return response($markdown, 200, ['Content-Type' => 'text/markdown; charset=UTF-8']);
     }
@@ -358,7 +358,7 @@ class WorkDailyLogController extends Controller
      * @param \Illuminate\Support\Collection $logs
      * @return string
      */
-    private function buildSummaryMarkdown(string $title, $logs): string
+    private function buildSummaryMarkdown(string $title, $logs, string $type = 'month'): string
     {
         if ($logs->isEmpty()) {
             return "# {$title}\n\n暂无记录。\n";
@@ -377,10 +377,18 @@ class WorkDailyLogController extends Controller
             $source .= "\n";
         }
 
-        $prompt = "你是工作日志总结助手。请基于以下原始记录，按平台归纳输出 Markdown 总结：\n" .
+        $styleHint = match ($type) {
+            'month' => '月报风格：强调本月对各平台做了哪些操作/修改、完善了哪些模块，突出产出与改进。',
+            'week' => '周报风格：简洁列出本周重点事项、进展、问题与解决，按平台归纳。',
+            'year' => '年报风格：年终总结语气，按平台归纳年度成果、关键项目、优化与经验沉淀。',
+            default => '按平台归纳总结，突出产出。'
+        };
+
+        $prompt = "你是工作日志总结助手。请基于以下原始记录，按平台归纳输出中文 Markdown 总结：\n" .
             "- 顶部保留标题 {$title}\n" .
             "- 每个平台一个二级标题\n" .
             "- 每个平台用 3-6 条要点总结，不要逐条复述\n" .
+            "- {$styleHint}\n" .
             "- 保持简洁、可汇报\n\n" .
             "原始记录：\n{$source}";
 
@@ -498,7 +506,7 @@ class WorkDailyLogController extends Controller
      * @return void
      */
     private function authorizeOwner(WorkDailyLog $workDailyLog): void
-    { 
+    {
         $user = auth('api')->user();
         $isManager = false;
         foreach ($user->roles as $role) {
