@@ -300,6 +300,8 @@ Route::name('api')->group(function () {
         Route::post('work-daily/{workDailyLog}', [WorkDailyLogController::class, 'edit'])->name('work-daily.edit');
         // 删除牛马日常
         Route::delete('work-daily/{workDailyLog}', [WorkDailyLogController::class, 'delete'])->name('work-daily.delete');
+        // 导入牛马日常
+        Route::post('work-daily/import', [WorkDailyLogController::class, 'import'])->name('work-daily.import');
         // 月报导出
         Route::get('work-daily/report/month', [WorkDailyLogController::class, 'reportMonth'])->name('work-daily.report-month');
         // 周报导出

@@ -7,6 +7,8 @@ use App\Http\Requests\Api\FormRequest;
 use App\Models\Admin\WorkDailyLog;
 use App\Models\Admin\WorkPlatform;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 
 class WorkDailyLogController extends Controller
 {
@@ -118,6 +120,59 @@ class WorkDailyLogController extends Controller
     }
 
     /**
+     * 导入Markdown日常
+     *
+     * @param FormRequest $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function import(FormRequest $request)
+    {
+        $file = $request->file('file');
+        if (!$file) {
+            throw new \Exception('请上传Markdown文件');
+        }
+
+        $year = $request->get('year');
+        if (!$year) {
+            $year = date('Y');
+        }
+
+        $content = $file->get();
+        $entries = $this->parseMarkdown($content, (int)$year);
+
+        if (empty($entries)) {
+            throw new \Exception('未解析到有效数据');
+        }
+
+        $platformMap = WorkPlatform::query()->get()->keyBy('name');
+        $created = 0;
+        foreach ($entries as $entry) {
+            $platform = $platformMap->get($entry['platform']);
+            if (!$platform) {
+                $platform = new WorkPlatform();
+                $platform->fill([
+                    'name' => $entry['platform'],
+                    'status' => 1,
+                    'sort' => 0
+                ]);
+                $platform->edit();
+                $platformMap->put($entry['platform'], $platform);
+            }
+
+            $log = new WorkDailyLog();
+            $log->fill([
+                'platform_id' => $platform->id,
+                'log_date' => $entry['date'],
+                'content' => $entry['content']
+            ]);
+            $log->edit();
+            $created++;
+        }
+
+        return response()->json(['count' => $created]);
+    }
+
+    /**
      * 月报导出（Markdown）
      *
      * @param FormRequest $request
@@ -137,7 +192,7 @@ class WorkDailyLogController extends Controller
         $logs = $this->fetchLogs($workDailyLog, $start, $end);
 
         $title = "牛马日常月报 - {$month}";
-        $markdown = $this->buildMarkdown($title, $logs);
+        $markdown = $this->buildSummaryMarkdown($title, $logs);
 
         return response($markdown, 200, ['Content-Type' => 'text/markdown; charset=UTF-8']);
     }
@@ -161,7 +216,7 @@ class WorkDailyLogController extends Controller
         $logs = $this->fetchLogs($workDailyLog, $start, $end);
 
         $title = "牛马日常周报 - {$start} ~ {$end}";
-        $markdown = $this->buildMarkdown($title, $logs);
+        $markdown = $this->buildSummaryMarkdown($title, $logs);
 
         return response($markdown, 200, ['Content-Type' => 'text/markdown; charset=UTF-8']);
     }
@@ -186,7 +241,7 @@ class WorkDailyLogController extends Controller
         $logs = $this->fetchLogs($workDailyLog, $start, $end);
 
         $title = "牛马日常年报 - {$year}";
-        $markdown = $this->buildMarkdown($title, $logs);
+        $markdown = $this->buildSummaryMarkdown($title, $logs);
 
         return response($markdown, 200, ['Content-Type' => 'text/markdown; charset=UTF-8']);
     }
@@ -297,13 +352,153 @@ class WorkDailyLogController extends Controller
     }
 
     /**
+     * 生成总结Markdown（调用OpenClaw）
+     *
+     * @param string $title
+     * @param \Illuminate\Support\Collection $logs
+     * @return string
+     */
+    private function buildSummaryMarkdown(string $title, $logs): string
+    {
+        if ($logs->isEmpty()) {
+            return "# {$title}\n\n暂无记录。\n";
+        }
+
+        $platformGroups = $logs->groupBy(function ($item) {
+            return $item->platform ? $item->platform->name : '未指定平台';
+        });
+
+        $source = "";
+        foreach ($platformGroups as $platform => $items) {
+            $source .= "## {$platform}\n";
+            foreach ($items as $item) {
+                $source .= "- {$item->log_date}: " . str_replace("\n", " ", trim($item->content)) . "\n";
+            }
+            $source .= "\n";
+        }
+
+        $prompt = "你是工作日志总结助手。请基于以下原始记录，按平台归纳输出 Markdown 总结：\n" .
+            "- 顶部保留标题 {$title}\n" .
+            "- 每个平台一个二级标题\n" .
+            "- 每个平台用 3-6 条要点总结，不要逐条复述\n" .
+            "- 保持简洁、可汇报\n\n" .
+            "原始记录：\n{$source}";
+
+        $summary = $this->callOpenClaw($prompt);
+
+        if (!$summary) {
+            return $this->buildMarkdown($title, $logs);
+        }
+
+        return "# {$title}\n\n" . trim($summary) . "\n";
+    }
+
+    /**
+     * 调用 OpenClaw Gateway 生成总结
+     *
+     * @param string $prompt
+     * @return string|null
+     */
+    private function callOpenClaw(string $prompt): ?string
+    {
+        $baseUrl = rtrim(env('OPENCLAW_GATEWAY_URL', 'http://127.0.0.1:18789'), '/');
+        $model = env('OPENCLAW_MODEL', 'github-copilot/gpt-5.2-codex');
+        $token = env('OPENCLAW_GATEWAY_TOKEN');
+
+        try {
+            $headers = [];
+            if ($token) {
+                $headers['Authorization'] = 'Bearer ' . $token;
+            }
+            $response = Http::withHeaders($headers)->post($baseUrl . '/v1/chat/completions', [
+                'model' => $model,
+                'temperature' => 0.2,
+                'messages' => [
+                    ['role' => 'system', 'content' => '你是一个擅长按平台归纳工作日志的助手，输出中文 Markdown。'],
+                    ['role' => 'user', 'content' => $prompt]
+                ]
+            ]);
+
+            if (!$response->ok()) {
+                Log::warning('OpenClaw summary failed', ['status' => $response->status(), 'body' => $response->body()]);
+                return null;
+            }
+
+            $data = $response->json();
+            return $data['choices'][0]['message']['content'] ?? null;
+        } catch (\Exception $e) {
+            Log::error('OpenClaw summary exception: ' . $e->getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * 解析Markdown为日志条目
+     *
+     * @param string $content
+     * @param int $year
+     * @return array
+     */
+    private function parseMarkdown(string $content, int $year): array
+    {
+        $lines = preg_split("/\r\n|\n|\r/", $content);
+        $entries = [];
+        $currentDate = null;
+        $inTable = false;
+
+        foreach ($lines as $line) {
+            $line = trim($line);
+            if ($line === '') {
+                $inTable = false;
+                continue;
+            }
+
+            if (preg_match('/^###\s*(\d+)\s*月\s*(\d+)\s*日/', $line, $matches)) {
+                $month = str_pad($matches[1], 2, '0', STR_PAD_LEFT);
+                $day = str_pad($matches[2], 2, '0', STR_PAD_LEFT);
+                $currentDate = $year . '-' . $month . '-' . $day;
+                $inTable = false;
+                continue;
+            }
+
+            if (strpos($line, '|') === 0) {
+                // skip header and alignment rows
+                if (str_contains($line, '项目') && str_contains($line, '内容')) {
+                    $inTable = true;
+                    continue;
+                }
+                if (preg_match('/^\|\s*:?[-]+/', $line)) {
+                    $inTable = true;
+                    continue;
+                }
+                if ($currentDate && $inTable) {
+                    $parts = array_values(array_filter(array_map('trim', explode('|', $line)), fn($v) => $v !== ''));
+                    if (count($parts) >= 2) {
+                        $platform = $parts[0];
+                        $contentCell = $parts[1];
+                        $contentCell = str_replace(['<br>', '<br/>', '<br />'], "\n", $contentCell);
+                        $contentCell = html_entity_decode($contentCell);
+                        $entries[] = [
+                            'date' => $currentDate,
+                            'platform' => $platform,
+                            'content' => trim($contentCell)
+                        ];
+                    }
+                }
+            }
+        }
+
+        return $entries;
+    }
+
+    /**
      * 校验数据归属
      *
      * @param WorkDailyLog $workDailyLog
      * @return void
      */
     private function authorizeOwner(WorkDailyLog $workDailyLog): void
-    {
+    { 
         $user = auth('api')->user();
         $isManager = false;
         foreach ($user->roles as $role) {
