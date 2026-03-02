@@ -40,8 +40,7 @@ class WorkDailyLogController extends Controller
 
         $dailyLogs = $this->queryBuilder($workDailyLog, true, $config);
 
-        $dailyLogs->load('platform');
-
+        // 不再展示 platform 字段，content 返回为解码后的结构（模型的 accessor 已处理）
         return $this->resource($dailyLogs, ['time' => true, 'collection' => true]);
     }
 
@@ -71,9 +70,35 @@ class WorkDailyLogController extends Controller
     {
         $data = $request->getSnakeRequest();
 
+        // 新格式：{ date: 'YYYY-MM-DD', platforms: [{platform_id, content, platform_name?}, ...] }
         $this->validateDailyLog($data);
 
-        $workDailyLog->fill($data);
+        $user = auth('api')->user();
+        $date = $data['log_date'] ?? ($data['date'] ?? null);
+        if (!$date) {
+            throw new \Exception('请选择日期');
+        }
+
+        // 覆盖策略：如果当天已有记录（按 create_user & date），则替换
+        $existing = WorkDailyLog::where('log_date', $date)->where('create_user', $user->id)->first();
+        $payload = ['platforms' => $data['platforms'] ?? []];
+
+        if ($existing) {
+            $existing->content = $payload;
+            $existing->updated_at = time();
+            $existing->edit();
+            $existing->load('platform');
+            return $this->resource($existing);
+        }
+
+        $workDailyLog->fill([
+            'platform_id' => 0,
+            'log_date' => $date,
+            'content' => $payload,
+            'create_user' => $user->id,
+            'created_at' => time(),
+            'updated_at' => time(),
+        ]);
         $workDailyLog->edit();
 
         $workDailyLog->load('platform');
@@ -94,9 +119,17 @@ class WorkDailyLogController extends Controller
 
         $data = $request->getSnakeRequest();
 
+        // 编辑同样接受 platforms 数组
         $this->validateDailyLog($data, false);
 
-        $workDailyLog->fill($data);
+        if (isset($data['platforms'])) {
+            $workDailyLog->content = ['platforms' => $data['platforms']];
+        }
+        if (isset($data['log_date'])) {
+            $workDailyLog->log_date = $data['log_date'];
+        }
+
+        $workDailyLog->updated_at = time();
         $workDailyLog->edit();
 
         $workDailyLog->load('platform');
@@ -255,22 +288,22 @@ class WorkDailyLogController extends Controller
      */
     private function validateDailyLog(array $data, bool $requireAll = true)
     {
-        if ($requireAll && empty($data['platform_id'])) {
-            throw new \Exception('请选择平台');
+        // 新格式校验
+        if ($requireAll) {
+            $date = $data['log_date'] ?? ($data['date'] ?? null);
+            if (!$date) {
+                throw new \Exception('请选择日期');
+            }
+            if (empty($data['platforms']) || !is_array($data['platforms'])) {
+                throw new \Exception('请选择至少一个平台并填写内容');
+            }
         }
 
-        if ($requireAll && empty($data['log_date'])) {
-            throw new \Exception('请选择日期');
-        }
-
-        if ($requireAll && empty($data['content'])) {
-            throw new \Exception('请填写内容');
-        }
-
-        if (isset($data['platform_id'])) {
-            $platform = WorkPlatform::query()->where('id', $data['platform_id'])->first();
-            if (!$platform) {
-                throw new \Exception('平台不存在');
+        if (isset($data['platforms']) && is_array($data['platforms'])) {
+            foreach ($data['platforms'] as $p) {
+                if (empty($p['platform_id']) && empty($p['platform_name'])) {
+                    throw new \Exception('平台信息不完整');
+                }
             }
         }
     }
