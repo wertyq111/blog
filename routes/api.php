@@ -21,6 +21,8 @@ use App\Http\Controllers\Api\Admin\ServerPathController;
 use App\Http\Controllers\Api\Admin\InitModelController;
 use App\Http\Controllers\Api\Admin\WorkDailyLogController;
 use App\Http\Controllers\Api\Admin\WorkPlatformController;
+use App\Http\Controllers\Api\Admin\WorkDocController;
+use App\Http\Controllers\Api\Admin\WorkDocCategoryController;
 use App\Http\Controllers\Api\Web\ArticlesController;
 use App\Http\Controllers\Api\Web\CategoriesController;
 use App\Http\Controllers\Api\Web\LabelsController;
@@ -48,6 +50,8 @@ use App\Models\Admin\ServerPath;
 use App\Models\Admin\InitModel;
 use App\Models\Admin\WorkDailyLog;
 use App\Models\Admin\WorkPlatform;
+use App\Models\Admin\WorkDoc;
+use App\Models\Admin\WorkDocCategory;
 use App\Models\Web\Article;
 use App\Models\Web\Category;
 use App\Models\Web\Label;
@@ -292,6 +296,8 @@ Route::name('api')->group(function () {
         // 牛马日常列表
         Route::get('work-daily/index', [WorkDailyLogController::class, 'index'])->name('work-daily.index')
             ->middleware('filter.process:' . WorkDailyLog::class);
+        // 导入牛马日常
+        Route::post('work-daily/import', [WorkDailyLogController::class, 'import'])->name('work-daily.import');
         // 牛马日常详情
         Route::get('work-daily/{workDailyLog}', [WorkDailyLogController::class, 'info'])->name('work-daily.info');
         // 添加牛马日常
@@ -300,14 +306,38 @@ Route::name('api')->group(function () {
         Route::post('work-daily/{workDailyLog}', [WorkDailyLogController::class, 'edit'])->name('work-daily.edit');
         // 删除牛马日常
         Route::delete('work-daily/{workDailyLog}', [WorkDailyLogController::class, 'delete'])->name('work-daily.delete');
-        // 导入牛马日常
-        Route::post('work-daily/import', [WorkDailyLogController::class, 'import'])->name('work-daily.import');
         // 月报导出
         Route::get('work-daily/report/month', [WorkDailyLogController::class, 'reportMonth'])->name('work-daily.report-month');
         // 周报导出
         Route::get('work-daily/report/week', [WorkDailyLogController::class, 'reportWeek'])->name('work-daily.report-week');
         // 年报导出
         Route::get('work-daily/report/year', [WorkDailyLogController::class, 'reportYear'])->name('work-daily.report-year');
+
+        // 牛马文档分类列表
+        Route::get('work-doc-category/index', [WorkDocCategoryController::class, 'index'])->name('work-doc-category.index')
+            ->middleware('filter.process:' . WorkDocCategory::class);
+        // 牛马文档分类列表（不分页）
+        Route::get('work-doc-category/list', [WorkDocCategoryController::class, 'list'])->name('work-doc-category.list');
+        // 牛马文档分类详情
+        Route::get('work-doc-category/{category}', [WorkDocCategoryController::class, 'info'])->name('work-doc-category.info');
+        // 添加牛马文档分类
+        Route::post('work-doc-category/add', [WorkDocCategoryController::class, 'add'])->name('work-doc-category.add');
+        // 修改牛马文档分类
+        Route::post('work-doc-category/{category}', [WorkDocCategoryController::class, 'edit'])->name('work-doc-category.edit');
+        // 删除牛马文档分类
+        Route::delete('work-doc-category/{category}', [WorkDocCategoryController::class, 'delete'])->name('work-doc-category.delete');
+
+        // 牛马文档列表
+        Route::get('work-doc/index', [WorkDocController::class, 'index'])->name('work-doc.index')
+            ->middleware('filter.process:' . WorkDoc::class);
+        // 牛马文档详情
+        Route::get('work-doc/{workDoc}', [WorkDocController::class, 'info'])->name('work-doc.info');
+        // 添加牛马文档
+        Route::post('work-doc/add', [WorkDocController::class, 'add'])->name('work-doc.add');
+        // 修改牛马文档
+        Route::post('work-doc/{workDoc}', [WorkDocController::class, 'edit'])->name('work-doc.edit');
+        // 删除牛马文档
+        Route::delete('work-doc/{workDoc}', [WorkDocController::class, 'delete'])->name('work-doc.delete');
         /** 开发助手接口结束 */
         /** 笔记接口开始 */
         // 文章列表
