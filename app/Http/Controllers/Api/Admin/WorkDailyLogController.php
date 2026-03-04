@@ -370,14 +370,29 @@ class WorkDailyLogController extends Controller
             return $markdown . "暂无记录。\n";
         }
 
+        $platformNameMap = $this->buildPlatformNameMap($logs);
         $grouped = $logs->groupBy('log_date');
 
         foreach ($grouped as $date => $items) {
             $markdown .= "## {$date}\n\n";
             foreach ($items as $item) {
-                $platformName = $item->platform ? $item->platform->name : '未指定平台';
-                $markdown .= "### 平台：{$platformName}\n\n";
-                $markdown .= trim($item->content) . "\n\n";
+                $platforms = $this->normalizePlatforms($item, $platformNameMap);
+                if (empty($platforms)) {
+                    $platformName = $item->platform ? $item->platform->name : '未指定平台';
+                    $content = is_array($item->content)
+                        ? json_encode($item->content, JSON_UNESCAPED_UNICODE)
+                        : $item->content;
+                    $markdown .= "### 平台：{$platformName}\n\n";
+                    $markdown .= trim((string)$content) . "\n\n";
+                    continue;
+                }
+
+                foreach ($platforms as $platform) {
+                    $platformName = $platform['platform_name'] ?? ($platformNameMap[$platform['platform_id']] ?? '未指定平台');
+                    $content = $platform['content'] ?? '';
+                    $markdown .= "### 平台：{$platformName}\n\n";
+                    $markdown .= trim((string)$content) . "\n\n";
+                }
             }
         }
 
@@ -397,15 +412,36 @@ class WorkDailyLogController extends Controller
             return "# {$title}\n\n暂无记录。\n";
         }
 
-        $platformGroups = $logs->groupBy(function ($item) {
-            return $item->platform ? $item->platform->name : '未指定平台';
-        });
+        $platformNameMap = $this->buildPlatformNameMap($logs);
+        $platformGroups = [];
+        foreach ($logs as $item) {
+            $platforms = $this->normalizePlatforms($item, $platformNameMap);
+            if (empty($platforms)) {
+                $platformName = $item->platform ? $item->platform->name : '未指定平台';
+                $content = is_array($item->content)
+                    ? json_encode($item->content, JSON_UNESCAPED_UNICODE)
+                    : $item->content;
+                $platformGroups[$platformName][] = [
+                    'date' => $item->log_date,
+                    'content' => $content
+                ];
+                continue;
+            }
+
+            foreach ($platforms as $platform) {
+                $platformName = $platform['platform_name'] ?? ($platformNameMap[$platform['platform_id']] ?? '未指定平台');
+                $platformGroups[$platformName][] = [
+                    'date' => $item->log_date,
+                    'content' => $platform['content'] ?? ''
+                ];
+            }
+        }
 
         $source = "";
         foreach ($platformGroups as $platform => $items) {
             $source .= "## {$platform}\n";
             foreach ($items as $item) {
-                $source .= "- {$item->log_date}: " . str_replace("\n", " ", trim($item->content)) . "\n";
+                $source .= "- {$item['date']}: " . str_replace("\n", " ", trim((string)$item['content'])) . "\n";
             }
             $source .= "\n";
         }
@@ -471,6 +507,68 @@ class WorkDailyLogController extends Controller
             Log::error('OpenClaw summary exception: ' . $e->getMessage());
             return null;
         }
+    }
+
+    /**
+     * 构建平台 ID => 名称映射
+     *
+     * @param \Illuminate\Support\Collection $logs
+     * @return array
+     */
+    private function buildPlatformNameMap($logs): array
+    {
+        $ids = [];
+        foreach ($logs as $item) {
+            if (!empty($item->platform_id)) {
+                $ids[] = $item->platform_id;
+            }
+            if (is_array($item->content) && isset($item->content['platforms'])) {
+                foreach ($item->content['platforms'] as $platform) {
+                    if (!empty($platform['platform_id'])) {
+                        $ids[] = $platform['platform_id'];
+                    }
+                }
+            }
+        }
+        $ids = array_values(array_unique(array_filter($ids)));
+        if (empty($ids)) {
+            return [];
+        }
+
+        return WorkPlatform::query()
+            ->whereIn('id', $ids)
+            ->pluck('name', 'id')
+            ->all();
+    }
+
+    /**
+     * 标准化 content 中的平台结构
+     *
+     * @param WorkDailyLog $item
+     * @param array $platformNameMap
+     * @return array
+     */
+    private function normalizePlatforms(WorkDailyLog $item, array $platformNameMap): array
+    {
+        if (!is_array($item->content) || !isset($item->content['platforms'])) {
+            return [];
+        }
+
+        $platforms = [];
+        foreach ($item->content['platforms'] as $platform) {
+            if (!is_array($platform)) {
+                continue;
+            }
+            $platformId = $platform['platform_id'] ?? $item->platform_id ?? 0;
+            $platformName = $platform['platform_name'] ?? ($platformId ? ($platformNameMap[$platformId] ?? null) : null);
+            $platforms[] = [
+                'platform_id' => $platformId,
+                'platform_name' => $platformName,
+                'content' => $platform['content'] ?? ''
+            ];
+        }
+
+        return $platforms;
     }
 
     /**
