@@ -10,7 +10,26 @@ use Illuminate\Http\Request;
 
 class WorkPlatformController extends Controller
 {
-    // ... existing methods ...
+    /**
+     * 列表（分页）
+     */
+    public function index(FormRequest $request, WorkPlatform $workPlatform)
+    {
+        $config = [
+            'allowedFilters' => ['name'],
+            'orderBy' => [
+                ['sort' => 'asc'],
+                ['id' => 'desc']
+            ],
+            'perPage' => $request->input('limit', 10)
+        ];
+
+        $platforms = $this->queryBuilder($workPlatform, true, $config);
+
+        return response()->json(['code' => 0, 'msg' => 'ok', 'data' => $platforms]);
+    }
+
+    // 现有方法
 
     /**
      * 批量保存排序
