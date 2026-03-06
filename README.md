@@ -63,3 +63,36 @@ $./vendor/bin/sail artisan db:seed
 $./vendor/bin/sail artisan db:show
     
 ```
+
+### 1.2.4 Docker 容器访问宿主机 `127.0.0.1:18789` 的 openclaw agent
+
+当 openclaw agent 只监听在宿主机回环地址（`127.0.0.1:18789`）时，`bridge` 网络中的容器无法直接访问该端口。可使用宿主机端口转发进行适配。
+
+#### 方案：在宿主机使用 `socat` 转发
+
+1. 在宿主机安装并启动 `socat`，将 `0.0.0.0:18790` 转发到 `127.0.0.1:18789`：
+
+```shell
+socat TCP-LISTEN:18790,fork,bind=0.0.0.0,reuseaddr TCP:127.0.0.1:18789
+```
+
+2. `docker-compose.yml`（本项目已包含）确保应用容器包含如下配置：
+
+```yaml
+extra_hosts:
+  - 'host.docker.internal:host-gateway'
+```
+
+3. 在 Laravel `.env` 中配置 openclaw agent 地址为宿主机转发端口：
+
+```env
+OPENCLAW_AGENT_URL=http://host.docker.internal:18790
+```
+
+4. 容器内连通性验证：
+
+```shell
+curl -v http://host.docker.internal:18790
+```
+
+> 说明：不建议直接使用 `network_mode: host` 替代上述方案，会降低容器网络隔离能力。
