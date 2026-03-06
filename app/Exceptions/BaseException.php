@@ -13,6 +13,7 @@ class BaseException extends Exception
 
     public function __construct($data, int $code = self::HTTP_OK, array $meta = [])
     {
+        dd("aabbcc");
         // 第一个参数是data，是因为想兼容string和array两种数据结构
         // 第二个参数默认取200，是因为公司前端框架限制，所以是status取200，错误码用code表示
         // 如果第二个参数是任意httpStatus（如200，201，204，301，422，500），就只返回httpStatus，如果是自定义错误编码，（如600101，600102），就返回httpstatus为200，返回体中包含message和code。
@@ -25,6 +26,7 @@ class BaseException extends Exception
 
     public function render()
     {
+        dd("ccc");
         $httpStatus = getHttpStatus();
         $status  = in_array($this->code, $httpStatus) ? $this->code : self::HTTP_OK;
         $content = [];
@@ -42,6 +44,7 @@ class BaseException extends Exception
                     //                    'timestamp' => time()
                 ];
         }
+        dd($content);
 
 //        if ($this->meta) {
 //            $content = array_add($content, 'meta', $this->meta);

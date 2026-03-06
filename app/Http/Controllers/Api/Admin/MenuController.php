@@ -15,6 +15,7 @@ class MenuController extends Controller
 {
     public function __construct()
     {
+        parent::__construct();
         $this->service = new MenuService();
     }
 
@@ -339,11 +340,35 @@ class MenuController extends Controller
      */
     public function getMenuList(Menu $menu)
     {
-        $menus = QueryBuilder::for($menu)
-            ->where(['pid' => 0])
-            ->with(['menuChildren'])
-            ->orderBy('sort', 'ASC')
-            ->get();
+        $user = auth('api')->user();
+        if($user->id != 1) {
+            // 关键：先 preload, 防止 N+1
+            $user->load('roles.menus');
+
+            $menuIds = $user->roles
+                ->flatMap(fn ($role) => $role->menus) //把每个角色的 menus 拿出来，并合并成一个“扁平的一维集合”
+                ->pluck('id')
+                ->unique()
+                ->values();
+
+            $menus = QueryBuilder::for(Menu::class)
+                ->whereIn('id', $menuIds)
+                ->where('pid', 0)
+                ->with([
+                    'menuChildren' => function ($query) use ($menuIds) {
+                        $query->whereIn('id', $menuIds)
+                            ->orderBy('sort', 'ASC');
+                    }
+                ])
+                ->orderBy('sort', 'ASC')
+                ->get();
+        } else{
+            $menus = QueryBuilder::for($menu)
+                ->where(['pid' => 0])
+                ->with(['menuChildren'])
+                ->orderBy('sort', 'ASC')
+                ->get();
+        }
 
         // menuChildren替换成 children
         $menus = $this->service->convertChildrenKey($menus);

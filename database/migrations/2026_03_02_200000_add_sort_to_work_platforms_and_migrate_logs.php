@@ -21,10 +21,26 @@ class AddSortToWorkPlatformsAndMigrateLogs extends Migration
         }
 
         // 数据迁移：把以 platform 为维度的多条日志合并为按 date 一条 JSON 记录
-        $rows = DB::table('work_daily_logs')->orderBy('user_id')->orderBy('log_date')->get();
+        // 兼容性处理：如果 work_daily_logs 表存在 user_id，则按 user+date 分组；否则按 date 分组
+        // 支持 create_user 作为旧表中记录用户的字段名
+        $hasUser = Schema::hasColumn('work_daily_logs', 'user_id') || Schema::hasColumn('work_daily_logs', 'create_user');
+        $userField = Schema::hasColumn('work_daily_logs', 'user_id') ? 'user_id' : (Schema::hasColumn('work_daily_logs', 'create_user') ? 'create_user' : null);
+
+        $query = DB::table('work_daily_logs');
+        if ($hasUser && $userField) {
+            $query = $query->orderBy($userField)->orderBy('log_date');
+        } else {
+            $query = $query->orderBy('log_date');
+        }
+
+        $rows = $query->get();
         $grouped = [];
         foreach ($rows as $r) {
-            $key = $r->user_id . '|' . $r->log_date;
+            if ($hasUser && $userField) {
+                $key = $r->{$userField} . '|' . $r->log_date;
+            } else {
+                $key = $r->log_date;
+            }
             if (!isset($grouped[$key])) {
                 $grouped[$key] = [];
             }
@@ -55,18 +71,28 @@ class AddSortToWorkPlatformsAndMigrateLogs extends Migration
             $payload = json_encode(['platforms' => $platforms], JSON_UNESCAPED_UNICODE);
 
             // 删除旧的这些行，插入一条新的
-            $userId = $items[0]->user_id;
             $date = $items[0]->log_date;
-
-            DB::table('work_daily_logs')->where('user_id', $userId)->where('log_date', $date)->delete();
-            DB::table('work_daily_logs')->insert([
-                'user_id' => $userId,
-                'platform_id' => null,
-                'log_date' => $date,
-                'content' => $payload,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
+            if ($hasUser && $userField) {
+                $userId = $items[0]->{$userField};
+                DB::table('work_daily_logs')->where($userField, $userId)->where('log_date', $date)->delete();
+                DB::table('work_daily_logs')->insert([
+                    $userField => $userId,
+                    'platform_id' => 0,
+                    'log_date' => $date,
+                    'content' => $payload,
+                    'created_at' => time(),
+                    'updated_at' => time(),
+                ]);
+            } else {
+                DB::table('work_daily_logs')->where('log_date', $date)->delete();
+                DB::table('work_daily_logs')->insert([
+                    'platform_id' => 0,
+                    'log_date' => $date,
+                    'content' => $payload,
+                    'created_at' => time(),
+                    'updated_at' => time(),
+                ]);
+            }
         }
     }
 

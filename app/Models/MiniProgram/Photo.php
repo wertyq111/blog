@@ -4,6 +4,7 @@ namespace App\Models\MiniProgram;
 
 use App\Models\BaseModel;
 use App\Models\User\Member;
+use App\Services\Api\QiniuService;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class Photo extends BaseModel
@@ -50,8 +51,18 @@ class Photo extends BaseModel
         return $this->belongsTo(PhotoCategory::class);
     }
 
+    /**
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
+     * @author zhouxufeng <zxf@netsun.com>
+     * @date 2024/7/3 13:25
+     */
     public function member()
     {
         return $this->belongsTo(Member::class);
+    }
+
+    public function photo()
+    {
+        $qiniuService = new QiniuService();
     }
 }
