@@ -34,7 +34,8 @@ class ServerPathController extends Controller
         $allowedFilters = $request->generateAllowedFilters($serverPath->getRequestFilters());
 
         $config = [
-            'allowedFilters' => $allowedFilters
+            'allowedFilters' => $allowedFilters,
+            'orderBy' => [['sort' => 'asc']]
         ];
         $serverPaths = $this->queryBuilder($serverPath, true, $config);
 

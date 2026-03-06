@@ -20,8 +20,10 @@ class ServerPath extends BaseModel
     protected $fillable = [
         'code',
         'name',
+        'url',
         'target',
-        'sources'
+        'sources',
+        'sort'
     ];
 
 

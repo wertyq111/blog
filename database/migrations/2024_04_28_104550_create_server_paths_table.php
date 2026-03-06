@@ -15,8 +15,10 @@ return new class extends Migration
             $table->id()->comment("主键ID");
             $table->string('code')->index('index_code')->comment('项目编码');
             $table->string('name')->index('index_name')->comment('项目名称');
+            $table->string('url', 120)->comment('网址');
             $table->text('target')->comment('服务器地址');
             $table->text('sources')->comment('来源地址');
+            $table->integer('sort')->comment('排序');
             $table->unsignedInteger('created_at')->default(0)->comment("添加时间");
             $table->unsignedInteger('update_user')->default(0)->comment("更新人");
             $table->unsignedInteger('updated_at')->default(0)->comment("更新时间");
