@@ -15,18 +15,21 @@ class WorkPlatformController extends Controller
      */
     public function index(FormRequest $request, WorkPlatform $workPlatform)
     {
+        $allowedFilters = $request->generateAllowedFilters($workPlatform->getRequestFilters());
+
         $config = [
-            'allowedFilters' => ['name'],
-            'orderBy' => [
-                ['sort' => 'asc'],
-                ['id' => 'desc']
-            ],
+            'allowedFilters' => $allowedFilters,
+            'orderBy' => [[
+                'sort' => 'asc'
+            ], [
+                'id' => 'desc'
+            ]],
             'perPage' => $request->input('limit', 10)
         ];
 
         $platforms = $this->queryBuilder($workPlatform, true, $config);
 
-        return response()->json(['code' => 0, 'msg' => 'ok', 'data' => $platforms]);
+        return $this->resource($platforms, ['time' => true, 'collection' => true]);
     }
 
     // 现有方法
