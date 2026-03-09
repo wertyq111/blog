@@ -284,6 +284,8 @@ Route::name('api')->group(function () {
             ->middleware('filter.process:' . WorkPlatform::class);
         // 平台列表（不分页）
         Route::get('work-platform/list', [WorkPlatformController::class, 'list'])->name('work-platform.list');
+        // 批量保存排序
+        Route::post('work-platform/reorder', [WorkPlatformController::class, 'reorder'])->name('work-platform.reorder');
         // 平台详情
         Route::get('work-platform/{workPlatform}', [WorkPlatformController::class, 'info'])->name('work-platform.info');
         // 添加平台
@@ -292,9 +294,6 @@ Route::name('api')->group(function () {
         Route::post('work-platform/{workPlatform}', [WorkPlatformController::class, 'edit'])->name('work-platform.edit');
         // 删除平台
         Route::delete('work-platform/{workPlatform}', [WorkPlatformController::class, 'delete'])->name('work-platform.delete');
-
-        // 批量保存排序
-        Route::post('work-platform/reorder', [WorkPlatformController::class, 'reorder'])->name('work-platform.reorder');
 
 
         // 牛马日常列表

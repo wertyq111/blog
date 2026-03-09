@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Api\Admin;
 use App\Http\Controllers\Api\Controller;
 use App\Http\Requests\Api\FormRequest;
 use App\Models\Admin\WorkPlatform;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class WorkPlatformController extends Controller
@@ -119,28 +118,30 @@ class WorkPlatformController extends Controller
 
     /**
      * 批量保存排序
+     *
+     * @param FormRequest $request
+     * @param WorkPlatform $workPlatform
+     * @return \Illuminate\Http\JsonResponse
      */
-    public function reorder(Request $request)
+    public function reorder(FormRequest $request, WorkPlatform $workPlatform)
     {
-        $order = $request->input('order', []);
-        if (empty($order) || !is_array($order)) {
-            return response()->json(['code' => 1, 'msg' => '参数错误']);
+        $order = $request->input('order', $request->input('list', []));
+
+        if (!is_array($order) || empty($order)) {
+            throw new \Exception('排序数据不能为空');
         }
 
-        DB::beginTransaction();
-        try {
-            foreach ($order as $entry) {
-                if (!isset($entry['id']) || !isset($entry['sort'])) {
+        DB::transaction(function () use ($order, $workPlatform) {
+            foreach ($order as $item) {
+                if (!isset($item['id']) || !isset($item['sort'])) {
                     continue;
                 }
-                WorkPlatform::where('id', $entry['id'])->update(['sort' => intval($entry['sort'])]);
+                $workPlatform->newQuery()->where('id', $item['id'])->update([
+                    'sort' => (int)$item['sort']
+                ]);
             }
-            DB::commit();
-            return response()->json(['code' => 0, 'msg' => '排序保存成功']);
-        } catch (\Exception $e) {
-            DB::rollBack();
-            \Log::error('work-platform reorder error: ' . $e->getMessage());
-            return response()->json(['code' => 2, 'msg' => '保存失败: ' . $e->getMessage()]);
-        }
+        });
+
+        return response()->json(['code' => 0, 'msg' => '排序已保存']);
     }
 }
