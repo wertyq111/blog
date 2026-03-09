@@ -23,3 +23,5 @@ yarn-error.log
 composer.json
 composer.lock
 docker-compose.yml
+# macOS AppleDouble metadata
+._*
