@@ -293,6 +293,9 @@ Route::name('api')->group(function () {
         // 删除平台
         Route::delete('work-platform/{workPlatform}', [WorkPlatformController::class, 'delete'])->name('work-platform.delete');
 
+        // 批量保存排序
+        Route::post('work-platform/reorder', [WorkPlatformController::class, 'reorder'])->name('work-platform.reorder');
+
 
         // 牛马日常列表
         Route::get('work-daily/index', [WorkDailyLogController::class, 'index'])->name('work-daily.index')
