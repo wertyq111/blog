@@ -487,7 +487,7 @@ class WorkDailyLogController extends Controller
             if ($token) {
                 $headers['Authorization'] = 'Bearer ' . $token;
             }
-            $response = Http::withHeaders($headers)->post($baseUrl . '/v1/chat/completions', [
+            $response = Http::withHeaders($headers)->timeout(60)->post($baseUrl . '/v1/chat/completions', [
                 'model' => $model,
                 'temperature' => 0.2,
                 'messages' => [
