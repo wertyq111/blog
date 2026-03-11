@@ -14,6 +14,7 @@ class WorkDocCategory extends BaseModel
     protected $fillable = [
         'parent_id',
         'name',
+        'icon',
         'description',
         'sort',
         'status'

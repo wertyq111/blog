@@ -325,6 +325,8 @@ Route::name('api')->group(function () {
         Route::get('work-doc-category/{category}', [WorkDocCategoryController::class, 'info'])->name('work-doc-category.info');
         // 添加牛马文档分类
         Route::post('work-doc-category/add', [WorkDocCategoryController::class, 'add'])->name('work-doc-category.add');
+        // 牛马文档分类拖拽排序
+        Route::post('work-doc-category/reorder', [WorkDocCategoryController::class, 'reorder'])->name('work-doc-category.reorder');
         // 修改牛马文档分类
         Route::post('work-doc-category/{category}', [WorkDocCategoryController::class, 'edit'])->name('work-doc-category.edit');
         // 删除牛马文档分类

@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\Controller;
 use App\Http\Requests\Api\FormRequest;
 use App\Models\Admin\WorkPlatform;
 use Illuminate\Support\Facades\DB;
+use Spatie\QueryBuilder\QueryBuilder;
 
 class WorkPlatformController extends Controller
 {
@@ -20,12 +21,15 @@ class WorkPlatformController extends Controller
     {
         $allowedFilters = $request->generateAllowedFilters($workPlatform->getRequestFilters());
 
-        $config = [
-            'allowedFilters' => $allowedFilters,
-            'orderBy' => [['sort' => 'asc'], ['id' => 'desc']]
-        ];
+        $query = QueryBuilder::for($workPlatform->newQuery())
+            ->allowedFilters($allowedFilters);
 
-        $workPlatforms = $this->queryBuilder($workPlatform, true, $config);
+        $this->applyOwnerFilter($query);
+
+        $workPlatforms = $query
+            ->orderBy('sort', 'asc')
+            ->orderBy('id', 'desc')
+            ->paginate($request->get('limit') ?? $request->get('pageSize') ?? self::PER_PAGE);
 
         return $this->resource($workPlatforms, ['time' => true, 'collection' => true]);
     }
@@ -44,6 +48,8 @@ class WorkPlatformController extends Controller
         if ($request->get('status') !== null) {
             $query->where('status', $request->get('status'));
         }
+
+        $this->applyOwnerFilter($query);
 
         $workPlatforms = $query->orderBy('sort', 'asc')->orderBy('id', 'desc')->get();
 
@@ -143,5 +149,25 @@ class WorkPlatformController extends Controller
         });
 
         return response()->json(['code' => 0, 'msg' => '排序已保存']);
+    }
+
+    private function applyOwnerFilter($query): void
+    {
+        $user = auth('api')->user();
+        if (!$user) {
+            return;
+        }
+
+        $isSuper = false;
+        foreach ($user->roles as $role) {
+            if (($role->code ?? null) === 'super') {
+                $isSuper = true;
+                break;
+            }
+        }
+
+        if (!$isSuper) {
+            $query->where('create_user', $user->id);
+        }
     }
 }
