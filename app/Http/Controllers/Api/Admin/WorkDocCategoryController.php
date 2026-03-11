@@ -37,9 +37,27 @@ class WorkDocCategoryController extends Controller
             $query->where('status', $request->get('status'));
         }
 
-        $categories = $query->orderBy('sort', 'asc')->orderBy('id', 'desc')->get();
+        $categories = $query->orderBy('sort', 'asc')->orderBy('id', 'asc')->get();
 
-        return $this->resource($categories);
+        $nodes = [];
+        foreach ($categories as $item) {
+            $row = $item->toArray();
+            $row['children'] = [];
+            $nodes[$item->id] = $row;
+        }
+
+        $tree = [];
+        foreach ($nodes as $id => &$node) {
+            $parentId = (int)($node['parent_id'] ?? 0);
+            if ($parentId > 0 && isset($nodes[$parentId])) {
+                $nodes[$parentId]['children'][] = &$node;
+            } else {
+                $tree[] = &$node;
+            }
+        }
+        unset($node);
+
+        return $this->resource($tree);
     }
 
     /**
