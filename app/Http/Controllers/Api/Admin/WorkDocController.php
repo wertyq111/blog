@@ -15,16 +15,11 @@ class WorkDocController extends Controller
     public function index(FormRequest $request, WorkDoc $workDoc)
     {
         $allowedFilters = $request->generateAllowedFilters($workDoc->getRequestFilters());
-        $conditions = $this->getAuthorizeConditions();
 
         $keyword = $request->get('keyword') ?: ($request->get('content') ?: $request->get('title'));
 
         $query = QueryBuilder::for($workDoc->newQuery()->with('category'))
             ->allowedFilters($allowedFilters);
-
-        foreach ($conditions as $condition) {
-            $query->where($condition[0], $condition[1], $condition[2]);
-        }
 
         if (!empty($keyword)) {
             $query->whereRaw('MATCH(title, content) AGAINST (? IN BOOLEAN MODE)', [$keyword]);
@@ -45,7 +40,6 @@ class WorkDocController extends Controller
      */
     public function info(WorkDoc $workDoc)
     {
-        $this->authorizeOwner($workDoc);
         $workDoc->load('category');
 
         return $this->resource($workDoc, ['time' => true]);
@@ -73,8 +67,6 @@ class WorkDocController extends Controller
      */
     public function edit(WorkDoc $workDoc, FormRequest $request)
     {
-        $this->authorizeOwner($workDoc);
-
         $data = $request->getSnakeRequest();
 
         $this->validateDoc($data, false);
@@ -92,8 +84,6 @@ class WorkDocController extends Controller
      */
     public function delete(WorkDoc $workDoc)
     {
-        $this->authorizeOwner($workDoc);
-
         $workDoc->delete();
 
         return response()->json([]);
@@ -112,42 +102,5 @@ class WorkDocController extends Controller
         }
     }
 
-    /**
-     * 获取当前用户的查询条件
-     */
-    private function getAuthorizeConditions(): array
-    {
-        $user = auth('api')->user();
-        $isManager = false;
-        foreach ($user->roles as $role) {
-            if ($role->code === 'super') {
-                $isManager = true;
-                break;
-            }
-        }
-
-        if ($isManager) {
-            return [];
-        }
-
-        return [['create_user', '=', $user->id]];
-    }
-
-    private function authorizeOwner(WorkDoc $workDoc): void
-    {
-        $user = auth('api')->user();
-        $isManager = false;
-        foreach ($user->roles as $role) {
-            if ($role->code === 'super') {
-                $isManager = true;
-                break;
-            }
-        }
-        if ($isManager) {
-            return;
-        }
-        if ($workDoc->create_user != $user->id) {
-            abort(403, '无权限');
-        }
-    }
 }
+

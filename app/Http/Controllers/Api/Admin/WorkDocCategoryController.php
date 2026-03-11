@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\Admin;
 use App\Http\Controllers\Api\Controller;
 use App\Http\Requests\Api\FormRequest;
 use App\Models\Admin\WorkDocCategory;
+use Illuminate\Support\Facades\DB;
 
 class WorkDocCategoryController extends Controller
 {
@@ -81,6 +82,32 @@ class WorkDocCategoryController extends Controller
         $category->edit();
 
         return $this->resource($category);
+    }
+
+    /**
+     * 分类拖拽排序
+     */
+    public function reorder(FormRequest $request, WorkDocCategory $category)
+    {
+        $order = $request->input('order', $request->input('list', []));
+
+        if (!is_array($order) || empty($order)) {
+            throw new \Exception('排序数据不能为空');
+        }
+
+        DB::transaction(function () use ($order, $category) {
+            foreach ($order as $item) {
+                if (!isset($item['id'])) {
+                    continue;
+                }
+                $category->newQuery()->where('id', $item['id'])->update([
+                    'parent_id' => isset($item['parent_id']) ? (int)$item['parent_id'] : 0,
+                    'sort' => isset($item['sort']) ? (int)$item['sort'] : 0,
+                ]);
+            }
+        });
+
+        return response()->json(['code' => 0, 'msg' => '分类排序已保存']);
     }
 
     /**
