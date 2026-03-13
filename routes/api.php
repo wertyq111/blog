@@ -315,6 +315,8 @@ Route::name('api')->group(function () {
         Route::get('work-daily/report/week', [WorkDailyLogController::class, 'reportWeek'])->name('work-daily.report-week');
         // 年报导出
         Route::get('work-daily/report/year', [WorkDailyLogController::class, 'reportYear'])->name('work-daily.report-year');
+        // OpenClaw 报表模型列表
+        Route::get('work-daily/report/models', [WorkDailyLogController::class, 'reportModels'])->name('work-daily.report-models');
 
         // 牛马文档分类列表
         Route::get('work-doc-category/index', [WorkDocCategoryController::class, 'index'])->name('work-doc-category.index')

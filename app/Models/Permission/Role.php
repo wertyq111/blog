@@ -46,7 +46,7 @@ class Role extends BaseModel
      */
     public function users()
     {
-        return $this->belongsToMany(User::class);
+        return $this->belongsToMany(User::class, 'user_role', 'role_id', 'user_id')->distinct();
     }
 
     /**
@@ -58,6 +58,6 @@ class Role extends BaseModel
      */
     public function menus()
     {
-        return $this->belongsToMany(Menu::class);
+        return $this->belongsToMany(Menu::class, 'role_menu', 'role_id', 'menu_id')->distinct();
     }
 }

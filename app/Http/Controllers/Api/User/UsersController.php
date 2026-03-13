@@ -151,7 +151,11 @@ class UsersController extends Controller
     {
         $user = auth()->user();
         $user = QueryBuilder::for(User::class)->allowedIncludes('member')->where(['id' => $user->id])->first();
-        $user->member->avatar = $user->member->avatar ? $this->qiniuService->getPrivateUrl($user->member->avatar) : "";
+        if ($user && $user->member) {
+            $user->member->avatar = $user->member->avatar
+                ? $this->qiniuService->getPrivateUrl($user->member->avatar)
+                : "";
+        }
 
         return new UserResource($user);
     }

@@ -85,6 +85,6 @@ class WorkDailyLog extends BaseModel
      */
     public static function findByUserAndDate($userId, $date)
     {
-        return self::where('user_id', $userId)->where('log_date', $date)->first();
+        return self::where('create_user', $userId)->where('log_date', $date)->first();
     }
 }

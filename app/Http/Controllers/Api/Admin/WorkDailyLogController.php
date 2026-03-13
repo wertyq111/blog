@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\Controller;
 use App\Http\Requests\Api\FormRequest;
 use App\Models\Admin\WorkDailyLog;
 use App\Models\Admin\WorkPlatform;
+use App\Services\Api\Admin\WorkDailyLogService;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -21,24 +22,31 @@ class WorkDailyLogController extends Controller
      */
     public function index(FormRequest $request, WorkDailyLog $workDailyLog)
     {
-        $allowedFilters = $request->generateAllowedFilters($workDailyLog->getRequestFilters());
+        $query = WorkDailyLog::query();
+        foreach ($this->getAuthorizeConditions() as $condition) {
+            $query->where($condition[0], $condition[1], $condition[2]);
+        }
 
-        $conditions = $this->getAuthorizeConditions();
-
+        $platformId = (int)$request->get('platform_id', 0);
         $startDate = $request->get('start_date');
         $endDate = $request->get('end_date');
         if ($startDate && $endDate) {
-            $conditions[] = ['log_date', '>=', $startDate];
-            $conditions[] = ['log_date', '<=', $endDate];
+            $query->where('log_date', '>=', $startDate)
+                ->where('log_date', '<=', $endDate);
         }
 
-        $config = [
-            'allowedFilters' => $allowedFilters,
-            'conditions' => $conditions,
-            'orderBy' => [['log_date' => 'desc'], ['id' => 'desc']]
-        ];
+        if ($platformId > 0) {
+            $this->applyPlatformFilter($query, $platformId);
+        }
 
-        $dailyLogs = $this->queryBuilder($workDailyLog, true, $config);
+        $content = trim((string)$request->get('content', ''));
+        if ($content !== '') {
+            $query->where('content', 'like', '%' . $content . '%');
+        }
+
+        $dailyLogs = $query->orderBy('log_date', 'desc')
+            ->orderBy('id', 'desc')
+            ->paginate(self::PER_PAGE);
 
         // 不再展示 platform 字段，content 返回为解码后的结构（模型的 accessor 已处理）
         return $this->resource($dailyLogs, ['time' => true, 'collection' => true]);
@@ -177,30 +185,9 @@ class WorkDailyLogController extends Controller
             throw new \Exception('未解析到有效数据');
         }
 
-        $platformMap = WorkPlatform::query()->get()->keyBy('name');
-        $created = 0;
-        foreach ($entries as $entry) {
-            $platform = $platformMap->get($entry['platform']);
-            if (!$platform) {
-                $platform = new WorkPlatform();
-                $platform->fill([
-                    'name' => $entry['platform'],
-                    'status' => 1,
-                    'sort' => 0
-                ]);
-                $platform->edit();
-                $platformMap->put($entry['platform'], $platform);
-            }
-
-            $log = new WorkDailyLog();
-            $log->fill([
-                'platform_id' => $platform->id,
-                'log_date' => $entry['date'],
-                'content' => $entry['content']
-            ]);
-            $log->edit();
-            $created++;
-        }
+        $user = auth('api')->user();
+        $service = new WorkDailyLogService();
+        $created = $service->importEntries($user->id, $entries);
 
         return response()->json(['count' => $created]);
     }
@@ -223,9 +210,10 @@ class WorkDailyLogController extends Controller
         $end = Carbon::createFromFormat('Y-m', $month)->endOfMonth()->toDateString();
 
         $logs = $this->fetchLogs($workDailyLog, $start, $end);
+        $model = $this->resolveReportModel($request);
 
         $title = "牛马日常月报 - {$month}";
-        $markdown = $this->buildSummaryMarkdown($title, $logs, 'month');
+        $markdown = $this->buildSummaryMarkdown($title, $logs, 'month', $model);
 
         return response($markdown, 200, ['Content-Type' => 'text/markdown; charset=UTF-8']);
     }
@@ -247,9 +235,10 @@ class WorkDailyLogController extends Controller
         }
 
         $logs = $this->fetchLogs($workDailyLog, $start, $end);
+        $model = $this->resolveReportModel($request);
 
         $title = "牛马日常周报 - {$start} ~ {$end}";
-        $markdown = $this->buildSummaryMarkdown($title, $logs, 'week');
+        $markdown = $this->buildSummaryMarkdown($title, $logs, 'week', $model);
 
         return response($markdown, 200, ['Content-Type' => 'text/markdown; charset=UTF-8']);
     }
@@ -272,11 +261,28 @@ class WorkDailyLogController extends Controller
         $end = Carbon::createFromFormat('Y', $year)->endOfYear()->toDateString();
 
         $logs = $this->fetchLogs($workDailyLog, $start, $end);
+        $model = $this->resolveReportModel($request);
 
         $title = "牛马日常年报 - {$year}";
-        $markdown = $this->buildSummaryMarkdown($title, $logs, 'year');
+        $markdown = $this->buildSummaryMarkdown($title, $logs, 'year', $model);
 
         return response($markdown, 200, ['Content-Type' => 'text/markdown; charset=UTF-8']);
+    }
+
+    /**
+     * 获取 OpenClaw 可用模型列表
+     *
+     * @return \App\Http\Resources\BaseResource
+     */
+    public function reportModels()
+    {
+        $defaultModel = env('OPENCLAW_MODEL', 'github-copilot/gpt-5.2-codex');
+        $models = $this->fetchOpenClawModels($defaultModel);
+
+        return $this->resource([
+            'models' => $models,
+            'current_model' => $defaultModel,
+        ]);
     }
 
     /**
@@ -406,7 +412,7 @@ class WorkDailyLogController extends Controller
      * @param \Illuminate\Support\Collection $logs
      * @return string
      */
-    private function buildSummaryMarkdown(string $title, $logs, string $type = 'month'): string
+    private function buildSummaryMarkdown(string $title, $logs, string $type = 'month', ?string $model = null): string
     {
         if ($logs->isEmpty()) {
             return "# {$title}\n\n暂无记录。\n";
@@ -461,7 +467,7 @@ class WorkDailyLogController extends Controller
             "- 保持简洁、可汇报\n\n" .
             "原始记录：\n{$source}";
 
-        $summary = $this->callOpenClaw($prompt);
+        $summary = $this->callOpenClaw($prompt, $model);
 
         if (!$summary) {
             return $this->buildMarkdown($title, $logs);
@@ -476,19 +482,23 @@ class WorkDailyLogController extends Controller
      * @param string $prompt
      * @return string|null
      */
-    private function callOpenClaw(string $prompt): ?string
+    private function callOpenClaw(string $prompt, ?string $model = null): ?string
     {
         $baseUrl = rtrim(env('OPENCLAW_GATEWAY_URL', 'http://127.0.0.1:18789'), '/');
-        $model = env('OPENCLAW_MODEL', 'github-copilot/gpt-5.2-codex');
+        $targetModel = $model ?: env('OPENCLAW_MODEL', 'github-copilot/gpt-5.2-codex');
         $token = env('OPENCLAW_GATEWAY_TOKEN');
+
+        if (str_starts_with($targetModel, 'bailian/')) {
+            return $this->callBailianDirect($prompt, $targetModel);
+        }
 
         try {
             $headers = [];
             if ($token) {
                 $headers['Authorization'] = 'Bearer ' . $token;
             }
-            $response = Http::withHeaders($headers)->timeout(60)->post($baseUrl . '/v1/chat/completions', [
-                'model' => $model,
+            $response = Http::withHeaders($headers)->post($baseUrl . '/v1/chat/completions', [
+                'model' => $targetModel,
                 'temperature' => 0.2,
                 'messages' => [
                     ['role' => 'system', 'content' => '你是一个擅长按平台归纳工作日志的助手，输出中文 Markdown。'],
@@ -502,9 +512,64 @@ class WorkDailyLogController extends Controller
             }
 
             $data = $response->json();
-            return $data['choices'][0]['message']['content'] ?? null;
+            $content = $data['choices'][0]['message']['content'] ?? null;
+            if (is_string($content) && str_starts_with($content, 'LLM request rejected:')) {
+                Log::warning('OpenClaw summary rejected', [
+                    'model' => $targetModel,
+                    'content' => $content,
+                ]);
+                return null;
+            }
+
+            return $content;
         } catch (\Exception $e) {
             Log::error('OpenClaw summary exception: ' . $e->getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Bailian 模型直连 DashScope，绕开 OpenClaw 网关的认证问题
+     *
+     * @param string $prompt
+     * @param string $model
+     * @return string|null
+     */
+    private function callBailianDirect(string $prompt, string $model): ?string
+    {
+        $apiKey = env('OPENCLAW_BAILIAN_API_KEY');
+        if (!$apiKey) {
+            Log::warning('Bailian direct summary skipped: missing OPENCLAW_BAILIAN_API_KEY');
+            return null;
+        }
+
+        $modelId = preg_replace('/^bailian\//', '', $model);
+
+        try {
+            $response = Http::withHeaders([
+                'Authorization' => 'Bearer ' . $apiKey,
+            ])->post('https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions', [
+                'model' => $modelId,
+                'temperature' => 0.2,
+                'messages' => [
+                    ['role' => 'system', 'content' => '你是一个擅长按平台归纳工作日志的助手，输出中文 Markdown。'],
+                    ['role' => 'user', 'content' => $prompt],
+                ],
+            ]);
+
+            if (!$response->ok()) {
+                Log::warning('Bailian direct summary failed', [
+                    'model' => $modelId,
+                    'status' => $response->status(),
+                    'body' => $response->body(),
+                ]);
+                return null;
+            }
+
+            $data = $response->json();
+            return $data['choices'][0]['message']['content'] ?? null;
+        } catch (\Exception $e) {
+            Log::error('Bailian direct summary exception: ' . $e->getMessage());
             return null;
         }
     }
@@ -628,6 +693,117 @@ class WorkDailyLogController extends Controller
         }
 
         return $entries;
+    }
+
+    /**
+     * 平台筛选兼容新旧两种数据结构
+     *
+     * @param \Illuminate\Database\Eloquent\Builder $query
+     * @param int $platformId
+     * @return void
+     */
+    private function applyPlatformFilter($query, int $platformId): void
+    {
+        $pattern = '"platform_id":[[:space:]]*' . $platformId . '([^0-9]|$)';
+
+        $query->where(function ($builder) use ($platformId, $pattern) {
+            $builder->where('platform_id', $platformId)
+                ->orWhereRaw('content REGEXP ?', [$pattern]);
+        });
+    }
+
+    /**
+     * 从请求中读取报表模型
+     *
+     * @param FormRequest $request
+     * @return string|null
+     */
+    private function resolveReportModel(FormRequest $request): ?string
+    {
+        $model = trim((string)$request->get('model', ''));
+        return $model !== '' ? $model : null;
+    }
+
+    /**
+     * 拉取 OpenClaw 模型列表
+     *
+     * @param string $defaultModel
+     * @return array
+     */
+    private function fetchOpenClawModels(string $defaultModel): array
+    {
+        $configuredModels = $this->parseConfiguredReportModels();
+        if (!empty($configuredModels)) {
+            if (!in_array($defaultModel, $configuredModels, true)) {
+                array_unshift($configuredModels, $defaultModel);
+            }
+            return array_values(array_unique(array_filter($configuredModels)));
+        }
+
+        $baseUrl = rtrim(env('OPENCLAW_GATEWAY_URL', 'http://127.0.0.1:18789'), '/');
+        $token = env('OPENCLAW_GATEWAY_TOKEN');
+
+        $models = [];
+
+        try {
+            $headers = [];
+            if ($token) {
+                $headers['Authorization'] = 'Bearer ' . $token;
+            }
+            $response = Http::withHeaders($headers)
+                ->timeout(10)
+                ->get($baseUrl . '/v1/models');
+
+            if ($response->ok()) {
+                $data = $response->json('data', []);
+                if (is_array($data)) {
+                    foreach ($data as $item) {
+                        if (is_array($item) && !empty($item['id'])) {
+                            $models[] = (string)$item['id'];
+                        }
+                    }
+                }
+            } else {
+                Log::warning('OpenClaw model list failed', [
+                    'status' => $response->status(),
+                    'body' => $response->body(),
+                ]);
+            }
+        } catch (\Exception $e) {
+            Log::error('OpenClaw model list exception: ' . $e->getMessage());
+        }
+
+        $models = array_values(array_unique(array_filter($models)));
+        if (empty($models)) {
+            return [$defaultModel];
+        }
+        if (!in_array($defaultModel, $models, true)) {
+            array_unshift($models, $defaultModel);
+        }
+
+        return $models;
+    }
+
+    /**
+     * 读取环境变量里配置的报表模型列表
+     *
+     * @return array
+     */
+    private function parseConfiguredReportModels(): array
+    {
+        $raw = trim((string)env('OPENCLAW_REPORT_MODELS', ''));
+        if ($raw === '') {
+            return [];
+        }
+
+        $decoded = json_decode($raw, true);
+        if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+            return array_values(array_filter(array_map(function ($item) {
+                return is_string($item) ? trim($item) : '';
+            }, $decoded)));
+        }
+
+        return array_values(array_filter(array_map('trim', explode(',', $raw))));
     }
 
     /**
