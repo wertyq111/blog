@@ -14,17 +14,15 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         $tableNames = [
-//            "users",
-//            "web_info",
-//            "im_chat_groups",
-//            "im_chat_group_users",
-//            "cities",
-            //"level",
-            //"member_level",
-            //"menus",
+            "users",
+            "web_info",
+            "im_chat_groups",
+            "im_chat_group_users",
+            "cities",
+            "level",
+            "member_level",
             "positions",
             "roles",
-            "role_menu",
             "user_role",
             "configs"
         ];
@@ -35,5 +33,10 @@ class DatabaseSeeder extends Seeder
                 $this->command->info($tableName . ' table seeded!');
             }
         }
+
+        $this->call([
+            MenuSeeder::class,
+            RoleMenuSeeder::class,
+        ]);
     }
 }
