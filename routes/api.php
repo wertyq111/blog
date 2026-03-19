@@ -259,6 +259,8 @@ Route::name('api')->group(function () {
         Route::get('server-path/{serverPath}', [ServerPathController::class, 'info'])->name('server-path.info');
         // 添加服务器路径
         Route::post('server-path/add', [ServerPathController::class, 'add'])->name('server-path.add');
+        // 兼容旧版前端删除服务器路径（支持单个/批量）
+        Route::post('server-path/delete', [ServerPathController::class, 'batchDelete'])->name('server-path.batch-delete');
         // 修改服务器路径
         Route::post('server-path/{serverPath}', [ServerPathController::class, 'edit'])->name('server-path.edit');
         // 删除服务器路径
@@ -272,6 +274,8 @@ Route::name('api')->group(function () {
         Route::get('init-model/{initModel}', [InitModelController::class, 'info'])->name('init-model.info');
         // 添加模型初始化
         Route::post('init-model/add', [InitModelController::class, 'add'])->name('init-model.add');
+        // 兼容旧版前端删除模型初始化（支持单个/批量）
+        Route::post('init-model/delete', [InitModelController::class, 'batchDelete'])->name('init-model.batch-delete');
         // 修改模型初始化
         Route::post('init-model/{initModel}', [InitModelController::class, 'edit'])->name('init-model.edit');
         // 删除模型初始化
