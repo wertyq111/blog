@@ -16,18 +16,38 @@ class ServerPathService
      */
     public function convert(ServerPath $serverPath, $paths)
     {
+        $serverPaths = [];
+        if (!is_array($paths) || empty($paths)) {
+            return $serverPaths;
+        }
+
         $target = $serverPath->target;
-        $sources = Utils::jsonDecode($serverPath->sources);
+        $sources = [];
+        if (!empty($serverPath->sources)) {
+            try {
+                $decodedSources = Utils::jsonDecode($serverPath->sources, true);
+                if (is_array($decodedSources)) {
+                    $sources = $decodedSources;
+                }
+            } catch (\Exception $e) {
+                $sources = [];
+            }
+        }
+
         foreach($paths as $path) {
             $isMatched = false;
             foreach ($sources as $source) {
+                if ($source === '') {
+                    continue;
+                }
+
                 //将 source 中的 \ 替换成\\
-                $patten = "@". str_replace('\\', '\\\\', $source). "@";
+                $patten = "@". preg_quote($source, '@'). "@";
                 if (preg_match($patten, $path)) {
                     $isMatched = true;
                     $serverPath = preg_replace($patten, $target, $path);
                     //将 \ 转换成 //
-                    $serverPath = preg_replace('@\\\@', '/', $serverPath);
+                    $serverPath = str_replace('\\', '/', $serverPath);
                     $serverPaths[] = $serverPath;
                 }
             }

@@ -68,6 +68,10 @@ class ServerPathController extends Controller
     {
         $data = $request->getSnakeRequest();
 
+        // 兼容前端未传 url/sort 的场景
+        $data['url'] = $data['url'] ?? '';
+        $data['sort'] = isset($data['sort']) ? (int)$data['sort'] : 0;
+
         if (isset($data['sources']) && is_array($data['sources'])) {
             $data['sources'] = Utils::jsonEncode($data['sources']);
         }
@@ -91,6 +95,10 @@ class ServerPathController extends Controller
     public function edit(ServerPath $serverPath, FormRequest $request)
     {
         $data = $request->getSnakeRequest();
+
+        // 兼容前端未传 url/sort 的场景
+        $data['url'] = $data['url'] ?? ($serverPath->url ?? '');
+        $data['sort'] = isset($data['sort']) ? (int)$data['sort'] : ((int) $serverPath->sort);
 
         if (isset($data['sources']) && is_array($data['sources'])) {
             $data['sources'] = Utils::jsonEncode($data['sources']);
@@ -132,6 +140,28 @@ class ServerPathController extends Controller
     public function delete(ServerPath $serverPath)
     {
         $serverPath->delete();
+
+        return response()->json([]);
+    }
+
+    /**
+     * 兼容旧版前端批量删除
+     *
+     * @param FormRequest $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function batchDelete(FormRequest $request)
+    {
+        $data = $request->getSnakeRequest();
+        $ids = $data['id'] ?? [];
+        $ids = is_array($ids) ? $ids : [$ids];
+        $ids = array_values(array_filter($ids, static function ($id) {
+            return is_numeric($id);
+        }));
+
+        if (!empty($ids)) {
+            ServerPath::query()->whereIn('id', $ids)->delete();
+        }
 
         return response()->json([]);
     }
