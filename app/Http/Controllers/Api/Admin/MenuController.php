@@ -99,57 +99,7 @@ class MenuController extends Controller
             $menu->fill($data);
             $menu->edit();
             if (isset($data['checkedList']) && count($data['checkedList']) > 0) {
-                // 对照数组
-                $permissionContrast = [
-                    1 => [
-                        'title' => '查询%s%',
-                        'permission' => 'sys:%s%:index'
-                    ],
-                    5 => [
-                        'title' => '添加%s%',
-                        'permission' => 'sys:%s%:add'
-                    ],
-                    10 => [
-                        'title' => '修改%s%',
-                        'permission' => 'sys:%s%:edit'
-                    ],
-                    15 => [
-                        'title' => '删除%s%',
-                        'permission' => 'sys:%s%:delete'
-                    ],
-                    20 => [
-                        'title' => '设置状态',
-                        'permission' => 'sys:%s%:status'
-                    ],
-                    25 => [
-                        'title' => '批量删除',
-                        'permission' => 'sys:%s%:dall'
-                    ],
-                    30 => [
-                        'title' => '全部展开',
-                        'permission' => 'sys:%s%:expand'
-                    ],
-                    35 => [
-                        'title' => '全部折叠',
-                        'permission' => 'sys:%s%:collapse'
-                    ],
-                    40 => [
-                        'title' => '添加子级',
-                        'permission' => 'sys:%s%:addz'
-                    ],
-                    45 => [
-                        'title' => '导出数据',
-                        'permission' => 'sys:%s%:export'
-                    ],
-                    50 => [
-                        'title' => '导入数据',
-                        'permission' => 'sys:%s%:import'
-                    ],
-                    55 => [
-                        'title' => '分配权限',
-                        'permission' => 'sys:%s%:permission'
-                    ]
-                ];
+                $permissionContrast = MenuService::permissionContrastMap();
                 $item = explode("/", $data['path']);
                 // 模块名称
                 $moduleName = $item[count($item) - 1];
@@ -158,6 +108,9 @@ class MenuController extends Controller
 
                 $childMenus = [];
                 foreach($data['checkedList'] as $permissionSort) {
+                    if (!isset($permissionContrast[$permissionSort])) {
+                        continue;
+                    }
                     $child['pid'] = $menu->id;
                     $child['type'] = 1;
                     $child['status'] = 1;
@@ -168,7 +121,7 @@ class MenuController extends Controller
 
                     // 判断现有权限组是否已存在
                     if (in_array($permissionSort, array_column($menu->children->toArray(), 'sort'))) {
-                        dd($permissionSort);
+                        continue;
                     } else {
                         $childMenus[] = new Menu($child);
                     }
@@ -217,57 +170,7 @@ class MenuController extends Controller
             $menu->fill($data);
             $menu->edit();
             if (isset($data['checkedList']) && count($data['checkedList']) > 0) {
-                // 对照数组
-                $permissionContrast = [
-                    1 => [
-                        'title' => '查询%s%',
-                        'permission' => 'sys:%s%:index'
-                    ],
-                    5 => [
-                        'title' => '添加%s%',
-                        'permission' => 'sys:%s%:add'
-                    ],
-                    10 => [
-                        'title' => '修改%s%',
-                        'permission' => 'sys:%s%:edit'
-                    ],
-                    15 => [
-                        'title' => '删除%s%',
-                        'permission' => 'sys:%s%:delete'
-                    ],
-                    20 => [
-                        'title' => '设置状态',
-                        'permission' => 'sys:%s%:status'
-                    ],
-                    25 => [
-                        'title' => '批量删除',
-                        'permission' => 'sys:%s%:dall'
-                    ],
-                    30 => [
-                        'title' => '全部展开',
-                        'permission' => 'sys:%s%:expand'
-                    ],
-                    35 => [
-                        'title' => '全部折叠',
-                        'permission' => 'sys:%s%:collapse'
-                    ],
-                    40 => [
-                        'title' => '添加子级',
-                        'permission' => 'sys:%s%:addz'
-                    ],
-                    45 => [
-                        'title' => '导出数据',
-                        'permission' => 'sys:%s%:export'
-                    ],
-                    50 => [
-                        'title' => '导入数据',
-                        'permission' => 'sys:%s%:import'
-                    ],
-                    55 => [
-                        'title' => '分配权限',
-                        'permission' => 'sys:%s%:permission'
-                    ]
-                ];
+                $permissionContrast = MenuService::permissionContrastMap();
                 $item = explode("/", $data['path']);
                 // 模块名称
                 $moduleName = $item[count($item) - 1];
@@ -276,6 +179,9 @@ class MenuController extends Controller
 
                 $childMenus = [];
                 foreach($data['checkedList'] as $permissionSort) {
+                    if (!isset($permissionContrast[$permissionSort])) {
+                        continue;
+                    }
                     $child['pid'] = $menu->id;
                     $child['type'] = 1;
                     $child['status'] = 1;
