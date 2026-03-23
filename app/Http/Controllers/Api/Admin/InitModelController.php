@@ -126,4 +126,26 @@ class InitModelController extends Controller
 
         return response()->json([]);
     }
+
+    /**
+     * 兼容旧版前端批量删除
+     *
+     * @param FormRequest $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function batchDelete(FormRequest $request)
+    {
+        $data = $request->getSnakeRequest();
+        $ids = $data['id'] ?? [];
+        $ids = is_array($ids) ? $ids : [$ids];
+        $ids = array_values(array_filter($ids, static function ($id) {
+            return is_numeric($id);
+        }));
+
+        if (!empty($ids)) {
+            InitModel::query()->whereIn('id', $ids)->delete();
+        }
+
+        return response()->json([]);
+    }
 }
