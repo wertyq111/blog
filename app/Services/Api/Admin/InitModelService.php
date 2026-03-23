@@ -53,7 +53,15 @@ class InitModelService
     {
         $templates = [];
         foreach ($columns as $column) {
+            if (trim((string) $column) === '') {
+                continue;
+            }
+
             $columnData = explode("|", $column);
+            if (!isset($columnData[0], $columnData[1])) {
+                throw new \Exception("模板字段格式不正确: {$column}");
+            }
+
             $name = $columnData[0];
             $type = $columnData[1];
             $length = isset($columnData[2]) ? $columnData[2] : null;
@@ -65,8 +73,8 @@ class InitModelService
             // 设置字段属性
             if ($type == 'decimal') {
                 $lengthData = explode(",", $length);
-                if ($length == null || !is_array($lengthData)) {
-                    throw new \Exception("float 类型长度不正确!");
+                if ($length == null || count($lengthData) !== 2) {
+                    throw new \Exception("decimal 类型长度不正确: {$column}");
                 }
 
                 $columnAttribute .= ', precision=' . $lengthData[0] . ',scale=' . $lengthData[1];
@@ -127,7 +135,15 @@ class InitModelService
     {
         $templates = [];
         foreach ($columns as $column) {
+            if (trim((string) $column) === '') {
+                continue;
+            }
+
             $columnData = explode("|", $column);
+            if (!isset($columnData[0], $columnData[1])) {
+                throw new \Exception("模板字段格式不正确: {$column}");
+            }
+
             $name = $columnData[0];
             $type = $columnData[1];
             $comment = isset($columnData[2]) ? $columnData[2] : null;
