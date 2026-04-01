@@ -4,30 +4,44 @@ namespace App\Http\Requests\Api\User;
 
 use App\Http\Requests\Api\FormRequest;
 use App\Rules\AvatarUrl;
-use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 
 class MemberRequest extends FormRequest
 {
+    protected function currentActionMethod(): ?string
+    {
+        $actionName = $this->route()?->getActionName();
+        if (!$actionName || !str_contains($actionName, '@')) {
+            return null;
+        }
+
+        [, $method] = explode('@', $actionName);
+
+        return $method;
+    }
 
     public function rules(): array
     {
         switch ($this->method()) {
             case 'POST':
+                $method = $this->currentActionMethod();
+
+                if ($method === 'status') {
+                    return [];
+                }
+
                 $rules = [
-                    'avatar' => new AvatarUrl()
+                    'avatar' => ['nullable', new AvatarUrl()]
                 ];
-                list($class, $method) = explode('@', $this->route()->getActionName());
-                if($method == 'add') {
-                    $rules = array_merge($rules, [
-                        'user_id' => [
-                            'required',
-                            'integer',
-                            Rule::unique('members')->where(function ($query) {
-                                $query->where('deleted_at', 0);
-                            })
-                        ]
-                    ]);
+
+                if ($method === 'add') {
+                    $rules['user_id'] = [
+                        'required',
+                        'integer',
+                        Rule::unique('members')->where(function ($query) {
+                            $query->where('deleted_at', 0);
+                        })
+                    ];
                 }
 
                 return $rules;

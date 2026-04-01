@@ -43,6 +43,19 @@ class MemberService extends BaseService
      */
     public function completeMember($data)
     {
+        foreach (['avatar', 'app_version'] as $field) {
+            if (array_key_exists($field, $data) && $data[$field] === null) {
+                $data[$field] = '';
+            }
+        }
+
+        if (array_key_exists('birthday', $data) && is_string($data['birthday']) && $data['birthday'] !== '') {
+            $birthdayTimestamp = strtotime($data['birthday']);
+            if ($birthdayTimestamp !== false) {
+                $data['birthday'] = $birthdayTimestamp;
+            }
+        }
+
         // 分解城市代码
         if(isset($data['city'])) {
             $data['province_code'] = $data['city'][0] ?? null;
