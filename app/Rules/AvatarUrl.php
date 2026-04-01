@@ -2,7 +2,6 @@
 
 namespace App\Rules;
 
-use Closure;
 use Illuminate\Contracts\Validation\Rule;
 
 class AvatarUrl implements Rule
@@ -17,7 +16,11 @@ class AvatarUrl implements Rule
     public function passes($attribute, $value)
     {
         $qiniuDomain = env('QINIU_DOMAIN', null);
-        if($qiniuDomain != null && preg_match('/^(http|https):\/\/'. $qiniuDomain. '(.*)\.(jpg|jpeg|gif|webp)$/', $value)) {
+        if (!is_string($value) || $value === '') {
+            return false;
+        }
+
+        if($qiniuDomain != null && preg_match('/^(http|https):\/\/' . preg_quote($qiniuDomain, '/') . '(.*)\.(jpg|jpeg|gif|png|webp)$/i', $value)) {
             return filter_var($value, FILTER_VALIDATE_URL);
         }
         return false;

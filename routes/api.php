@@ -125,6 +125,8 @@ Route::name('api')->group(function () {
         /** 用户接口开始 */
         // 获取用户信息
         Route::get('users/getUserInfo', [UsersController::class, 'getUserInfo'])->name('users.getUserInfo');
+        // 更新当前用户资料
+        Route::post('index/updateUserInfo', [UsersController::class, 'updateUserInfo'])->name('users.updateUserInfo');
         // 用户列表
         Route::get('users/list', [UsersController::class, 'index'])->name('users.index');
         // 验证用户
