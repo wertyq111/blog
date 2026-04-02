@@ -18,7 +18,6 @@ class PhotoCategory extends BaseModel
         'id',
         'member_id',
         'name',
-        'sort'
     ];
 
 

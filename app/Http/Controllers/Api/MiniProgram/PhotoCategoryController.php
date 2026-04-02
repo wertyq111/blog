@@ -105,8 +105,8 @@ class PhotoCategoryController extends Controller
     public function add(PhotoCategoryRequest $request, PhotoCategory $category)
     {
         $data = $request->getSnakeRequest();
-        // 补充会员信息
-        $data = array_merge($data, $this->authorizeForMember());
+        // 新增分类始终归属当前登录会员，查询作用域不参与写入归属。
+        $data['member_id'] = auth('api')->user()->member->id;
 
         $category->fill($data);
 
