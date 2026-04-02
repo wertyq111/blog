@@ -1,98 +1,192 @@
-# 一. 项目介绍
+# Blog Backend
 
-## 1.1 项目名称
-个人博客系统（后端）
+## 项目概览
 
-## 1.2 功能描述
+当前工作区中的后端是一个基于 Laravel 10 的 API 服务，主要为后台管理端、博客内容、小程序内容和若干业务模块提供接口。
 
+- 主要接口入口在 `routes/api.php`
+- `routes/web.php` 当前只保留默认欢迎页
+- 业务代码集中在 `app/Http/Controllers/Api`、`app/Services/Api`、`app/Models`
+- 初始化数据由 `database/seeders/sql/*.sql` 和 Seeder 类共同完成
 
-# 二. 系统技术栈
+当前代码里可以明显看到的模块分层：
 
-## 1.1 技术栈
+- `Admin`：后台管理相关接口
+- `User`：登录、用户、会员等接口
+- `MiniProgram`：小程序内容相关接口
+- `Web`：博客站点内容相关接口
+- `Tobacco`：烟草业务相关接口
 
-| 名称    | 简介                                                         | 文档                  |
-| ------- | ------------------------------------------------------------ | --------------------- |
-| PHP     | PHP（PHP: Hypertext Preprocessor）是在服务器端执行的脚本语言，尤其适用于 Web 开发。 | https://www.php.net   |
-| Laravel | Laravel 是一套简洁、优雅的 PHP Web开发框架。                 | https://laravel.com   |
-| MySQL   | MySQL 是最流行的关系型数据库管理系统之一。                   | https://www.mysql.com |
-| Redis   | Redis（Remote Dictionary Server )，即远程字典服务，是一个开源的Key-Value数据库。 | https://redis.io      |
+## 技术栈
 
-## 1.2 安装运行
+| 名称 | 当前情况 |
+| --- | --- |
+| PHP | `composer.json` 要求 `^8.1` |
+| Laravel | `^10.10` |
+| MySQL | `docker-compose.yml` 中使用 `mysql/mysql-server:8.0` |
+| Redis | `docker-compose.yml` 中使用 `redis:alpine` |
+| Mailpit | 本地开发邮件捕获 |
+| Vite | 用于 `resources/` 下前端资源构建 |
+| PHPUnit | 单元测试与功能测试 |
 
-### 1.2.1 下载项目
+## 当前目录说明
 
-```shell
-$cd '目录地址'
-$git clone git@github.com:wertyq111/blog.git
+```text
+blog-dev
+├── app/                    Laravel 业务代码
+├── config/                 框架配置
+├── database/
+│   ├── migrations/         数据库迁移
+│   ├── seeders/            Seeder 与 SQL 初始化数据
+│   └── seeders/sql/        初始数据 SQL 文件
+├── public/                 对外静态资源与上传目录
+├── resources/              Laravel 默认前端资源
+├── routes/                 路由定义
+├── runtimes/               Docker 运行时构建文件
+├── tests/                  PHPUnit 测试
+├── artisan                 Laravel CLI 入口
+├── composer.json           PHP 依赖定义
+├── docker-compose.yml      当前工作区使用的本地容器编排
+└── package.json            Vite 资源构建脚本
 ```
 
-### 1.2.2 配置和安装
+## 快速开始
 
-```shell
-# 1. 先切换到项目根目录
-$cd blog
-    
-# 2. 复制配置环境文件
-$cp .env.example .env
-    
-# 3. 修改配置文件里的配置项，比如 mysql、redis 等具体配置
-    
-# 4. 修改 setup.sh 脚本文件权限
-$chmod 755 setup.sh
-    
-# 5. 运行安装脚本，并等待安装结束
-$./setup.sh 
-    
-# 6. 安装成功后，运行 sail 启动项目
-$./vendor/laravel/sail up
-    
-# 7. 设置 sail 别名，以避免每次输入路径
-$alias sail='[ -f sail ] && sh sail || sh vendor/bin/sail'
-    
+### 1. 环境准备
+
+推荐按当前工作区的主流程，用 Docker + Sail 启动：
+
+- Docker Engine / Docker Desktop
+- Docker Compose v2
+- 可选：本机安装 PHP 8.1+、Composer、Node.js
+
+### 2. 配置环境变量
+
+```bash
+cp .env.example .env
 ```
 
-### 1.2.3 创建数据表并添加初始数据
-```shell
-#1. 导入数据表
-$./vendor/bin/sail artisan migrate
-    
-#2. 导入初始数据
-$./vendor/bin/sail artisan db:seed
-    
-#3. 查看数据库
-$./vendor/bin/sail artisan db:show
-    
+至少先检查这些配置项：
+
+- `APP_URL`
+- `APP_PORT`
+- `DB_*`
+- `REDIS_*`
+- `MAIL_*`
+
+`.env.example` 当前默认暴露的开发端口是：
+
+- 应用：`3925`
+- Vite：`5174`
+- MySQL：`3307`
+- Redis：`6380`
+- Mailpit SMTP：`1026`
+- Mailpit 面板：`8026`
+
+### 3. 安装依赖
+
+如果本机已安装 Composer：
+
+```bash
+composer install
 ```
 
-### 1.2.4 Docker 容器访问宿主机 `127.0.0.1:18789` 的 openclaw agent
+如果希望直接使用 Sail 的 Composer 镜像：
 
-当 openclaw agent 只监听在宿主机回环地址（`127.0.0.1:18789`）时，`bridge` 网络中的容器无法直接访问该端口。可使用宿主机端口转发进行适配。
-
-#### 方案：在宿主机使用 `socat` 转发
-
-1. 在宿主机安装并启动 `socat`，将 `0.0.0.0:18790` 转发到 `127.0.0.1:18789`：
-
-```shell
-socat TCP-LISTEN:18790,fork,bind=0.0.0.0,reuseaddr TCP:127.0.0.1:18789
+```bash
+docker run --rm \
+  -v "$(pwd)":/opt \
+  -w /opt \
+  laravelsail/php81-composer:latest \
+  composer install --ignore-platform-reqs
 ```
 
-2. `docker-compose.yml`（本项目已包含）确保应用容器包含如下配置：
+前端资源依赖按需安装：
 
-```yaml
-extra_hosts:
-  - 'host.docker.internal:host-gateway'
+```bash
+npm install
 ```
 
-3. 在 Laravel `.env` 中配置 openclaw agent 地址为宿主机转发端口：
+### 4. 启动服务
 
-```env
-OPENCLAW_AGENT_URL=http://host.docker.internal:18790
+```bash
+./vendor/bin/sail up -d
 ```
 
-4. 容器内连通性验证：
+首次启动后建议执行：
 
-```shell
-curl -v http://host.docker.internal:18790
+```bash
+./vendor/bin/sail artisan key:generate
+./vendor/bin/sail artisan migrate --seed
 ```
 
-> 说明：不建议直接使用 `network_mode: host` 替代上述方案，会降低容器网络隔离能力。
+如果你是在容器内运行 Laravel 应用，数据库和缓存服务通常应指向 compose 中的服务名：
+
+- `DB_HOST=mysql`
+- `REDIS_HOST=redis`
+- `MAIL_HOST=mailpit`
+
+如果你是在宿主机直接运行 Laravel，再使用 compose 暴露出的端口，则通常使用：
+
+- `DB_HOST=127.0.0.1`
+- `DB_PORT=3307`
+- `REDIS_HOST=127.0.0.1`
+- `REDIS_PORT=6380`
+
+## 常用命令
+
+```bash
+# 启动 / 停止
+./vendor/bin/sail up -d
+./vendor/bin/sail down
+
+# 进入容器
+./vendor/bin/sail shell
+
+# Artisan
+./vendor/bin/sail artisan migrate
+./vendor/bin/sail artisan db:seed
+./vendor/bin/sail artisan test
+
+# 资源构建
+npm run dev
+npm run build
+```
+
+## 初始化数据
+
+`DatabaseSeeder` 当前会导入这些初始数据来源：
+
+- `database/seeders/sql/*.sql`
+- `MenuSeeder`
+- `RoleMenuSeeder`
+
+因此首次初始化数据库时，优先使用：
+
+```bash
+./vendor/bin/sail artisan migrate --seed
+```
+
+## 测试
+
+当前测试入口为 PHPUnit：
+
+```bash
+./vendor/bin/sail artisan test
+```
+
+测试目录：
+
+- `tests/Feature`
+- `tests/Unit`
+
+## OpenClaw 网关说明
+
+当前代码中的 `WorkDailyLogController` 会读取这些环境变量来调用 OpenClaw / AI 汇总能力：
+
+- `OPENCLAW_GATEWAY_URL`
+- `OPENCLAW_GATEWAY_TOKEN`
+- `OPENCLAW_MODEL`
+- `OPENCLAW_REPORT_MODELS`
+
+如果容器需要访问宿主机回环地址上的网关端口，可以在宿主机做端口转发，再把 Laravel 配置指向 `host.docker.internal`。这部分只在你需要工作日报 AI 摘要能力时才需要配置。
