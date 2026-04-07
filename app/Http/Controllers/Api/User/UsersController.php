@@ -34,12 +34,28 @@ class UsersController extends Controller
             ->allowedFilters([
                 'username',
                 'phone',
+                AllowedFilter::exact('gender', 'member.gender'),
                 AllowedFilter::exact('status'),
                 AllowedFilter::exact('roles.id'),
             ])->paginate();
 
         $list = UserResource::collection($users);
         return $list;
+    }
+
+    /**
+     * 获取用户详情
+     *
+     * @param User $user
+     * @return UserResource
+     * @author zhouxufeng <zxf@netsun.com>
+     * @date 2026/4/7 11:37
+     */
+    public function show(User $user)
+    {
+        $user->load(['member', 'roles']);
+
+        return new UserResource($user);
     }
 
     /**
