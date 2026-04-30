@@ -52,18 +52,18 @@ blog-dev
 
 主路由入口是 `routes/api.php`。`routes/web.php` 当前只保留 Laravel 默认 Web 入口。
 
-## 默认端口
+## 端口变量
 
-`.env.example` 当前默认端口如下：
+端口统一从 `.env` 读取，默认值放在 `.env.example`：
 
-| 服务 | 环境变量 | 宿主机端口 |
-| --- | --- | --- |
-| Laravel 应用 | `APP_PORT` | `3925` |
-| Vite | `VITE_PORT` | `5174` |
-| MySQL | `FORWARD_DB_PORT` | `3307` |
-| Redis | `FORWARD_REDIS_PORT` | `6380` |
-| Mailpit SMTP | `FORWARD_MAILPIT_PORT` | `1026` |
-| Mailpit 面板 | `FORWARD_MAILPIT_DASHBOARD_PORT` | `8026` |
+| 服务 | 环境变量 |
+| --- | --- |
+| Laravel 应用 | `APP_PORT` |
+| Vite | `VITE_PORT` |
+| MySQL | `FORWARD_DB_PORT` |
+| Redis | `FORWARD_REDIS_PORT` |
+| Mailpit SMTP | `FORWARD_MAILPIT_PORT` |
+| Mailpit 面板 | `FORWARD_MAILPIT_DASHBOARD_PORT` |
 
 ## 环境变量
 
@@ -88,11 +88,11 @@ MAIL_PORT=1025
 
 ```dotenv
 DB_HOST=127.0.0.1
-DB_PORT=3307
+DB_PORT=${FORWARD_DB_PORT}
 REDIS_HOST=127.0.0.1
-REDIS_PORT=6380
+REDIS_PORT=${FORWARD_REDIS_PORT}
 MAIL_HOST=127.0.0.1
-MAIL_PORT=1026
+MAIL_PORT=${FORWARD_MAILPIT_PORT}
 ```
 
 业务功能按需读取这些配置：
@@ -104,6 +104,7 @@ MAIL_PORT=1026
 | 高德天气 | `WEATHER_AMAP_KEY` |
 | 微信小程序 | `WECHAT_MINI_APP_APPID`、`WECHAT_MINI_APP_SECRET` |
 | 短信 | `SMS_ALIYUN_ACCESS_KEY_ID`、`SMS_ALIYUN_ACCESS_KEY_SECRET`、`SMS_ALIYUN_TEMPLATE_REGISTER` |
+| 客户端 IP 映射 | `CLIENT_IP_OVERRIDE_SOURCE`、`CLIENT_IP_OVERRIDE_TARGET` |
 | 工作日报 AI 汇总 | `OPENCLAW_GATEWAY_URL`、`OPENCLAW_GATEWAY_TOKEN`、`OPENCLAW_MODEL`、`OPENCLAW_REPORT_MODELS`、`OPENCLAW_BAILIAN_API_KEY` |
 
 ## 安装依赖
@@ -149,8 +150,8 @@ npm install
 
 | 目标 | 地址 |
 | --- | --- |
-| API 前缀 | `http://localhost:3925/api` |
-| Mailpit 面板 | `http://localhost:8026` |
+| API 前缀 | `http://localhost:${APP_PORT}/api` |
+| Mailpit 面板 | `http://localhost:${FORWARD_MAILPIT_DASHBOARD_PORT}` |
 
 ## 初始化数据
 

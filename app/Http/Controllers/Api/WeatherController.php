@@ -19,12 +19,7 @@ class WeatherController extends Controller
      */
     public function index()
     {
-        $ip = request()->getClientIp();
-
-        // 测试 ip
-        if($ip == '192.168.28.59') {
-            $ip = '125.118.5.27';
-        }
+        $ip = $this->resolveClientIp();
 
         try {
             // 根据 ip 获取 ip 定位
@@ -78,5 +73,18 @@ class WeatherController extends Controller
         ]);
 
         return Utils::jsonDecode($res->getBody(), true);
+    }
+
+    private function resolveClientIp(): string
+    {
+        $ip = request()->getClientIp();
+        $sourceIp = config('services.client_ip_override.source');
+        $targetIp = config('services.client_ip_override.target');
+
+        if ($sourceIp && $targetIp && $ip === $sourceIp) {
+            return $targetIp;
+        }
+
+        return $ip;
     }
 }
