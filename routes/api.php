@@ -131,6 +131,8 @@ Route::name('api')->group(function () {
         Route::get('users/list', [UsersController::class, 'index'])->name('users.index');
         // 验证用户
         Route::get('users/checkUser', [UsersController::class, 'checkUser'])->name('users.checkUser');
+        // 用户详情
+        Route::get('users/{user}', [UsersController::class, 'show'])->name('users.show');
         // 创建用户
         Route::post('users/add', [UsersController::class, 'add'])->name('users.add');
         // 重置密码
