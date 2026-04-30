@@ -1,4 +1,4 @@
-# Blog Backend
+# 个人博客后端
 
 这是当前 blog 工作区的 Laravel 10 API 后端，给 Vue 管理后台、博客内容、小程序内容、会员体系、烟草业务和开发工作台提供接口。
 
@@ -212,15 +212,3 @@ npm run build
 | --- | --- |
 | `tests/Unit` | Filter、MenuService、迁移辅助逻辑等单元测试 |
 | `tests/Feature` | HTTP 功能测试 |
-
-## 远端验证
-
-当前工作区涉及运行时验证时，以远端环境为准：
-
-| 项目 | 当前值 |
-| --- | --- |
-| SSH | `ubuntu@10.10.9.184` |
-| 后端远端目录 | `/data/personal/projects/blog` |
-| 远端 API 前缀 | `http://10.10.9.184:3925/api` |
-
-本地和远端是同一仓库时，用 Git 同步。不要把 macOS `._*` 文件同步到远端。
