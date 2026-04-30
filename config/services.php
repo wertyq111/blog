@@ -39,4 +39,13 @@ return [
         ],
     ],
 
+    'openclaw' => [
+        'gateway_url' => env('OPENCLAW_GATEWAY_URL'),
+    ],
+
+    'client_ip_override' => [
+        'source' => env('CLIENT_IP_OVERRIDE_SOURCE'),
+        'target' => env('CLIENT_IP_OVERRIDE_TARGET'),
+    ],
+
 ];
