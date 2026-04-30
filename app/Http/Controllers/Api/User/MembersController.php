@@ -56,11 +56,7 @@ class MembersController extends Controller
     {
         $data = $request->getSnakeRequest();
         $type = $data['type'] ?? null;
-        $ip = $request->getClientIp();
-        // 测试 ip
-        if ($ip == '192.168.28.59') {
-            $ip = '125.118.5.27';
-        }
+        $ip = $this->resolveClientIp($request);
 
         $responseData = [];
 
@@ -92,11 +88,7 @@ class MembersController extends Controller
     {
         $data = $request->getSnakeRequest();
         $type = $data['type'] ?? null;
-        $ip = $request->getClientIp();
-        // 测试 ip
-        if ($ip == '192.168.28.59') {
-            $ip = '125.118.5.27';
-        }
+        $ip = $this->resolveClientIp($request);
 
         $responseData = [];
 
@@ -207,5 +199,18 @@ class MembersController extends Controller
         $member->edit();
 
         return new MemberResource($member);
+    }
+
+    private function resolveClientIp(FormRequest $request): string
+    {
+        $ip = $request->getClientIp();
+        $sourceIp = config('services.client_ip_override.source');
+        $targetIp = config('services.client_ip_override.target');
+
+        if ($sourceIp && $targetIp && $ip === $sourceIp) {
+            return $targetIp;
+        }
+
+        return $ip;
     }
 }
