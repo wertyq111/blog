@@ -1,5 +1,24 @@
 <?php
 
+use Laravel\Sanctum\Sanctum;
+
+$statefulLocalHost = env('SANCTUM_LOCAL_HOST', 'localhost');
+$statefulLoopbackHost = env('SANCTUM_LOOPBACK_HOST', '127.0.0.1');
+$statefulIpv6LoopbackHost = env('SANCTUM_IPV6_LOOPBACK_HOST', '::1');
+$statefulFrontendPort = env('SANCTUM_FRONTEND_PORT');
+$statefulBackendPort = env('SANCTUM_BACKEND_PORT');
+
+$statefulFallbackDomains = array_filter([
+    $statefulLocalHost,
+    $statefulFrontendPort ? $statefulLocalHost . ':' . $statefulFrontendPort : null,
+    $statefulLoopbackHost,
+    $statefulBackendPort ? $statefulLoopbackHost . ':' . $statefulBackendPort : null,
+    $statefulIpv6LoopbackHost,
+    Sanctum::currentApplicationUrlWithPort(),
+]);
+
+$statefulDomains = env('SANCTUM_STATEFUL_DOMAINS') ?: implode(',', $statefulFallbackDomains);
+
 return [
 
     /*
@@ -13,7 +32,7 @@ return [
     |
     */
 
-    'stateful' => array_filter(array_map('trim', explode(',', env('SANCTUM_STATEFUL_DOMAINS', '')))),
+    'stateful' => array_values(array_filter(array_map('trim', explode(',', $statefulDomains)))),
 
     /*
     |--------------------------------------------------------------------------
