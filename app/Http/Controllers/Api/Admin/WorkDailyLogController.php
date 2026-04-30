@@ -484,7 +484,12 @@ class WorkDailyLogController extends Controller
      */
     private function callOpenClaw(string $prompt, ?string $model = null): ?string
     {
-        $baseUrl = rtrim(env('OPENCLAW_GATEWAY_URL', 'http://127.0.0.1:18789'), '/');
+        $baseUrl = $this->resolveOpenClawGatewayUrl();
+        if (!$baseUrl) {
+            Log::warning('OpenClaw summary skipped: missing OPENCLAW_GATEWAY_URL');
+            return null;
+        }
+
         $targetModel = $model ?: env('OPENCLAW_MODEL', 'github-copilot/gpt-5.2-codex');
         $token = env('OPENCLAW_GATEWAY_TOKEN');
 
@@ -740,7 +745,11 @@ class WorkDailyLogController extends Controller
             return array_values(array_unique(array_filter($configuredModels)));
         }
 
-        $baseUrl = rtrim(env('OPENCLAW_GATEWAY_URL', 'http://127.0.0.1:18789'), '/');
+        $baseUrl = $this->resolveOpenClawGatewayUrl();
+        if (!$baseUrl) {
+            return [$defaultModel];
+        }
+
         $token = env('OPENCLAW_GATEWAY_TOKEN');
 
         $models = [];
@@ -782,6 +791,15 @@ class WorkDailyLogController extends Controller
         }
 
         return $models;
+    }
+
+    private function resolveOpenClawGatewayUrl(): ?string
+    {
+        $baseUrl = config('services.openclaw.gateway_url');
+
+        return is_string($baseUrl) && trim($baseUrl) !== ''
+            ? rtrim($baseUrl, '/')
+            : null;
     }
 
     /**
