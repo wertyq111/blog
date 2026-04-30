@@ -1,97 +1,114 @@
 # Blog Backend
 
-## 项目概览
+这是当前 blog 工作区的 Laravel 10 API 后端，给 Vue 管理后台、博客内容、小程序内容、会员体系、烟草业务和开发工作台提供接口。
 
-当前工作区中的后端是一个基于 Laravel 10 的 API 服务，主要为后台管理端、博客内容、小程序内容和若干业务模块提供接口。
+## 当前技术栈
 
-- 主要接口入口在 `routes/api.php`
-- `routes/web.php` 当前只保留默认欢迎页
-- 业务代码集中在 `app/Http/Controllers/Api`、`app/Services/Api`、`app/Models`
-- 初始化数据由 `database/seeders/sql/*.sql` 和 Seeder 类共同完成
-
-当前代码里可以明显看到的模块分层：
-
-- `Admin`：后台管理相关接口
-- `User`：登录、用户、会员等接口
-- `MiniProgram`：小程序内容相关接口
-- `Web`：博客站点内容相关接口
-- `Tobacco`：烟草业务相关接口
-
-## 技术栈
-
-| 名称 | 当前情况 |
+| 项目 | 当前情况 |
 | --- | --- |
-| PHP | `composer.json` 要求 `^8.1` |
+| PHP | `^8.1` |
 | Laravel | `^10.10` |
-| MySQL | `docker-compose.yml` 中使用 `mysql/mysql-server:8.0` |
-| Redis | `docker-compose.yml` 中使用 `redis:alpine` |
-| Mailpit | 本地开发邮件捕获 |
-| Vite | 用于 `resources/` 下前端资源构建 |
-| PHPUnit | 单元测试与功能测试 |
+| 运行方式 | Laravel Sail，入口是 `docker-compose.yml` |
+| 应用服务名 | `blog` |
+| 数据库 | MySQL 8.0 |
+| 缓存 | Redis Alpine |
+| 邮件调试 | Mailpit |
+| 登录认证 | `php-open-source-saver/jwt-auth` |
+| 测试 | PHPUnit 10，入口是 `php artisan test` |
+| 资源构建 | Vite 4，仅用于 Laravel `resources/` 资源 |
 
-## 当前目录说明
+## 目录结构
 
 ```text
 blog-dev
 ├── app/                    Laravel 业务代码
-├── config/                 框架配置
+├── config/                 框架和扩展配置
 ├── database/
 │   ├── migrations/         数据库迁移
-│   ├── seeders/            Seeder 与 SQL 初始化数据
-│   └── seeders/sql/        初始数据 SQL 文件
-├── public/                 对外静态资源与上传目录
+│   ├── seeders/            Seeder 类
+│   └── seeders/sql/        DatabaseSeeder 会导入的 SQL 初始数据
+├── public/                 对外静态资源和上传入口
 ├── resources/              Laravel 默认前端资源
-├── routes/                 路由定义
-├── runtimes/               Docker 运行时构建文件
+├── routes/                 API 和 Web 路由
+├── runtimes/               Sail 镜像文件
 ├── tests/                  PHPUnit 测试
+├── .env.example            本地环境模板
 ├── artisan                 Laravel CLI 入口
-├── composer.json           PHP 依赖定义
-├── docker-compose.yml      当前工作区使用的本地容器编排
-└── package.json            Vite 资源构建脚本
+├── composer.json           PHP 依赖和 Composer 脚本
+├── docker-compose.yml      Sail 服务：app、MySQL、Redis、Mailpit
+└── package.json            Vite 脚本
 ```
 
-## 快速开始
+## 主要模块
 
-### 1. 环境准备
+| 模块 | 主要路径 |
+| --- | --- |
+| 后台和工作台 | `app/Http/Controllers/Api/Admin`、`app/Services/Api/Admin` |
+| 用户和会员 | `app/Http/Controllers/Api/User`、`app/Services/Api/User` |
+| 博客内容 | `app/Http/Controllers/Api/Web`、`app/Models/Web` |
+| 小程序内容 | `app/Http/Controllers/Api/MiniProgram`、`app/Models/MiniProgram` |
+| 烟草业务 | `app/Http/Controllers/Api/Tobacco`、`app/Models/Tobacco` |
+| 通用 API 层 | `app/Http/Middleware`、`app/Http/Requests/Api`、`app/Http/Resources` |
 
-推荐按当前工作区的主流程，用 Docker + Sail 启动：
+主路由入口是 `routes/api.php`。`routes/web.php` 当前只保留 Laravel 默认 Web 入口。
 
-- Docker Engine / Docker Desktop
-- Docker Compose v2
-- 可选：本机安装 PHP 8.1+、Composer、Node.js
+## 默认端口
 
-### 2. 配置环境变量
+`.env.example` 当前默认端口如下：
+
+| 服务 | 环境变量 | 宿主机端口 |
+| --- | --- | --- |
+| Laravel 应用 | `APP_PORT` | `3925` |
+| Vite | `VITE_PORT` | `5174` |
+| MySQL | `FORWARD_DB_PORT` | `3307` |
+| Redis | `FORWARD_REDIS_PORT` | `6380` |
+| Mailpit SMTP | `FORWARD_MAILPIT_PORT` | `1026` |
+| Mailpit 面板 | `FORWARD_MAILPIT_DASHBOARD_PORT` | `8026` |
+
+## 环境变量
+
+先创建本地 `.env`：
 
 ```bash
 cp .env.example .env
 ```
 
-至少先检查这些配置项：
+如果 Laravel 跑在 Sail 容器里，数据库、Redis、Mailpit 使用 Docker 服务名：
 
-- `APP_URL`
-- `APP_PORT`
-- `DB_*`
-- `REDIS_*`
-- `MAIL_*`
-
-`.env.example` 当前默认暴露的开发端口是：
-
-- 应用：`3925`
-- Vite：`5174`
-- MySQL：`3307`
-- Redis：`6380`
-- Mailpit SMTP：`1026`
-- Mailpit 面板：`8026`
-
-### 3. 安装依赖
-
-如果本机已安装 Composer：
-
-```bash
-composer install
+```dotenv
+DB_HOST=mysql
+DB_PORT=3306
+REDIS_HOST=redis
+REDIS_PORT=6379
+MAIL_HOST=mailpit
+MAIL_PORT=1025
 ```
 
-如果希望直接使用 Sail 的 Composer 镜像：
+如果 Laravel 跑在宿主机，只借用 Docker 里的 MySQL、Redis、Mailpit，使用转发端口：
+
+```dotenv
+DB_HOST=127.0.0.1
+DB_PORT=3307
+REDIS_HOST=127.0.0.1
+REDIS_PORT=6380
+MAIL_HOST=127.0.0.1
+MAIL_PORT=1026
+```
+
+业务功能按需读取这些配置：
+
+| 功能 | 主要环境变量 |
+| --- | --- |
+| JWT 登录 | `JWT_SECRET`、`JWT_ALGO`、`JWT_TTL`、`JWT_REFRESH_TTL` |
+| 七牛上传 | `QINIU_ACCESS_KEY`、`QINIU_SECRET_KEY`、`QINIU_BUCKET`、`QINIU_DOMAIN` |
+| 高德天气 | `WEATHER_AMAP_KEY` |
+| 微信小程序 | `WECHAT_MINI_APP_APPID`、`WECHAT_MINI_APP_SECRET` |
+| 短信 | `SMS_ALIYUN_ACCESS_KEY_ID`、`SMS_ALIYUN_ACCESS_KEY_SECRET`、`SMS_ALIYUN_TEMPLATE_REGISTER` |
+| 工作日报 AI 汇总 | `OPENCLAW_GATEWAY_URL`、`OPENCLAW_GATEWAY_TOKEN`、`OPENCLAW_MODEL`、`OPENCLAW_REPORT_MODELS`、`OPENCLAW_BAILIAN_API_KEY` |
+
+## 安装依赖
+
+优先用 Sail 的 Composer 镜像安装 PHP 依赖：
 
 ```bash
 docker run --rm \
@@ -101,92 +118,109 @@ docker run --rm \
   composer install --ignore-platform-reqs
 ```
 
-前端资源依赖按需安装：
+如果本机 PHP 和 Composer 版本已满足要求，也可以直接运行：
+
+```bash
+composer install
+```
+
+只有需要构建 Laravel `resources/` 资源时，才需要安装 Node 依赖：
 
 ```bash
 npm install
 ```
 
-### 4. 启动服务
+## 启动
+
+在 `blog-dev` 目录启动后端服务：
 
 ```bash
 ./vendor/bin/sail up -d
 ```
 
-首次启动后建议执行：
+首次初始化：
 
 ```bash
 ./vendor/bin/sail artisan key:generate
 ./vendor/bin/sail artisan migrate --seed
 ```
 
-如果你是在容器内运行 Laravel 应用，数据库和缓存服务通常应指向 compose 中的服务名：
+默认访问地址：
 
-- `DB_HOST=mysql`
-- `REDIS_HOST=redis`
-- `MAIL_HOST=mailpit`
-
-如果你是在宿主机直接运行 Laravel，再使用 compose 暴露出的端口，则通常使用：
-
-- `DB_HOST=127.0.0.1`
-- `DB_PORT=3307`
-- `REDIS_HOST=127.0.0.1`
-- `REDIS_PORT=6380`
-
-## 常用命令
-
-```bash
-# 启动 / 停止
-./vendor/bin/sail up -d
-./vendor/bin/sail down
-
-# 进入容器
-./vendor/bin/sail shell
-
-# Artisan
-./vendor/bin/sail artisan migrate
-./vendor/bin/sail artisan db:seed
-./vendor/bin/sail artisan test
-
-# 资源构建
-npm run dev
-npm run build
-```
+| 目标 | 地址 |
+| --- | --- |
+| API 前缀 | `http://localhost:3925/api` |
+| Mailpit 面板 | `http://localhost:8026` |
 
 ## 初始化数据
 
-`DatabaseSeeder` 当前会导入这些初始数据来源：
+`DatabaseSeeder` 先导入 SQL，再执行菜单 Seeder：
 
-- `database/seeders/sql/*.sql`
-- `MenuSeeder`
-- `RoleMenuSeeder`
+1. `database/seeders/sql/users.sql`
+2. `database/seeders/sql/web_info.sql`
+3. `database/seeders/sql/im_chat_groups.sql`
+4. `database/seeders/sql/im_chat_group_users.sql`
+5. `database/seeders/sql/cities.sql`
+6. `database/seeders/sql/level.sql`
+7. `database/seeders/sql/member_level.sql`
+8. `database/seeders/sql/positions.sql`
+9. `database/seeders/sql/roles.sql`
+10. `database/seeders/sql/user_role.sql`
+11. `database/seeders/sql/configs.sql`
+12. `MenuSeeder`
+13. `RoleMenuSeeder`
 
-因此首次初始化数据库时，优先使用：
+新库初始化直接执行：
 
 ```bash
 ./vendor/bin/sail artisan migrate --seed
 ```
 
+## 常用命令
+
+```bash
+# 容器
+./vendor/bin/sail up -d
+./vendor/bin/sail down
+./vendor/bin/sail shell
+
+# Laravel
+./vendor/bin/sail artisan route:list
+./vendor/bin/sail artisan migrate
+./vendor/bin/sail artisan db:seed
+./vendor/bin/sail artisan test
+
+# 格式化
+./vendor/bin/sail pint
+
+# Laravel resources
+npm run dev
+npm run build
+```
+
 ## 测试
 
-当前测试入口为 PHPUnit：
+后端测试入口：
 
 ```bash
 ./vendor/bin/sail artisan test
 ```
 
-测试目录：
+当前测试目录：
 
-- `tests/Feature`
-- `tests/Unit`
+| 路径 | 内容 |
+| --- | --- |
+| `tests/Unit` | Filter、MenuService、迁移辅助逻辑等单元测试 |
+| `tests/Feature` | HTTP 功能测试 |
 
-## OpenClaw 网关说明
+## 远端验证
 
-当前代码中的 `WorkDailyLogController` 会读取这些环境变量来调用 OpenClaw / AI 汇总能力：
+当前工作区涉及运行时验证时，以远端环境为准：
 
-- `OPENCLAW_GATEWAY_URL`
-- `OPENCLAW_GATEWAY_TOKEN`
-- `OPENCLAW_MODEL`
-- `OPENCLAW_REPORT_MODELS`
+| 项目 | 当前值 |
+| --- | --- |
+| SSH | `ubuntu@10.10.9.184` |
+| 后端远端目录 | `/data/personal/projects/blog` |
+| 远端 API 前缀 | `http://10.10.9.184:3925/api` |
 
-如果容器需要访问宿主机回环地址上的网关端口，可以在宿主机做端口转发，再把 Laravel 配置指向 `host.docker.internal`。这部分只在你需要工作日报 AI 摘要能力时才需要配置。
+本地和远端是同一仓库时，用 Git 同步。不要把 macOS `._*` 文件同步到远端。
