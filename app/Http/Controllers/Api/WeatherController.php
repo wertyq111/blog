@@ -75,7 +75,7 @@ class WeatherController extends Controller
         return Utils::jsonDecode($res->getBody(), true);
     }
 
-    private function resolveClientIp(): string
+    private function resolveClientIp(): ?string
     {
         $ip = request()->getClientIp();
         $sourceIp = config('services.client_ip_override.source');
