@@ -201,7 +201,7 @@ class MembersController extends Controller
         return new MemberResource($member);
     }
 
-    private function resolveClientIp(FormRequest $request): string
+    private function resolveClientIp(FormRequest $request): ?string
     {
         $ip = $request->getClientIp();
         $sourceIp = config('services.client_ip_override.source');
