@@ -20,6 +20,7 @@ use App\Http\Controllers\Api\MiniProgram\ImageController;
 use App\Http\Controllers\Api\Admin\ServerPathController;
 use App\Http\Controllers\Api\Admin\InitModelController;
 use App\Http\Controllers\Api\Admin\WorkDailyLogController;
+use App\Http\Controllers\Api\Admin\WorkDailyImageController;
 use App\Http\Controllers\Api\Admin\WorkPlatformController;
 use App\Http\Controllers\Api\Admin\WorkDocController;
 use App\Http\Controllers\Api\Admin\WorkDocCategoryController;
@@ -309,6 +310,8 @@ Route::name('api')->group(function () {
             ->middleware('filter.process:' . WorkDailyLog::class);
         // 导入牛马日常
         Route::post('work-daily/import', [WorkDailyLogController::class, 'import'])->name('work-daily.import');
+        // 上传牛马日常图片
+        Route::post('work-daily/image', [WorkDailyImageController::class, 'store'])->name('work-daily.image.store');
         // 牛马日常详情
         Route::get('work-daily/{workDailyLog}', [WorkDailyLogController::class, 'info'])->name('work-daily.info');
         // 添加牛马日常
