@@ -248,6 +248,18 @@ class MenuSeeder extends Seeder
                 ],
             ],
             [
+                'title' => '设计管理',
+                'icon' => 'el-icon-picture-outline',
+                'path' => '/design',
+                'component' => '',
+                'target' => '_self',
+                'permission' => '',
+                'sort' => 45,
+                'children' => [
+                    $this->module('图片处理', '/design/image-process', 'el-icon-picture-outline-round', 10, 'design:imageProcess:view', '图片处理'),
+                ],
+            ],
+            [
                 'title' => '小程序管理',
                 'icon' => 'el-icon-mobile-phone',
                 'path' => '/mini-program',
