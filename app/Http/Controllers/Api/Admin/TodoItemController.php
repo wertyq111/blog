@@ -52,7 +52,7 @@ class TodoItemController extends Controller
 
     public function add(FormRequest $request, TodoItem $todoItem)
     {
-        $data = $request->getSnakeRequest();
+        $data = $this->normalizeData($request->getSnakeRequest());
 
         if (empty($data['title'])) {
             throw new \Exception('标题不能为空');
@@ -68,13 +68,21 @@ class TodoItemController extends Controller
     public function edit(TodoItem $todoItem, FormRequest $request)
     {
         $this->authorizeOwner($todoItem);
-        $data = $request->getSnakeRequest();
+        $data = $this->normalizeData($request->getSnakeRequest());
 
         $todoItem->fill($data);
         $todoItem->edit();
         $todoItem->load('platform');
 
         return $this->resource($todoItem);
+    }
+
+    private function normalizeData(array $data): array
+    {
+        if (array_key_exists('platform_id', $data) && empty($data['platform_id'])) {
+            $data['platform_id'] = 0;
+        }
+        return $data;
     }
 
     public function delete(TodoItem $todoItem)
