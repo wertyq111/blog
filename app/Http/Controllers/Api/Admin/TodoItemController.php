@@ -54,9 +54,7 @@ class TodoItemController extends Controller
     {
         $data = $this->normalizeData($request->getSnakeRequest());
 
-        if (empty($data['title'])) {
-            throw new \Exception('标题不能为空');
-        }
+        $this->validateTitle($data);
 
         $todoItem->fill($data);
         $todoItem->edit();
@@ -69,6 +67,8 @@ class TodoItemController extends Controller
     {
         $this->authorizeOwner($todoItem);
         $data = $this->normalizeData($request->getSnakeRequest());
+
+        $this->validateTitle($data, false);
 
         $todoItem->fill($data);
         $todoItem->edit();
@@ -83,6 +83,20 @@ class TodoItemController extends Controller
             $data['platform_id'] = 0;
         }
         return $data;
+    }
+
+    private function validateTitle(array $data, bool $isCreate = true): void
+    {
+        if (!array_key_exists('title', $data)) {
+            if ($isCreate) {
+                throw new \Exception('标题不能为空');
+            }
+            return;
+        }
+
+        if (!is_string($data['title']) || trim($data['title']) === '') {
+            throw new \Exception('标题不能为空');
+        }
     }
 
     public function delete(TodoItem $todoItem)
@@ -119,11 +133,12 @@ class TodoItemController extends Controller
         $pending = (clone $query)->where('status', 0)->count();
         $inProgress = (clone $query)->where('status', 1)->count();
         $completed = (clone $query)->where('status', 2)->count();
+        $canceled = (clone $query)->where('status', 3)->count();
 
         return response()->json([
             'code' => 0,
             'msg' => '',
-            'data' => compact('total', 'pending', 'inProgress', 'completed')
+            'data' => compact('total', 'pending', 'inProgress', 'completed', 'canceled')
         ]);
     }
 
