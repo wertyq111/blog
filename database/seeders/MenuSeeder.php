@@ -245,6 +245,7 @@ class MenuSeeder extends Seeder
                     $this->module('工作平台', '/develop/work-platform', 'el-icon-s-grid', 30, 'dev:workPlatform:view', '工作平台'),
                     $this->module('工作日常', '/develop/work-daily', 'el-icon-date', 40, 'dev:workDaily:view', '工作日常'),
                     $this->module('工作文档', '/develop/work-doc', 'el-icon-folder-opened', 50, 'dev:workDoc:view', '工作文档'),
+                    $this->module('待办列表', '/develop/todo', 'el-icon-finished', 60, 'dev:todo:view', '待办列表'),
                 ],
             ],
             [
