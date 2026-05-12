@@ -24,6 +24,7 @@ use App\Http\Controllers\Api\Admin\WorkDailyImageController;
 use App\Http\Controllers\Api\Admin\WorkPlatformController;
 use App\Http\Controllers\Api\Admin\WorkDocController;
 use App\Http\Controllers\Api\Admin\WorkDocCategoryController;
+use App\Http\Controllers\Api\Admin\TodoItemController;
 use App\Http\Controllers\Api\Web\ArticlesController;
 use App\Http\Controllers\Api\Web\CategoriesController;
 use App\Http\Controllers\Api\Web\LabelsController;
@@ -53,6 +54,7 @@ use App\Models\Admin\WorkDailyLog;
 use App\Models\Admin\WorkPlatform;
 use App\Models\Admin\WorkDoc;
 use App\Models\Admin\WorkDocCategory;
+use App\Models\Admin\TodoItem;
 use App\Models\Web\Article;
 use App\Models\Web\Category;
 use App\Models\Web\Label;
@@ -356,6 +358,16 @@ Route::name('api')->group(function () {
         Route::post('work-doc/{workDoc}', [WorkDocController::class, 'edit'])->name('work-doc.edit');
         // 删除牛马文档
         Route::delete('work-doc/{workDoc}', [WorkDocController::class, 'delete'])->name('work-doc.delete');
+
+        // 待办列表
+        Route::get('todo/index', [TodoItemController::class, 'index'])->name('todo.index')
+            ->middleware('filter.process:' . TodoItem::class);
+        Route::get('todo/statistics', [TodoItemController::class, 'statistics'])->name('todo.statistics');
+        Route::get('todo/{todoItem}', [TodoItemController::class, 'info'])->name('todo.info');
+        Route::post('todo/add', [TodoItemController::class, 'add'])->name('todo.add');
+        Route::post('todo/status/{todoItem}', [TodoItemController::class, 'updateStatus'])->name('todo.update-status');
+        Route::post('todo/{todoItem}', [TodoItemController::class, 'edit'])->name('todo.edit');
+        Route::delete('todo/{todoItem}', [TodoItemController::class, 'delete'])->name('todo.delete');
         /** 开发助手接口结束 */
         /** 笔记接口开始 */
         // 文章列表
