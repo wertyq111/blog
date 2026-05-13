@@ -25,6 +25,7 @@ use App\Http\Controllers\Api\Admin\WorkPlatformController;
 use App\Http\Controllers\Api\Admin\WorkDocController;
 use App\Http\Controllers\Api\Admin\WorkDocCategoryController;
 use App\Http\Controllers\Api\Admin\TodoItemController;
+use App\Http\Controllers\Api\Admin\DashboardController;
 use App\Http\Controllers\Api\Web\ArticlesController;
 use App\Http\Controllers\Api\Web\CategoriesController;
 use App\Http\Controllers\Api\Web\LabelsController;
@@ -289,6 +290,9 @@ Route::name('api')->group(function () {
         Route::delete('init-model/{initModel}', [InitModelController::class, 'delete'])->name('init-model.delete');
         // 模型初始化转换
         Route::post('init-model/convert/{initModel}', [InitModelController::class, 'convert'])->name('init-model.convert');
+
+        // 工作台仪表盘统计
+        Route::get('dashboard/stats', [DashboardController::class, 'stats'])->name('dashboard.stats');
 
         // 平台列表
         Route::get('work-platform/index', [WorkPlatformController::class, 'index'])->name('work-platform.index')
