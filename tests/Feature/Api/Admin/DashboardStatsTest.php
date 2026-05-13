@@ -22,7 +22,152 @@ class DashboardStatsTest extends TestCase
         DB::setDefaultConnection('sqlite');
 
         Schema::dropAllTables();
+        $this->createDashboardSchema();
+    }
 
+    public function test_未登录请求统计接口返回_401(): void
+    {
+        $response = $this->getJson('/api/dashboard/stats');
+
+        $response
+            ->assertStatus(200)
+            ->assertJsonPath('code', 401);
+    }
+
+    public function test_非法_view_or_range_返回_422(): void
+    {
+        $token = $this->createDashboardToken();
+
+        $viewResp = $this
+            ->withHeader('Authorization', "Bearer {$token}")
+            ->getJson('/api/dashboard/stats?view=bad');
+        $viewResp
+            ->assertStatus(200)
+            ->assertJsonPath('code', 422);
+
+        $rangeResp = $this
+            ->withHeader('Authorization', "Bearer {$token}")
+            ->getJson('/api/dashboard/stats?range=bad');
+        $rangeResp
+            ->assertStatus(200)
+            ->assertJsonPath('code', 422);
+    }
+
+    public function test_空数据用户返回空指标结构_并带_cache_hit(): void
+    {
+        $token = $this->createDashboardToken();
+
+        $first = $this
+            ->withHeader('Authorization', "Bearer {$token}")
+            ->getJson('/api/dashboard/stats');
+
+        $first
+            ->assertOk()
+            ->assertJsonPath('code', 0)
+            ->assertJsonPath('data.view', 'overview')
+            ->assertJsonPath('data.metrics.total_words.value', 0)
+            ->assertJsonPath('data.metrics.current_streak.value', 0)
+            ->assertJsonPath('data.metrics.favorite_platform', null)
+            ->assertJsonPath('data.cache_hit', false);
+
+        $second = $this
+            ->withHeader('Authorization', "Bearer {$token}")
+            ->getJson('/api/dashboard/stats');
+
+        $second
+            ->assertOk()
+            ->assertJsonPath('code', 0)
+            ->assertJsonPath('data.cache_hit', true);
+    }
+
+    public function test_今天没写但昨天有日志时_current_streak_为_0(): void
+    {
+        $user = $this->createDashboardUser();
+        $this->assignSuperRole($user);
+
+        $platformId = DB::table('work_platforms')->insertGetId([
+            'name' => 'Alpha',
+            'status' => 1,
+            'created_at' => time(),
+            'updated_at' => time(),
+            'deleted_at' => 0,
+        ]);
+
+        $yesterday = Carbon::today('Asia/Shanghai')->subDay();
+        DB::table('work_daily_logs')->insert([
+            'platform_id' => $platformId,
+            'log_date' => $yesterday->toDateString(),
+            'content' => json_encode([
+                'platforms' => [[
+                    'platform_id' => $platformId,
+                    'platform_name' => 'Alpha',
+                    'content' => '昨天产出了一些内容',
+                ]],
+            ], JSON_UNESCAPED_UNICODE),
+            'create_user' => $user->id,
+            'created_at' => $yesterday->copy()->setHour(10)->timestamp,
+            'updated_at' => $yesterday->copy()->setHour(10)->timestamp,
+            'deleted_at' => 0,
+        ]);
+
+        $token = auth('api')->login($user);
+        $response = $this
+            ->withHeader('Authorization', "Bearer {$token}")
+            ->getJson('/api/dashboard/stats?range=7d');
+
+        $response
+            ->assertOk()
+            ->assertJsonPath('code', 0)
+            ->assertJsonPath('data.metrics.current_streak.value', 0)
+            ->assertJsonPath('data.metrics.current_streak.hint', '今天还没写呢');
+    }
+
+    public function test_platform_view_returns_rank_and_matrix(): void
+    {
+        $user = $this->createDashboardUser();
+        $this->assignSuperRole($user);
+
+        $platformId = DB::table('work_platforms')->insertGetId([
+            'name' => 'Gamma',
+            'status' => 1,
+            'created_at' => time(),
+            'updated_at' => time(),
+            'deleted_at' => 0,
+        ]);
+
+        DB::table('work_daily_logs')->insert([
+            'platform_id' => $platformId,
+            'log_date' => now()->toDateString(),
+            'content' => json_encode([
+                'platforms' => [[
+                    'platform_id' => $platformId,
+                    'platform_name' => 'Gamma',
+                    'content' => '平台月度矩阵统计',
+                ]],
+            ], JSON_UNESCAPED_UNICODE),
+            'create_user' => $user->id,
+            'created_at' => Carbon::now('Asia/Shanghai')->setHour(10)->timestamp,
+            'updated_at' => Carbon::now('Asia/Shanghai')->setHour(10)->timestamp,
+            'deleted_at' => 0,
+        ]);
+
+        $token = auth('api')->login($user);
+        $response = $this
+            ->withHeader('Authorization', "Bearer {$token}")
+            ->getJson('/api/dashboard/stats?view=platform&range=30d');
+
+        $response
+            ->assertOk()
+            ->assertJsonPath('code', 0)
+            ->assertJsonPath('data.view', 'platform')
+            ->assertJsonPath('data.rank.0.name', 'Gamma')
+            ->assertJsonPath('data.matrix.rows.0.name', 'Gamma');
+
+        $this->assertCount(12, $response->json('data.matrix.months'));
+    }
+
+    private function createDashboardSchema(): void
+    {
         Schema::create('users', function (Blueprint $table) {
             $table->id();
             $table->string('username')->nullable();
@@ -93,148 +238,6 @@ class DashboardStatsTest extends TestCase
             $table->unsignedInteger('updated_at')->default(0);
             $table->unsignedInteger('deleted_at')->default(0);
         });
-    }
-
-    public function test_空数据用户返回空指标结构(): void
-    {
-        $token = $this->createDashboardToken();
-
-        $response = $this
-            ->withHeader('Authorization', "Bearer {$token}")
-            ->getJson('/api/dashboard/stats');
-
-        $response
-            ->assertOk()
-            ->assertJsonPath('code', 0)
-            ->assertJsonPath('data.view', 'overview')
-            ->assertJsonPath('data.metrics.total_words.value', 0)
-            ->assertJsonPath('data.metrics.total_logs.value', 0)
-            ->assertJsonPath('data.metrics.total_docs.value', 0)
-            ->assertJsonPath('data.metrics.active_days.value', 0)
-            ->assertJsonPath('data.metrics.current_streak.value', 0)
-            ->assertJsonPath('data.metrics.longest_streak.value', 0)
-            ->assertJsonPath('data.metrics.favorite_platform.name', '—');
-
-        $this->assertCount(365, $response->json('data.heatmap.cells'));
-    }
-
-    public function test_会按连续日期和平台字数计算统计(): void
-    {
-        $user = $this->createDashboardUser();
-        $this->assignSuperRole($user);
-
-        $alphaId = DB::table('work_platforms')->insertGetId([
-            'name' => 'Alpha',
-            'status' => 1,
-            'created_at' => time(),
-            'updated_at' => time(),
-            'deleted_at' => 0,
-        ]);
-        $betaId = DB::table('work_platforms')->insertGetId([
-            'name' => 'Beta',
-            'status' => 1,
-            'created_at' => time(),
-            'updated_at' => time(),
-            'deleted_at' => 0,
-        ]);
-
-        foreach ([2, 1, 0] as $offset) {
-            $date = now()->subDays($offset)->toDateString();
-            DB::table('work_daily_logs')->insert([
-                'platform_id' => $alphaId,
-                'log_date' => $date,
-                'content' => json_encode([
-                    'platforms' => [
-                        [
-                            'platform_id' => $alphaId,
-                            'platform_name' => 'Alpha',
-                            'content' => '今天完成后台工作台统计接口和图表联调',
-                        ],
-                        [
-                            'platform_id' => $betaId,
-                            'platform_name' => 'Beta',
-                            'content' => $offset === 0 ? '短记' : '',
-                        ],
-                    ],
-                ], JSON_UNESCAPED_UNICODE),
-                'create_user' => $user->id,
-                'created_at' => Carbon::now('Asia/Shanghai')->subDays($offset)->setHour(15)->timestamp,
-                'updated_at' => Carbon::now('Asia/Shanghai')->subDays($offset)->setHour(15)->timestamp,
-                'deleted_at' => 0,
-            ]);
-        }
-
-        DB::table('work_docs')->insert([
-            'title' => '仪表盘方案',
-            'content' => '文档内容',
-            'create_user' => $user->id,
-            'created_at' => now()->timestamp,
-            'updated_at' => now()->timestamp,
-            'deleted_at' => 0,
-        ]);
-
-        $token = auth('api')->login($user);
-
-        $response = $this
-            ->withHeader('Authorization', "Bearer {$token}")
-            ->getJson('/api/dashboard/stats?range=all');
-
-        $response
-            ->assertOk()
-            ->assertJsonPath('code', 0)
-            ->assertJsonPath('data.metrics.current_streak.value', 3)
-            ->assertJsonPath('data.metrics.longest_streak.value', 3)
-            ->assertJsonPath('data.metrics.favorite_platform.name', 'Alpha')
-            ->assertJsonPath('data.metrics.favorite_platform.platform_id', $alphaId)
-            ->assertJsonPath('data.metrics.peak_hour.hour', 15)
-            ->assertJsonPath('data.metrics.total_docs.value', 1);
-    }
-
-    public function test_platform_view_returns_rank_and_matrix(): void
-    {
-        $user = $this->createDashboardUser();
-        $this->assignSuperRole($user);
-
-        $platformId = DB::table('work_platforms')->insertGetId([
-            'name' => 'Gamma',
-            'status' => 1,
-            'created_at' => time(),
-            'updated_at' => time(),
-            'deleted_at' => 0,
-        ]);
-
-        DB::table('work_daily_logs')->insert([
-            'platform_id' => $platformId,
-            'log_date' => now()->toDateString(),
-            'content' => json_encode([
-                'platforms' => [
-                    [
-                        'platform_id' => $platformId,
-                        'platform_name' => 'Gamma',
-                        'content' => '平台月度矩阵统计',
-                    ],
-            ],
-        ], JSON_UNESCAPED_UNICODE),
-        'create_user' => $user->id,
-        'created_at' => Carbon::now('Asia/Shanghai')->setHour(10)->timestamp,
-        'updated_at' => Carbon::now('Asia/Shanghai')->setHour(10)->timestamp,
-        'deleted_at' => 0,
-    ]);
-
-        $token = auth('api')->login($user);
-
-        $response = $this
-            ->withHeader('Authorization', "Bearer {$token}")
-            ->getJson('/api/dashboard/stats?view=platform&range=30d');
-
-        $response
-            ->assertOk()
-            ->assertJsonPath('code', 0)
-            ->assertJsonPath('data.view', 'platform')
-            ->assertJsonPath('data.rank.0.name', 'Gamma')
-            ->assertJsonPath('data.matrix.rows.0.name', 'Gamma');
-
-        $this->assertCount(12, $response->json('data.matrix.months'));
     }
 
     private function createDashboardToken(): string

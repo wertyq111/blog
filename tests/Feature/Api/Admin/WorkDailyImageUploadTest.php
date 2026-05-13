@@ -1,53 +1,57 @@
 <?php
 
+namespace Tests\Feature\Api\Admin;
+
 use App\Models\User\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Tests\TestCase;
 
-uses(RefreshDatabase::class);
+class WorkDailyImageUploadTest extends TestCase
+{
+    use RefreshDatabase;
 
-$uploadedPaths = [];
+    private array $uploadedPaths = [];
 
-afterEach(function () use (&$uploadedPaths) {
-    foreach ($uploadedPaths as $path) {
-        $absolutePath = public_path($path);
-
-        if (is_file($absolutePath)) {
-            unlink($absolutePath);
+    protected function tearDown(): void
+    {
+        foreach ($this->uploadedPaths as $path) {
+            $absolutePath = public_path($path);
+            if (is_file($absolutePath)) {
+                unlink($absolutePath);
+            }
         }
+
+        parent::tearDown();
     }
 
-    $uploadedPaths = [];
-});
-
-it('uploads work daily images to the public work daily directory', function () use (&$uploadedPaths) {
-    $user = User::query()->create([
-        'username' => 'work_daily_image_user',
-        'email' => 'work-daily-image@example.com',
-        'phone' => '13800000000',
-        'password' => bcrypt('password'),
-        'status' => 1,
-    ]);
-
-    $token = auth('api')->login($user);
-
-    $response = $this
-        ->withHeader('Authorization', "Bearer {$token}")
-        ->post('/api/work-daily/image', [
-            'file' => UploadedFile::fake()->create('daily.png', 10, 'image/png'),
+    public function test_work_daily_image_can_be_uploaded_to_public_work_daily_directory(): void
+    {
+        $user = User::query()->create([
+            'username' => 'work_daily_image_user',
+            'email' => 'work-daily-image@example.com',
+            'phone' => '13800000000',
+            'password' => bcrypt('password'),
+            'status' => 1,
         ]);
 
-    $path = $response->json('data.path');
-    $uploadedPaths[] = $path;
+        $token = auth('api')->login($user);
 
-    $response
-        ->assertOk()
-        ->assertJsonPath('code', 0);
+        $response = $this
+            ->withHeader('Authorization', "Bearer {$token}")
+            ->post('/api/work-daily/image', [
+                'file' => UploadedFile::fake()->create('daily.png', 10, 'image/png'),
+            ]);
 
-    expect(str_starts_with($path, '/uploads/work-daily/' . date('Ymd') . '/'))
-        ->toBeTrue()
-        ->and(str_contains($response->json('data.url'), '/uploads/work-daily/' . date('Ymd') . '/'))
-        ->toBeTrue()
-        ->and(is_file(public_path($path)))
-        ->toBeTrue();
-});
+        $path = $response->json('data.path');
+        $this->uploadedPaths[] = $path;
+
+        $response
+            ->assertOk()
+            ->assertJsonPath('code', 0);
+
+        $this->assertStringStartsWith('/uploads/work-daily/' . date('Ymd') . '/', $path);
+        $this->assertStringContainsString('/uploads/work-daily/' . date('Ymd') . '/', $response->json('data.url'));
+        $this->assertFileExists(public_path($path));
+    }
+}
