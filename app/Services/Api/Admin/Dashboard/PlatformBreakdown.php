@@ -92,4 +92,18 @@ class PlatformBreakdown
             'rows' => $rows,
         ];
     }
+
+    public function buildDist(Collection $logs): array
+    {
+        $stats = array_values($this->statsAggregator->buildPlatformStats($logs));
+        $totalWords = array_sum(array_column($stats, 'words'));
+
+        usort($stats, fn ($a, $b) => $b['words'] <=> $a['words']);
+
+        return array_map(fn ($item) => [
+            'name'  => $item['name'],
+            'words' => $item['words'],
+            'pct'   => $totalWords > 0 ? round($item['words'] * 100 / $totalWords, 1) : 0.0,
+        ], $stats);
+    }
 }

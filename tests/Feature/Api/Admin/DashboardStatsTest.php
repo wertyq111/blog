@@ -328,4 +328,55 @@ class DashboardStatsTest extends TestCase
         $todayDow = (int) Carbon::today('Asia/Shanghai')->dayOfWeekIso - 1;
         $this->assertEquals(100, $weekDist[$todayDow]);
     }
+
+    public function test_overview_包含_platform_dist_和_recent_logs(): void
+    {
+        $user = $this->createDashboardUser();
+        $this->assignSuperRole($user);
+
+        $platformId = DB::table('work_platforms')->insertGetId([
+            'name'       => 'BlogPlatform',
+            'status'     => 1,
+            'created_at' => time(),
+            'updated_at' => time(),
+            'deleted_at' => 0,
+        ]);
+
+        DB::table('work_daily_logs')->insert([
+            'platform_id' => $platformId,
+            'log_date'    => now()->toDateString(),
+            'content'     => json_encode([
+                'platforms' => [[
+                    'platform_id'   => $platformId,
+                    'platform_name' => 'BlogPlatform',
+                    'content'       => '今天写了一些内容',
+                ]],
+            ], JSON_UNESCAPED_UNICODE),
+            'create_user' => $user->id,
+            'created_at'  => time(),
+            'updated_at'  => time(),
+            'deleted_at'  => 0,
+        ]);
+
+        $token = auth('api')->login($user);
+        $response = $this
+            ->withHeader('Authorization', "Bearer {$token}")
+            ->getJson('/api/dashboard/stats?view=overview&range=all');
+
+        $response->assertOk()->assertJsonPath('code', 0);
+
+        $dist = $response->json('data.platform_dist');
+        $this->assertIsArray($dist);
+        $this->assertNotEmpty($dist);
+        $this->assertEquals('BlogPlatform', $dist[0]['name']);
+        $this->assertArrayHasKey('words', $dist[0]);
+        $this->assertArrayHasKey('pct', $dist[0]);
+        $this->assertEquals(100.0, $dist[0]['pct']);
+
+        $logs = $response->json('data.recent_logs');
+        $this->assertIsArray($logs);
+        $this->assertNotEmpty($logs);
+        $this->assertArrayHasKey('log_date', $logs[0]);
+        $this->assertArrayHasKey('content', $logs[0]);
+    }
 }
