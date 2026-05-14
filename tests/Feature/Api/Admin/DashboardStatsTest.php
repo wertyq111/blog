@@ -164,6 +164,8 @@ class DashboardStatsTest extends TestCase
             ->assertJsonPath('data.matrix.rows.0.name', 'Gamma');
 
         $this->assertCount(12, $response->json('data.matrix.months'));
+        $this->assertCount(12, $response->json('data.matrix.rows.0.cells'));
+        $this->assertIsInt($response->json('data.matrix.rows.0.cells.0'));
     }
 
     private function createDashboardSchema(): void

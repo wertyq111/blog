@@ -45,6 +45,9 @@ class PlatformBreakdownTest extends TestCase
         $this->assertCount(12, $matrix['months']);
         $this->assertNotEmpty($matrix['rows']);
         $this->assertArrayHasKey('buckets', $matrix);
+        $this->assertCount(12, $matrix['rows'][0]['cells']);
+        $this->assertIsInt($matrix['rows'][0]['cells'][0]);
+        $this->assertCount(12, $matrix['rows'][0]['log_cells']);
     }
 
     private function makeLog(string $date, int $hour, int $platformId, string $platformName, string $content): WorkDailyLog

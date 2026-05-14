@@ -52,7 +52,8 @@ class PlatformBreakdown
                     $platformStats[$platformId] = [
                         'platform_id' => $platformId,
                         'name' => $platformName,
-                        'cells' => array_fill(0, count($months), ['words' => 0, 'logs' => 0]),
+                        'cells' => array_fill(0, count($months), 0),
+                        'log_cells' => array_fill(0, count($months), 0),
                     ];
                 }
 
@@ -61,21 +62,26 @@ class PlatformBreakdown
                     continue;
                 }
 
-                $platformStats[$platformId]['cells'][$monthIndex]['words'] += $platform['words'];
-                $platformStats[$platformId]['cells'][$monthIndex]['logs'] += 1;
+                $platformStats[$platformId]['cells'][$monthIndex] += $platform['words'];
+                $platformStats[$platformId]['log_cells'][$monthIndex] += 1;
             }
         }
 
         $rows = array_values($platformStats);
         usort($rows, function ($left, $right) {
-            return array_sum(array_column($right['cells'], 'words')) <=> array_sum(array_column($left['cells'], 'words'));
+            $wordCompare = array_sum($right['cells']) <=> array_sum($left['cells']);
+            if ($wordCompare !== 0) {
+                return $wordCompare;
+            }
+
+            return array_sum($right['log_cells']) <=> array_sum($left['log_cells']);
         });
 
         $bucketSource = [];
         foreach ($rows as $row) {
-            foreach ($row['cells'] as $cell) {
-                if ($cell['words'] > 0) {
-                    $bucketSource[] = $cell['words'];
+            foreach ($row['cells'] as $words) {
+                if ($words > 0) {
+                    $bucketSource[] = $words;
                 }
             }
         }
