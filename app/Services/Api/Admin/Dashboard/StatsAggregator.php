@@ -78,6 +78,8 @@ class StatsAggregator
             ],
             'peak_hour' => $peakHour,
             'favorite_platform' => $favoritePlatform,
+            'hour_dist' => $this->buildHourDist($logs),
+            'week_dist' => $this->buildWeekDist($logs),
         ];
     }
 
@@ -401,5 +403,38 @@ class StatsAggregator
             'evening' => '晚上',
             default => '深夜',
         };
+    }
+
+    public function buildHourDist(Collection $logs): array
+    {
+        $dist = array_fill(0, 24, 0);
+
+        foreach ($logs as $log) {
+            $createdAt = (int) $log->getRawOriginal('created_at');
+            if ($createdAt <= 0) {
+                continue;
+            }
+            $hour = (int) gmdate('G', $createdAt + 8 * 3600);
+            foreach ($this->extractLogPlatforms($log) as $platform) {
+                $dist[$hour] += $platform['words'];
+            }
+        }
+
+        return $dist;
+    }
+
+    public function buildWeekDist(Collection $logs): array
+    {
+        // index 0=周一 … 6=周日
+        $dist = array_fill(0, 7, 0);
+
+        foreach ($logs as $log) {
+            $dow = (int) Carbon::parse($log->log_date)->dayOfWeekIso - 1; // 1=Mon→0
+            foreach ($this->extractLogPlatforms($log) as $platform) {
+                $dist[$dow] += $platform['words'];
+            }
+        }
+
+        return $dist;
     }
 }

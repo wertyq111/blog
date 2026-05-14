@@ -277,4 +277,55 @@ class DashboardStatsTest extends TestCase
             'role_id' => $roleId,
         ]);
     }
+
+    public function test_overview_包含_hour_dist_和_week_dist(): void
+    {
+        $user = $this->createDashboardUser();
+        $this->assignSuperRole($user);
+
+        $platformId = DB::table('work_platforms')->insertGetId([
+            'name'       => 'TestPlatform',
+            'status'     => 1,
+            'created_at' => time(),
+            'updated_at' => time(),
+            'deleted_at' => 0,
+        ]);
+
+        // 在 10:00 (hour=10 CST) 写了一条日志
+        $logTs = Carbon::today('Asia/Shanghai')->setHour(10)->timestamp;
+        DB::table('work_daily_logs')->insert([
+            'platform_id' => $platformId,
+            'log_date'    => now()->toDateString(),
+            'content'     => json_encode([
+                'platforms' => [[
+                    'platform_id'   => $platformId,
+                    'platform_name' => 'TestPlatform',
+                    'content'       => str_repeat('字', 100),
+                ]],
+            ], JSON_UNESCAPED_UNICODE),
+            'create_user' => $user->id,
+            'created_at'  => $logTs,
+            'updated_at'  => $logTs,
+            'deleted_at'  => 0,
+        ]);
+
+        $token = auth('api')->login($user);
+        $response = $this
+            ->withHeader('Authorization', "Bearer {$token}")
+            ->getJson('/api/dashboard/stats?view=overview&range=all');
+
+        $response->assertOk()->assertJsonPath('code', 0);
+
+        $hourDist = $response->json('data.metrics.hour_dist');
+        $weekDist = $response->json('data.metrics.week_dist');
+
+        $this->assertIsArray($hourDist);
+        $this->assertCount(24, $hourDist);
+        $this->assertEquals(100, $hourDist[10]);
+
+        $this->assertIsArray($weekDist);
+        $this->assertCount(7, $weekDist);
+        $todayDow = (int) Carbon::today('Asia/Shanghai')->dayOfWeekIso - 1;
+        $this->assertEquals(100, $weekDist[$todayDow]);
+    }
 }
