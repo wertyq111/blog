@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\Admin;
 
 use App\Http\Controllers\Api\Controller;
+use App\Models\Admin\WorkDailyLog;
 use App\Services\Api\Admin\Dashboard\DashboardCache;
 use App\Services\Api\Admin\Dashboard\HeatmapBuilder;
 use App\Services\Api\Admin\Dashboard\PlatformBreakdown;
@@ -81,6 +82,21 @@ class DashboardController extends Controller
                 $this->statsAggregator->fetchLogsBetween($trendWindow['start'], $trendWindow['end'], $userId, $isManager),
                 $trendWindow
             );
+            $response['platform_dist'] = $this->platformBreakdown->buildDist($overviewLogs);
+            $response['recent_logs'] = WorkDailyLog::query()
+                ->when(!$isManager, fn ($q) => $q->where('create_user', $userId))
+                ->orderBy('log_date', 'desc')
+                ->orderBy('id', 'desc')
+                ->limit(5)
+                ->get()
+                ->map(fn ($log) => [
+                    'id'          => $log->id,
+                    'log_date'    => $log->log_date,
+                    'content'     => $log->content,
+                    'create_time' => $log->getRawOriginal('created_at'),
+                ])
+                ->values()
+                ->all();
 
             return $response;
         }
