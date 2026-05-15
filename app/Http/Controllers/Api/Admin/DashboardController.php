@@ -32,11 +32,11 @@ class DashboardController extends Controller
         $view = $request->get('view', 'overview');
         $range = $request->get('range', 'all');
 
-        if (!in_array($view, ['overview', 'platform'], true)) {
+        if (!in_array($view, ['overview', 'platform', 'hour', 'tag'], true)) {
             return response()->json(['code' => 422, 'msg' => '参数错误：view', 'data' => null], 422);
         }
 
-        if (!in_array($range, ['all', '30d', '7d'], true)) {
+        if (!in_array($range, ['all', '30d', '7d', 'today'], true)) {
             return response()->json(['code' => 422, 'msg' => '参数错误：range', 'data' => null], 422);
         }
 
@@ -101,15 +101,30 @@ class DashboardController extends Controller
             return $response;
         }
 
-        $platformLogs = $this->statsAggregator->fetchLogsBetween($overviewWindow['start'], $overviewWindow['end'], $userId, $isManager);
-        $matrixWindow = [
-            'start' => Carbon::today('Asia/Shanghai')->subMonths(11)->startOfMonth()->toDateString(),
-            'end' => Carbon::today('Asia/Shanghai')->endOfMonth()->toDateString(),
-        ];
-        $response['rank'] = $this->platformBreakdown->buildRank($platformLogs);
-        $response['matrix'] = $this->platformBreakdown->buildMatrix(
-            $this->statsAggregator->fetchLogsBetween($matrixWindow['start'], $matrixWindow['end'], $userId, $isManager)
-        );
+        if ($view === 'platform') {
+            $platformLogs = $this->statsAggregator->fetchLogsBetween($overviewWindow['start'], $overviewWindow['end'], $userId, $isManager);
+            $matrixWindow = [
+                'start' => Carbon::today('Asia/Shanghai')->subMonths(11)->startOfMonth()->toDateString(),
+                'end' => Carbon::today('Asia/Shanghai')->endOfMonth()->toDateString(),
+            ];
+            $response['rank'] = $this->platformBreakdown->buildRank($platformLogs);
+            $response['matrix'] = $this->platformBreakdown->buildMatrix(
+                $this->statsAggregator->fetchLogsBetween($matrixWindow['start'], $matrixWindow['end'], $userId, $isManager)
+            );
+
+            return $response;
+        }
+
+        if ($view === 'hour') {
+            $hourLogs = $this->statsAggregator->fetchLogsBetween($overviewWindow['start'], $overviewWindow['end'], $userId, $isManager);
+            $response['hour_dist'] = $this->statsAggregator->buildHourDist($hourLogs);
+            $response['week_dist'] = $this->statsAggregator->buildWeekDist($hourLogs);
+
+            return $response;
+        }
+
+        // view === 'tag'
+        $response['tags'] = [];
 
         return $response;
     }
@@ -121,6 +136,13 @@ class DashboardController extends Controller
         if ($range === '7d') {
             return [
                 'start' => $today->copy()->subDays(6)->toDateString(),
+                'end' => $today->toDateString(),
+            ];
+        }
+
+        if ($range === 'today') {
+            return [
+                'start' => $today->toDateString(),
                 'end' => $today->toDateString(),
             ];
         }
