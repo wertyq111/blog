@@ -81,6 +81,14 @@ class WorkDailyLog extends BaseModel
     }
 
     /**
+     * 标签关联（多对多）
+     */
+    public function tags()
+    {
+        return $this->belongsToMany(WorkDailyTag::class, 'work_daily_log_tag');
+    }
+
+    /**
      * 查找用户某日的记录
      */
     public static function findByUserAndDate($userId, $date)
