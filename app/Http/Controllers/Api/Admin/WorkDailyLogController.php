@@ -44,7 +44,13 @@ class WorkDailyLogController extends Controller
             $query->where('content', 'like', '%' . $content . '%');
         }
 
-        $dailyLogs = $query->orderBy('log_date', 'desc')
+        $tagId = (int)$request->get('tag_id', 0);
+        if ($tagId > 0) {
+            $query->whereHas('tags', fn($q) => $q->where('work_daily_tags.id', $tagId));
+        }
+
+        $dailyLogs = $query->with('tags:id,name')
+            ->orderBy('log_date', 'desc')
             ->orderBy('id', 'desc')
             ->paginate(self::PER_PAGE);
 
@@ -62,7 +68,7 @@ class WorkDailyLogController extends Controller
     {
         $this->authorizeOwner($workDailyLog);
 
-        $workDailyLog->load('platform');
+        $workDailyLog->load(['platform', 'tags:id,name']);
 
         return $this->resource($workDailyLog, ['time' => true]);
     }
@@ -91,11 +97,14 @@ class WorkDailyLogController extends Controller
         $existing = WorkDailyLog::where('log_date', $date)->where('create_user', $user->id)->first();
         $payload = ['platforms' => $data['platforms'] ?? []];
 
+        $tagIds = array_filter(array_map('intval', (array) $request->input('tag_ids', [])));
+
         if ($existing) {
             $existing->content = $payload;
             $existing->updated_at = time();
             $existing->edit();
-            $existing->load('platform');
+            $existing->tags()->sync($tagIds);
+            $existing->load(['platform', 'tags:id,name']);
             return $this->resource($existing);
         }
 
@@ -108,8 +117,9 @@ class WorkDailyLogController extends Controller
             'updated_at' => time(),
         ]);
         $workDailyLog->edit();
+        $workDailyLog->tags()->sync($tagIds);
 
-        $workDailyLog->load('platform');
+        $workDailyLog->load(['platform', 'tags:id,name']);
 
         return $this->resource($workDailyLog);
     }
@@ -140,7 +150,12 @@ class WorkDailyLogController extends Controller
         $workDailyLog->updated_at = time();
         $workDailyLog->edit();
 
-        $workDailyLog->load('platform');
+        if ($request->has('tag_ids')) {
+            $tagIds = array_filter(array_map('intval', (array) $request->input('tag_ids', [])));
+            $workDailyLog->tags()->sync($tagIds);
+        }
+
+        $workDailyLog->load(['platform', 'tags:id,name']);
 
         return $this->resource($workDailyLog);
     }

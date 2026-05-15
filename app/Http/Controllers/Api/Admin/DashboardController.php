@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\Admin;
 use App\Http\Controllers\Api\Controller;
 use App\Models\Admin\WorkDailyLog;
 use App\Services\Api\Admin\Dashboard\DashboardCache;
+use Illuminate\Support\Facades\DB;
 use App\Services\Api\Admin\Dashboard\HeatmapBuilder;
 use App\Services\Api\Admin\Dashboard\PlatformBreakdown;
 use App\Services\Api\Admin\Dashboard\StatsAggregator;
@@ -83,20 +84,28 @@ class DashboardController extends Controller
                 $trendWindow
             );
             $response['platform_dist'] = $this->platformBreakdown->buildDist($overviewLogs);
-            $response['recent_logs'] = WorkDailyLog::query()
+            $recentLogs = WorkDailyLog::query()
+                ->with('tags:id,name')
                 ->when(!$isManager, fn ($q) => $q->where('create_user', $userId))
                 ->orderBy('log_date', 'desc')
                 ->orderBy('id', 'desc')
                 ->limit(5)
-                ->get()
+                ->get();
+
+            $response['recent_logs'] = $recentLogs
                 ->map(fn ($log) => [
                     'id'          => $log->id,
                     'log_date'    => $log->log_date,
                     'content'     => $log->content,
                     'create_time' => $log->getRawOriginal('created_at'),
+                    'tags'        => $log->tags->pluck('name')->all(),
                 ])
                 ->values()
                 ->all();
+
+            // 标签 Top 10 排行（基于所有日志）
+            $allLogIds = $overviewLogs->pluck('id')->all();
+            $response['tag_ranking'] = $this->buildTagRanking($allLogIds);
 
             return $response;
         }
@@ -124,7 +133,8 @@ class DashboardController extends Controller
         }
 
         // view === 'tag'
-        $response['tags'] = [];
+        $tagLogs = $this->statsAggregator->fetchLogsBetween($overviewWindow['start'], $overviewWindow['end'], $userId, $isManager);
+        $response['tags'] = $this->buildTagRanking($tagLogs->pluck('id')->all());
 
         return $response;
     }
@@ -160,6 +170,28 @@ class DashboardController extends Controller
             'start' => $firstLogDate ?: $today->toDateString(),
             'end' => $today->toDateString(),
         ];
+    }
+
+    /**
+     * 构建标签排行榜
+     */
+    private function buildTagRanking(array $logIds, int $limit = 10): array
+    {
+        if (empty($logIds)) {
+            return [];
+        }
+
+        return DB::table('work_daily_log_tag')
+            ->join('work_daily_tags', 'work_daily_tags.id', '=', 'work_daily_log_tag.work_daily_tag_id')
+            ->whereIn('work_daily_log_tag.work_daily_log_id', $logIds)
+            ->where('work_daily_tags.deleted_at', 0)
+            ->groupBy('work_daily_tags.name')
+            ->select('work_daily_tags.name', DB::raw('COUNT(*) as count'))
+            ->orderByDesc('count')
+            ->limit($limit)
+            ->get()
+            ->map(fn ($row) => ['name' => $row->name, 'count' => $row->count])
+            ->all();
     }
 
     private function isManager($user): bool

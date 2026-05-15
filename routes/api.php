@@ -21,6 +21,7 @@ use App\Http\Controllers\Api\Admin\ServerPathController;
 use App\Http\Controllers\Api\Admin\InitModelController;
 use App\Http\Controllers\Api\Admin\WorkDailyLogController;
 use App\Http\Controllers\Api\Admin\WorkDailyImageController;
+use App\Http\Controllers\Api\Admin\WorkDailyTagController;
 use App\Http\Controllers\Api\Admin\WorkPlatformController;
 use App\Http\Controllers\Api\Admin\WorkDocController;
 use App\Http\Controllers\Api\Admin\WorkDocCategoryController;
@@ -310,6 +311,11 @@ Route::name('api')->group(function () {
         // 删除平台
         Route::delete('work-platform/{workPlatform}', [WorkPlatformController::class, 'delete'])->name('work-platform.delete');
 
+
+        // 工作日常标签
+        Route::get('work-daily-tag/list', [WorkDailyTagController::class, 'list'])->name('work-daily-tag.list');
+        Route::post('work-daily-tag/add', [WorkDailyTagController::class, 'add'])->name('work-daily-tag.add');
+        Route::delete('work-daily-tag/{workDailyTag}', [WorkDailyTagController::class, 'delete'])->name('work-daily-tag.delete');
 
         // 牛马日常列表
         Route::get('work-daily/index', [WorkDailyLogController::class, 'index'])->name('work-daily.index')
