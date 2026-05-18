@@ -10,6 +10,7 @@ use App\Services\Api\Admin\WorkDailyLogService;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Spatie\QueryBuilder\QueryBuilder;
 
 class WorkDailyLogController extends Controller
 {
@@ -22,7 +23,27 @@ class WorkDailyLogController extends Controller
      */
     public function index(FormRequest $request, WorkDailyLog $workDailyLog)
     {
-        $query = WorkDailyLog::query();
+        $requestFilters = $workDailyLog->getRequestFilters();
+        unset($requestFilters['platform_id']);
+
+        $filters = $request->input('filter', []);
+        if (!is_array($filters)) {
+            $filters = [];
+        }
+        unset($filters['platform_id']);
+
+        $queryParameters = $request->query->all();
+        if (empty($filters)) {
+            unset($queryParameters['filter']);
+        } else {
+            $queryParameters['filter'] = $filters;
+        }
+
+        $allowedFilters = $request->generateAllowedFilters($requestFilters);
+
+        $query = QueryBuilder::for($workDailyLog->newQuery(), $request->duplicate($queryParameters, $request->request->all()))
+            ->allowedFilters($allowedFilters);
+
         foreach ($this->getAuthorizeConditions() as $condition) {
             $query->where($condition[0], $condition[1], $condition[2]);
         }
@@ -54,7 +75,19 @@ class WorkDailyLogController extends Controller
             ->orderBy('id', 'desc')
             ->paginate(self::PER_PAGE);
 
-        // 不再展示 platform 字段，content 返回为解码后的结构（模型的 accessor 已处理）
+        $platformNameMap = $this->buildPlatformNameMap($dailyLogs->getCollection());
+
+        $dailyLogs->getCollection()->transform(function (WorkDailyLog $log) use ($platformNameMap) {
+            $log->tags_name = $log->tags->pluck('name')->filter()->values()->all();
+
+            $platforms = $this->normalizePlatforms($log, $platformNameMap);
+            $log->platforms_name = array_values(array_unique(array_filter(array_map(static function (array $platform) {
+                return $platform['platform_name'] ?? null;
+            }, $platforms))));
+
+            return $log;
+        });
+
         return $this->resource($dailyLogs, ['time' => true, 'collection' => true]);
     }
 
