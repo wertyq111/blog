@@ -11,7 +11,7 @@ use Tests\TestCase;
 
 class StatsAggregatorTest extends TestCase
 {
-    public function test_streak_今天没写但昨天有时_current_streak_为_0(): void
+    public function test_streak_昨天写过今天还没写_仍算连续(): void
     {
         $service = new StatsAggregator();
 
@@ -21,6 +21,36 @@ class StatsAggregatorTest extends TestCase
         $yesterday = Carbon::today('Asia/Shanghai')->subDay()->toDateString();
 
         [$currentStreak] = $method->invoke($service, [$yesterday], $today);
+
+        $this->assertSame(1, $currentStreak);
+    }
+
+    public function test_streak_连续两天写到昨天_当前连续为_2(): void
+    {
+        $service = new StatsAggregator();
+
+        $method = new ReflectionMethod($service, 'calculateStreaks');
+        $method->setAccessible(true);
+        $today = Carbon::today('Asia/Shanghai');
+        $yesterday = $today->copy()->subDay()->toDateString();
+        $dayBefore = $today->copy()->subDays(2)->toDateString();
+
+        [$currentStreak] = $method->invoke($service, [$dayBefore, $yesterday], $today->toDateString());
+
+        $this->assertSame(2, $currentStreak);
+    }
+
+    public function test_streak_最后写作早于昨天_当前连续归零(): void
+    {
+        $service = new StatsAggregator();
+
+        $method = new ReflectionMethod($service, 'calculateStreaks');
+        $method->setAccessible(true);
+        $today = Carbon::today('Asia/Shanghai');
+        $twoDaysAgo = $today->copy()->subDays(2)->toDateString();
+        $threeDaysAgo = $today->copy()->subDays(3)->toDateString();
+
+        [$currentStreak] = $method->invoke($service, [$threeDaysAgo, $twoDaysAgo], $today->toDateString());
 
         $this->assertSame(0, $currentStreak);
     }

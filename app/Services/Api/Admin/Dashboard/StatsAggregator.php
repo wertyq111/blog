@@ -276,8 +276,11 @@ class StatsAggregator
             $previous = $date;
         }
 
+        // 最后一次写作是今天或昨天，连续都仍然有效：
+        // 昨天写过、今天还没写也应计入当前连续，不能直接归零
         $lastDate = end($dates);
-        if ($lastDate === $endDate) {
+        $yesterday = Carbon::parse($endDate)->subDay()->toDateString();
+        if ($lastDate === $endDate || $lastDate === $yesterday) {
             $currentStreak = 1;
             $currentDate = Carbon::parse($lastDate);
             while (in_array($currentDate->copy()->subDay()->toDateString(), $dates, true)) {
