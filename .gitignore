@@ -25,3 +25,7 @@ composer.lock
 docker-compose.yml
 # macOS AppleDouble metadata
 ._*
+
+# CodeGraph (local code index, do not commit)
+.cgcignore
+.codegraph/
