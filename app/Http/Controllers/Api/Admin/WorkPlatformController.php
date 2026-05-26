@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Api\Admin;
 
 use App\Http\Controllers\Api\Controller;
-use App\Http\Requests\Api\FormRequest;
+use App\Http\Requests\Api\Admin\WorkPlatformRequest;
 use App\Models\Admin\WorkPlatform;
 use Illuminate\Support\Facades\DB;
 use Spatie\QueryBuilder\QueryBuilder;
@@ -13,11 +13,13 @@ class WorkPlatformController extends Controller
     /**
      * 平台列表 - 分页
      *
-     * @param FormRequest $request
+     * @param WorkPlatformRequest $request
      * @param WorkPlatform $workPlatform
      * @return \App\Http\Resources\BaseResource
+     * @author zhouxufeng <zxf@netsun.com>
+     * @date 2026/5/26
      */
-    public function index(FormRequest $request, WorkPlatform $workPlatform)
+    public function index(WorkPlatformRequest $request, WorkPlatform $workPlatform)
     {
         $allowedFilters = $request->generateAllowedFilters($workPlatform->getRequestFilters());
 
@@ -29,7 +31,7 @@ class WorkPlatformController extends Controller
         $workPlatforms = $query
             ->orderBy('sort', 'asc')
             ->orderBy('id', 'desc')
-            ->paginate($request->get('limit') ?? $request->get('pageSize') ?? self::PER_PAGE);
+            ->paginate($request->perPage());
 
         return $this->resource($workPlatforms, ['time' => true, 'collection' => true]);
     }
@@ -37,11 +39,13 @@ class WorkPlatformController extends Controller
     /**
      * 平台列表 - 不分页
      *
-     * @param FormRequest $request
+     * @param WorkPlatformRequest $request
      * @param WorkPlatform $workPlatform
      * @return \App\Http\Resources\BaseResource
+     * @author zhouxufeng <zxf@netsun.com>
+     * @date 2026/5/26
      */
-    public function list(FormRequest $request, WorkPlatform $workPlatform)
+    public function list(WorkPlatformRequest $request, WorkPlatform $workPlatform)
     {
         $query = $workPlatform->newQuery();
 
@@ -61,6 +65,8 @@ class WorkPlatformController extends Controller
      *
      * @param WorkPlatform $workPlatform
      * @return \App\Http\Resources\BaseResource
+     * @author zhouxufeng <zxf@netsun.com>
+     * @date 2026/5/26
      */
     public function info(WorkPlatform $workPlatform)
     {
@@ -70,17 +76,15 @@ class WorkPlatformController extends Controller
     /**
      * 添加平台
      *
-     * @param FormRequest $request
+     * @param WorkPlatformRequest $request
      * @param WorkPlatform $workPlatform
      * @return \App\Http\Resources\BaseResource
+     * @author zhouxufeng <zxf@netsun.com>
+     * @date 2026/5/26
      */
-    public function add(FormRequest $request, WorkPlatform $workPlatform)
+    public function add(WorkPlatformRequest $request, WorkPlatform $workPlatform)
     {
         $data = $request->getSnakeRequest();
-
-        if (empty($data['name'])) {
-            throw new \Exception('平台名称不能为空');
-        }
 
         $workPlatform->fill($data);
         $workPlatform->edit();
@@ -92,16 +96,14 @@ class WorkPlatformController extends Controller
      * 编辑平台
      *
      * @param WorkPlatform $workPlatform
-     * @param FormRequest $request
+     * @param WorkPlatformRequest $request
      * @return \App\Http\Resources\BaseResource
+     * @author zhouxufeng <zxf@netsun.com>
+     * @date 2026/5/26
      */
-    public function edit(WorkPlatform $workPlatform, FormRequest $request)
+    public function edit(WorkPlatform $workPlatform, WorkPlatformRequest $request)
     {
         $data = $request->getSnakeRequest();
-
-        if (isset($data['name']) && empty($data['name'])) {
-            throw new \Exception('平台名称不能为空');
-        }
 
         $workPlatform->fill($data);
         $workPlatform->edit();
@@ -114,6 +116,8 @@ class WorkPlatformController extends Controller
      *
      * @param WorkPlatform $workPlatform
      * @return \Illuminate\Http\JsonResponse
+     * @author zhouxufeng <zxf@netsun.com>
+     * @date 2026/5/26
      */
     public function delete(WorkPlatform $workPlatform)
     {
@@ -125,23 +129,18 @@ class WorkPlatformController extends Controller
     /**
      * 批量保存排序
      *
-     * @param FormRequest $request
+     * @param WorkPlatformRequest $request
      * @param WorkPlatform $workPlatform
      * @return \Illuminate\Http\JsonResponse
+     * @author zhouxufeng <zxf@netsun.com>
+     * @date 2026/5/26
      */
-    public function reorder(FormRequest $request, WorkPlatform $workPlatform)
+    public function reorder(WorkPlatformRequest $request, WorkPlatform $workPlatform)
     {
         $order = $request->input('order', $request->input('list', []));
 
-        if (!is_array($order) || empty($order)) {
-            throw new \Exception('排序数据不能为空');
-        }
-
         DB::transaction(function () use ($order, $workPlatform) {
             foreach ($order as $item) {
-                if (!isset($item['id']) || !isset($item['sort'])) {
-                    continue;
-                }
                 $workPlatform->newQuery()->where('id', $item['id'])->update([
                     'sort' => (int)$item['sort']
                 ]);
@@ -151,6 +150,14 @@ class WorkPlatformController extends Controller
         return response()->json(['code' => 0, 'msg' => '排序已保存']);
     }
 
+    /**
+     * 应用当前用户平台数据范围。
+     *
+     * @param mixed $query
+     * @return void
+     * @author zhouxufeng <zxf@netsun.com>
+     * @date 2026/5/26
+     */
     private function applyOwnerFilter($query): void
     {
         $user = auth('api')->user();

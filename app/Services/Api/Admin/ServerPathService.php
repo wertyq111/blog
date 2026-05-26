@@ -8,30 +8,26 @@ use GuzzleHttp\Utils;
 class ServerPathService
 {
     /**
+     * 转换服务器路径。
+     *
      * @param ServerPath $serverPath
-     * @param $paths
+     * @param array $paths
      * @return array
      * @author zhouxufeng <zxf@netsun.com>
-     * @date 2024/4/28 11:00
+     * @date 2026/5/26
      */
-    public function convert(ServerPath $serverPath, $paths)
+    public function convert(ServerPath $serverPath, array $paths): array
     {
-        $serverPaths = [];
-        if (!is_array($paths) || empty($paths)) {
-            return $serverPaths;
-        }
+        $convertedPaths = [];
 
         $target = $serverPath->target;
         $sources = [];
         if (!empty($serverPath->sources)) {
-            try {
-                $decodedSources = Utils::jsonDecode($serverPath->sources, true);
-                if (is_array($decodedSources)) {
-                    $sources = $decodedSources;
-                }
-            } catch (\Exception $e) {
-                $sources = [];
+            $decodedSources = Utils::jsonDecode($serverPath->sources, true);
+            if (!is_array($decodedSources)) {
+                throw new \UnexpectedValueException('来源地址格式错误');
             }
+            $sources = $decodedSources;
         }
 
         foreach($paths as $path) {
@@ -45,18 +41,17 @@ class ServerPathService
                 $patten = "@". preg_quote($source, '@'). "@";
                 if (preg_match($patten, $path)) {
                     $isMatched = true;
-                    $serverPath = preg_replace($patten, $target, $path);
+                    $convertedPath = preg_replace($patten, $target, $path);
                     //将 \ 转换成 //
-                    $serverPath = str_replace('\\', '/', $serverPath);
-                    $serverPaths[] = $serverPath;
+                    $convertedPaths[] = str_replace('\\', '/', $convertedPath);
                 }
             }
 
             if($isMatched === false) {
-                $serverPaths[] = $path;
+                $convertedPaths[] = $path;
             }
         }
 
-        return $serverPaths;
+        return $convertedPaths;
     }
 }

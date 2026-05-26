@@ -12,16 +12,28 @@ use Spatie\QueryBuilder\QueryBuilder;
 
 class RoleController extends Controller
 {
-    public function index(FormRequest $request, Role $role)
+    /**
+     * 角色列表 - 分页。
+     *
+     * @param RoleRequest $request
+     * @param Role $role
+     * @return \App\Http\Resources\BaseResource
+     * @author zhouxufeng <zxf@netsun.com>
+     * @date 2026/5/26
+     */
+    public function index(RoleRequest $request, Role $role)
     {
         // 生成允许过滤字段数组
         $allowedFilters = $request->generateAllowedFilters($role->getRequestFilters());
 
-        $roles = QueryBuilder::for($role)
-            ->allowedIncludes('users', 'menus')
-            ->allowedFilters($allowedFilters)->paginate();
+        $config = [
+            'includes' => ['users', 'menus'],
+            'allowedFilters' => $allowedFilters,
+            'perPage' => $request->perPage(),
+        ];
+        $roles = $this->queryBuilder($role, true, $config);
 
-        return BaseResource::collection($roles);
+        return $this->resource($roles, ['time' => true, 'collection' => true]);
     }
 
     /**
@@ -52,11 +64,10 @@ class RoleController extends Controller
      */
     public function status(RoleRequest $request, Role $role)
     {
-        $role = $role->find($request->get('id'));
         $role->status = $request->get('status');
         $role->edit();
 
-        return new BaseResource($role);
+        return $this->resource($role);
     }
 
     /**
@@ -84,12 +95,12 @@ class RoleController extends Controller
      * 编辑角色
      *
      * @param Role $role
-     * @param FormRequest $request
+     * @param RoleRequest $request
      * @return BaseResource
      * @author zhouxufeng <zxf@netsun.com>
-     * @date 2024/3/11 13:08
+     * @date 2026/5/26
      */
-    public function edit(Role $role, FormRequest $request)
+    public function edit(Role $role, RoleRequest $request)
     {
         $data = $request->getSnakeRequest();
 
@@ -97,7 +108,7 @@ class RoleController extends Controller
 
         $role->edit();
 
-        return new BaseResource($role);
+        return $this->resource($role);
     }
 
     /**
@@ -123,15 +134,14 @@ class RoleController extends Controller
     /**
      * 批量删除
      *
-     * @param FormRequest $request
+     * @param RoleRequest $request
      * @return \Illuminate\Http\JsonResponse
      * @author zhouxufeng <zxf@netsun.com>
-     * @date 2024/3/11 13:32
+     * @date 2026/5/26
      */
-    public function batchDelete(FormRequest $request, Role $role)
+    public function batchDelete(RoleRequest $request, Role $role)
     {
-        $ids = $request->get('id');
-        foreach($ids as $id) {
+        foreach($request->integerIds() as $id) {
             $this->delete($role->find($id));
         }
 
@@ -184,9 +194,9 @@ class RoleController extends Controller
      * @param FormRequest $request
      * @return \Illuminate\Http\JsonResponse
      * @author zhouxufeng <zxf@netsun.com>
-     * @date 2024/3/11 15:08
+     * @date 2026/5/26
      */
-    public function savePermissionList(Role $role, FormRequest $request)
+    public function savePermissionList(Role $role, RoleRequest $request)
     {
         // 清空角色下的所有权限
         $role->menus()->detach();

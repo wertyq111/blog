@@ -13,23 +13,30 @@ use Spatie\QueryBuilder\QueryBuilder;
 
 class MenuController extends Controller
 {
-    public function __construct()
+    /**
+     * 初始化菜单服务。
+     *
+     * @param MenuService $menuService
+     * @return void
+     * @author zhouxufeng <zxf@netsun.com>
+     * @date 2026/5/26
+     */
+    public function __construct(private readonly MenuService $menuService)
     {
         parent::__construct();
-        $this->service = new MenuService();
     }
 
 
     /**
      * 菜单列表 - 不分页
      *
-     * @param FormRequest $request
+     * @param MenuRequest $request
      * @param Menu $menu
      * @return BaseResource
      * @author zhouxufeng <zxf@netsun.com>
-     * @date 2024/3/18 09:52
+     * @date 2026/5/26
      */
-    public function index(FormRequest $request, Menu $menu)
+    public function index(MenuRequest $request, Menu $menu)
     {
         // 生成允许过滤字段数组
         $allowedFilters = $request->generateAllowedFilters($menu->getRequestFilters());
@@ -37,7 +44,7 @@ class MenuController extends Controller
         $menus = QueryBuilder::for($menu)
             ->allowedFilters($allowedFilters)->orderBy('sort')->get()->toArray();
 
-        return new BaseResource($menus);
+        return $this->resource($menus);
     }
 
     /**
@@ -152,12 +159,12 @@ class MenuController extends Controller
      * 编辑菜单
      *
      * @param Menu $menu
-     * @param FormRequest $request
+     * @param MenuRequest $request
      * @return BaseResource
      * @author zhouxufeng <zxf@netsun.com>
-     * @date 2024/3/11 13:08
+     * @date 2026/5/26
      */
-    public function edit(Menu $menu, FormRequest $request)
+    public function edit(Menu $menu, MenuRequest $request)
     {
         $data = $request->all();
 
@@ -215,7 +222,7 @@ class MenuController extends Controller
             DB::commit();
         }
 
-        return new BaseResource($menu);
+        return $this->resource($menu);
     }
 
     /**
@@ -229,7 +236,7 @@ class MenuController extends Controller
     public function delete(Menu $menu)
     {
         // 批量删除子级
-        $this->service->batchDeleteChildren($menu->children);
+        $this->menuService->batchDeleteChildren($menu->children);
 
         $menu->delete();
 
@@ -277,8 +284,8 @@ class MenuController extends Controller
         }
 
         // menuChildren替换成 children
-        $menus = $this->service->convertChildrenKey($menus);
+        $menus = $this->menuService->convertChildrenKey($menus);
 
-        return new BaseResource($menus);
+        return $this->resource($menus);
     }
 }

@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Api\Admin;
 
 use App\Http\Controllers\Api\Controller;
-use App\Http\Requests\Api\FormRequest;
+use App\Http\Requests\Api\Admin\WorkDailyLogRequest;
 use App\Models\Admin\WorkDailyLog;
 use App\Models\Admin\WorkPlatform;
 use App\Services\Api\Admin\WorkDailyLogService;
@@ -15,13 +15,28 @@ use Spatie\QueryBuilder\QueryBuilder;
 class WorkDailyLogController extends Controller
 {
     /**
+     * 初始化工作日常服务。
+     *
+     * @param WorkDailyLogService $workDailyLogService
+     * @return void
+     * @author zhouxufeng <zxf@netsun.com>
+     * @date 2026/5/26
+     */
+    public function __construct(private readonly WorkDailyLogService $workDailyLogService)
+    {
+        parent::__construct();
+    }
+
+    /**
      * 牛马日常列表 - 分页
      *
-     * @param FormRequest $request
+     * @param WorkDailyLogRequest $request
      * @param WorkDailyLog $workDailyLog
      * @return \App\Http\Resources\BaseResource
+     * @author zhouxufeng <zxf@netsun.com>
+     * @date 2026/5/26
      */
-    public function index(FormRequest $request, WorkDailyLog $workDailyLog)
+    public function index(WorkDailyLogRequest $request, WorkDailyLog $workDailyLog)
     {
         $requestFilters = $workDailyLog->getRequestFilters();
         unset($requestFilters['platform_id']);
@@ -73,7 +88,7 @@ class WorkDailyLogController extends Controller
         $dailyLogs = $query->with('tags:id,name')
             ->orderBy('log_date', 'desc')
             ->orderBy('id', 'desc')
-            ->paginate(self::PER_PAGE);
+            ->paginate($request->perPage());
 
         $platformNameMap = $this->buildPlatformNameMap($dailyLogs->getCollection());
 
@@ -96,6 +111,8 @@ class WorkDailyLogController extends Controller
      *
      * @param WorkDailyLog $workDailyLog
      * @return \App\Http\Resources\BaseResource
+     * @author zhouxufeng <zxf@netsun.com>
+     * @date 2026/5/26
      */
     public function info(WorkDailyLog $workDailyLog)
     {
@@ -109,22 +126,18 @@ class WorkDailyLogController extends Controller
     /**
      * 添加牛马日常
      *
-     * @param FormRequest $request
+     * @param WorkDailyLogRequest $request
      * @param WorkDailyLog $workDailyLog
      * @return \App\Http\Resources\BaseResource
+     * @author zhouxufeng <zxf@netsun.com>
+     * @date 2026/5/26
      */
-    public function add(FormRequest $request, WorkDailyLog $workDailyLog)
+    public function add(WorkDailyLogRequest $request, WorkDailyLog $workDailyLog)
     {
         $data = $request->getSnakeRequest();
 
-        // 新格式：{ date: 'YYYY-MM-DD', platforms: [{platform_id, content, platform_name?}, ...] }
-        $this->validateDailyLog($data);
-
         $user = auth('api')->user();
-        $date = $data['log_date'] ?? ($data['date'] ?? null);
-        if (!$date) {
-            throw new \Exception('请选择日期');
-        }
+        $date = $data['log_date'];
 
         // 覆盖策略：如果当天已有记录（按 create_user & date），则替换
         $existing = WorkDailyLog::where('log_date', $date)->where('create_user', $user->id)->first();
@@ -161,17 +174,16 @@ class WorkDailyLogController extends Controller
      * 编辑牛马日常
      *
      * @param WorkDailyLog $workDailyLog
-     * @param FormRequest $request
+     * @param WorkDailyLogRequest $request
      * @return \App\Http\Resources\BaseResource
+     * @author zhouxufeng <zxf@netsun.com>
+     * @date 2026/5/26
      */
-    public function edit(WorkDailyLog $workDailyLog, FormRequest $request)
+    public function edit(WorkDailyLog $workDailyLog, WorkDailyLogRequest $request)
     {
         $this->authorizeOwner($workDailyLog);
 
         $data = $request->getSnakeRequest();
-
-        // 编辑同样接受 platforms 数组
-        $this->validateDailyLog($data, false);
 
         if (isset($data['platforms'])) {
             $workDailyLog->content = ['platforms' => $data['platforms']];
@@ -198,6 +210,8 @@ class WorkDailyLogController extends Controller
      *
      * @param WorkDailyLog $workDailyLog
      * @return \Illuminate\Http\JsonResponse
+     * @author zhouxufeng <zxf@netsun.com>
+     * @date 2026/5/26
      */
     public function delete(WorkDailyLog $workDailyLog)
     {
@@ -211,20 +225,15 @@ class WorkDailyLogController extends Controller
     /**
      * 导入Markdown日常
      *
-     * @param FormRequest $request
+     * @param WorkDailyLogRequest $request
      * @return \Illuminate\Http\JsonResponse
+     * @author zhouxufeng <zxf@netsun.com>
+     * @date 2026/5/26
      */
-    public function import(FormRequest $request)
+    public function import(WorkDailyLogRequest $request)
     {
         $file = $request->file('file');
-        if (!$file) {
-            throw new \Exception('请上传Markdown文件');
-        }
-
-        $year = $request->get('year');
-        if (!$year) {
-            $year = date('Y');
-        }
+        $year = $request->get('year') ?: date('Y');
 
         $content = $file->get();
         $entries = $this->parseMarkdown($content, (int)$year);
@@ -234,8 +243,7 @@ class WorkDailyLogController extends Controller
         }
 
         $user = auth('api')->user();
-        $service = new WorkDailyLogService();
-        $created = $service->importEntries($user->id, $entries);
+        $created = $this->workDailyLogService->importEntries($user->id, $entries);
 
         return response()->json(['count' => $created]);
     }
@@ -243,16 +251,15 @@ class WorkDailyLogController extends Controller
     /**
      * 月报导出（Markdown）
      *
-     * @param FormRequest $request
+     * @param WorkDailyLogRequest $request
      * @param WorkDailyLog $workDailyLog
      * @return \Illuminate\Http\Response
+     * @author zhouxufeng <zxf@netsun.com>
+     * @date 2026/5/26
      */
-    public function reportMonth(FormRequest $request, WorkDailyLog $workDailyLog)
+    public function reportMonth(WorkDailyLogRequest $request, WorkDailyLog $workDailyLog)
     {
         $month = $request->get('month');
-        if (!$month) {
-            throw new \Exception('请选择月份');
-        }
 
         $start = Carbon::createFromFormat('Y-m', $month)->startOfMonth()->toDateString();
         $end = Carbon::createFromFormat('Y-m', $month)->endOfMonth()->toDateString();
@@ -269,18 +276,16 @@ class WorkDailyLogController extends Controller
     /**
      * 周报导出（Markdown）
      *
-     * @param FormRequest $request
+     * @param WorkDailyLogRequest $request
      * @param WorkDailyLog $workDailyLog
      * @return \Illuminate\Http\Response
+     * @author zhouxufeng <zxf@netsun.com>
+     * @date 2026/5/26
      */
-    public function reportWeek(FormRequest $request, WorkDailyLog $workDailyLog)
+    public function reportWeek(WorkDailyLogRequest $request, WorkDailyLog $workDailyLog)
     {
         $start = $request->get('start_date');
         $end = $request->get('end_date');
-
-        if (!$start || !$end) {
-            throw new \Exception('请选择日期范围');
-        }
 
         $logs = $this->fetchLogs($workDailyLog, $start, $end);
         $model = $this->resolveReportModel($request);
@@ -294,16 +299,15 @@ class WorkDailyLogController extends Controller
     /**
      * 年报导出（Markdown）
      *
-     * @param FormRequest $request
+     * @param WorkDailyLogRequest $request
      * @param WorkDailyLog $workDailyLog
      * @return \Illuminate\Http\Response
+     * @author zhouxufeng <zxf@netsun.com>
+     * @date 2026/5/26
      */
-    public function reportYear(FormRequest $request, WorkDailyLog $workDailyLog)
+    public function reportYear(WorkDailyLogRequest $request, WorkDailyLog $workDailyLog)
     {
         $year = $request->get('year');
-        if (!$year) {
-            throw new \Exception('请选择年份');
-        }
 
         $start = Carbon::createFromFormat('Y', $year)->startOfYear()->toDateString();
         $end = Carbon::createFromFormat('Y', $year)->endOfYear()->toDateString();
@@ -321,6 +325,8 @@ class WorkDailyLogController extends Controller
      * 获取 OpenClaw 可用模型列表
      *
      * @return \App\Http\Resources\BaseResource
+     * @author zhouxufeng <zxf@netsun.com>
+     * @date 2026/5/26
      */
     public function reportModels()
     {
@@ -331,35 +337,6 @@ class WorkDailyLogController extends Controller
             'models' => $models,
             'current_model' => $defaultModel,
         ]);
-    }
-
-    /**
-     * 校验数据
-     *
-     * @param array $data
-     * @param bool $requireAll
-     * @return void
-     */
-    private function validateDailyLog(array $data, bool $requireAll = true)
-    {
-        // 新格式校验
-        if ($requireAll) {
-            $date = $data['log_date'] ?? ($data['date'] ?? null);
-            if (!$date) {
-                throw new \Exception('请选择日期');
-            }
-            if (empty($data['platforms']) || !is_array($data['platforms'])) {
-                throw new \Exception('请选择至少一个平台并填写内容');
-            }
-        }
-
-        if (isset($data['platforms']) && is_array($data['platforms'])) {
-            foreach ($data['platforms'] as $p) {
-                if (empty($p['platform_id']) && empty($p['platform_name'])) {
-                    throw new \Exception('平台信息不完整');
-                }
-            }
-        }
     }
 
     /**
@@ -768,10 +745,12 @@ class WorkDailyLogController extends Controller
     /**
      * 从请求中读取报表模型
      *
-     * @param FormRequest $request
+     * @param WorkDailyLogRequest $request
      * @return string|null
+     * @author zhouxufeng <zxf@netsun.com>
+     * @date 2026/5/26
      */
-    private function resolveReportModel(FormRequest $request): ?string
+    private function resolveReportModel(WorkDailyLogRequest $request): ?string
     {
         $model = trim((string)$request->get('model', ''));
         return $model !== '' ? $model : null;

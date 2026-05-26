@@ -3,13 +3,22 @@
 namespace App\Http\Controllers\Api\Admin;
 
 use App\Http\Controllers\Api\Controller;
-use App\Http\Requests\Api\FormRequest;
+use App\Http\Requests\Api\Admin\TodoItemRequest;
 use App\Models\Admin\TodoItem;
 use Spatie\QueryBuilder\QueryBuilder;
 
 class TodoItemController extends Controller
 {
-    public function index(FormRequest $request, TodoItem $todoItem)
+    /**
+     * 待办列表 - 分页。
+     *
+     * @param TodoItemRequest $request
+     * @param TodoItem $todoItem
+     * @return \App\Http\Resources\BaseResource
+     * @author zhouxufeng <zxf@netsun.com>
+     * @date 2026/5/26
+     */
+    public function index(TodoItemRequest $request, TodoItem $todoItem)
     {
         $allowedFilters = $request->generateAllowedFilters($todoItem->getRequestFilters());
 
@@ -37,11 +46,19 @@ class TodoItemController extends Controller
             ->orderBy('due_date', 'asc')
             ->orderBy('id', 'desc');
 
-        $items = $query->paginate($request->get('pageSize') ?? self::PER_PAGE);
+        $items = $query->paginate($request->perPage());
 
         return $this->resource($items, ['time' => true, 'collection' => true]);
     }
 
+    /**
+     * 待办详情。
+     *
+     * @param TodoItem $todoItem
+     * @return \App\Http\Resources\BaseResource
+     * @author zhouxufeng <zxf@netsun.com>
+     * @date 2026/5/26
+     */
     public function info(TodoItem $todoItem)
     {
         $this->authorizeOwner($todoItem);
@@ -50,11 +67,18 @@ class TodoItemController extends Controller
         return $this->resource($todoItem, ['time' => true]);
     }
 
-    public function add(FormRequest $request, TodoItem $todoItem)
+    /**
+     * 添加待办。
+     *
+     * @param TodoItemRequest $request
+     * @param TodoItem $todoItem
+     * @return \App\Http\Resources\BaseResource
+     * @author zhouxufeng <zxf@netsun.com>
+     * @date 2026/5/26
+     */
+    public function add(TodoItemRequest $request, TodoItem $todoItem)
     {
-        $data = $this->normalizeData($request->getSnakeRequest());
-
-        $this->validateTitle($data);
+        $data = $request->getSnakeRequest();
 
         $todoItem->fill($data);
         $todoItem->edit();
@@ -63,12 +87,19 @@ class TodoItemController extends Controller
         return $this->resource($todoItem);
     }
 
-    public function edit(TodoItem $todoItem, FormRequest $request)
+    /**
+     * 编辑待办。
+     *
+     * @param TodoItem $todoItem
+     * @param TodoItemRequest $request
+     * @return \App\Http\Resources\BaseResource
+     * @author zhouxufeng <zxf@netsun.com>
+     * @date 2026/5/26
+     */
+    public function edit(TodoItem $todoItem, TodoItemRequest $request)
     {
         $this->authorizeOwner($todoItem);
-        $data = $this->normalizeData($request->getSnakeRequest());
-
-        $this->validateTitle($data, false);
+        $data = $request->getSnakeRequest();
 
         $todoItem->fill($data);
         $todoItem->edit();
@@ -77,28 +108,14 @@ class TodoItemController extends Controller
         return $this->resource($todoItem);
     }
 
-    private function normalizeData(array $data): array
-    {
-        if (array_key_exists('platform_id', $data) && empty($data['platform_id'])) {
-            $data['platform_id'] = 0;
-        }
-        return $data;
-    }
-
-    private function validateTitle(array $data, bool $isCreate = true): void
-    {
-        if (!array_key_exists('title', $data)) {
-            if ($isCreate) {
-                throw new \Exception('标题不能为空');
-            }
-            return;
-        }
-
-        if (!is_string($data['title']) || trim($data['title']) === '') {
-            throw new \Exception('标题不能为空');
-        }
-    }
-
+    /**
+     * 删除待办。
+     *
+     * @param TodoItem $todoItem
+     * @return \Illuminate\Http\JsonResponse
+     * @author zhouxufeng <zxf@netsun.com>
+     * @date 2026/5/26
+     */
     public function delete(TodoItem $todoItem)
     {
         $this->authorizeOwner($todoItem);
@@ -107,22 +124,34 @@ class TodoItemController extends Controller
         return response()->json([]);
     }
 
-    public function updateStatus(TodoItem $todoItem, FormRequest $request)
+    /**
+     * 修改待办状态。
+     *
+     * @param TodoItem $todoItem
+     * @param TodoItemRequest $request
+     * @return \App\Http\Resources\BaseResource
+     * @author zhouxufeng <zxf@netsun.com>
+     * @date 2026/5/26
+     */
+    public function updateStatus(TodoItem $todoItem, TodoItemRequest $request)
     {
         $this->authorizeOwner($todoItem);
 
-        $status = (int)$request->get('status');
-        if ($status < 0 || $status > 3) {
-            throw new \Exception('无效的状态值');
-        }
-
-        $todoItem->status = $status;
+        $todoItem->status = (int)$request->get('status');
         $todoItem->edit();
 
         return $this->resource($todoItem);
     }
 
-    public function statistics(FormRequest $request)
+    /**
+     * 待办统计。
+     *
+     * @param TodoItemRequest $request
+     * @return \Illuminate\Http\JsonResponse
+     * @author zhouxufeng <zxf@netsun.com>
+     * @date 2026/5/26
+     */
+    public function statistics(TodoItemRequest $request)
     {
         $query = TodoItem::query();
         foreach ($this->getAuthorizeConditions() as $condition) {
@@ -142,6 +171,13 @@ class TodoItemController extends Controller
         ]);
     }
 
+    /**
+     * 获取当前用户数据范围。
+     *
+     * @return array
+     * @author zhouxufeng <zxf@netsun.com>
+     * @date 2026/5/26
+     */
     private function getAuthorizeConditions(): array
     {
         $user = auth('api')->user();
@@ -160,6 +196,14 @@ class TodoItemController extends Controller
         return [['create_user', '=', $user->id]];
     }
 
+    /**
+     * 校验待办归属权限。
+     *
+     * @param TodoItem $todoItem
+     * @return void
+     * @author zhouxufeng <zxf@netsun.com>
+     * @date 2026/5/26
+     */
     private function authorizeOwner(TodoItem $todoItem): void
     {
         $user = auth('api')->user();

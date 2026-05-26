@@ -8,35 +8,40 @@ use App\Http\Requests\Api\User\MemberRequest;
 use App\Http\Resources\User\MemberResource;
 use App\Models\User\Member;
 use App\Services\Api\User\MemberService;
-use Illuminate\Http\Request;
 
 class MembersController extends Controller
 {
 
     /**
      * 加载服务
+     *
+     * @param MemberService $memberService
+     * @return void
+     * @author zhouxufeng <zxf@netsun.com>
+     * @date 2026/5/26
      */
-    public function __construct()
+    public function __construct(private readonly MemberService $memberService)
     {
-        $this->service = new MemberService();
     }
 
     /**
      * 会员列表
      *
-     * @param Request $request
+     * @param MemberRequest $request
+     * @param Member $member
      * @return \Illuminate\Http\Resources\Json\AnonymousResourceCollection
      * @author zhouxufeng <zxf@netsun.com>
-     * @date 2024/4/10 09:33
+     * @date 2026/5/26
      */
-    public function index(FormRequest $request, Member $member)
+    public function index(MemberRequest $request, Member $member)
     {
         // 生成允许过滤字段数组
         $allowedFilters = $request->generateAllowedFilters($member->getRequestFilters());
 
         $config = [
             'includes' => ['user'],
-            'allowedFilters' => $allowedFilters
+            'allowedFilters' => $allowedFilters,
+            'perPage' => $request->perPage(),
         ];
         $members = $this->queryBuilder($member, true, $config);
 
@@ -61,11 +66,11 @@ class MembersController extends Controller
         $responseData = [];
 
         try {
-            $member = $this->service->getMember($data);
+            $member = $this->memberService->getMember($data);
 
             switch ($type) {
                 case 'wallpaper':
-                    $responseData = $this->service->getWallpaperInfo($member, $ip);
+                    $responseData = $this->memberService->getWallpaperInfo($member, $ip);
                     break;
             }
         } catch (\Exception $e) {
@@ -97,7 +102,7 @@ class MembersController extends Controller
 
             switch ($type) {
                 case 'wallpaper':
-                    $responseData = $this->service->getWallpaperInfo($member, $ip);
+                    $responseData = $this->memberService->getWallpaperInfo($member, $ip);
                     break;
             }
         } catch (\Exception $e) {
@@ -112,12 +117,12 @@ class MembersController extends Controller
      * 修改状态
      *
      * @param Member $member
-     * @param FormRequest $request
+     * @param MemberRequest $request
      * @return MemberResource
      * @author zhouxufeng <zxf@netsun.com>
-     * @date 2024/4/10 09:37
+     * @date 2026/5/26
      */
-    public function status(Member $member, FormRequest $request)
+    public function status(Member $member, MemberRequest $request)
     {
         $member->status = $request->get('status');
         $member->edit();
@@ -138,7 +143,7 @@ class MembersController extends Controller
         $data = $request->getSnakeRequest();
 
         // 添加会员
-        $member = $this->service->add($data);
+        $member = $this->memberService->add($data);
 
         return new MemberResource($member);
 
@@ -157,7 +162,7 @@ class MembersController extends Controller
     {
         $data = $request->getSnakeRequest();
 
-        $data = $this->service->completeMember($data);
+        $data = $this->memberService->completeMember($data);
 
         $member->fill($data);
 
@@ -192,8 +197,6 @@ class MembersController extends Controller
      */
     public function updateAdmire(MemberRequest $request, Member $member)
     {
-        $member = $member->find($request->get('id'));
-
         $member->admire = $request->get('admire');
 
         $member->edit();
@@ -201,6 +204,14 @@ class MembersController extends Controller
         return new MemberResource($member);
     }
 
+    /**
+     * 解析客户端 IP。
+     *
+     * @param FormRequest $request
+     * @return string|null
+     * @author zhouxufeng <zxf@netsun.com>
+     * @date 2026/5/26
+     */
     private function resolveClientIp(FormRequest $request): ?string
     {
         $ip = $request->getClientIp();
