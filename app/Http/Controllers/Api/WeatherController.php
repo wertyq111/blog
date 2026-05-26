@@ -19,20 +19,26 @@ class WeatherController extends Controller
      */
     public function index()
     {
+        $cityCode = request()->query('city_code');
+        if (!empty($cityCode)) {
+            return $this->getWeatherByCityCode($cityCode);
+        }
+
         $ip = $this->resolveClientIp();
 
         try {
             // 根据 ip 获取 ip 定位
             $addressInfo = $this->send('ip', ['ip' => $ip]);
             if($addressInfo && isset($addressInfo['city'])) {
-                $city = QueryBuilder::for(City::class)->where(['name' => $addressInfo['city']])->first()->toArray();
+                $city = QueryBuilder::for(City::class)->where(['name' => $addressInfo['city']])->first();
+                if (!$city) {
+                    throw new \Exception('找不到指定城市');
+                }
+
+                $city = $city->toArray();
                 $cityCode = $city['citycode'];
 
-                // 查询天气信息
-                $weatherInfo = $this->send('weather', ['city' => $cityCode]);
-                if($weatherInfo['status'] && $weatherInfo['infocode'] == config('weather.amap.response.infocode')) {
-                    return new BaseResource($weatherInfo['lives'][0]);
-                }
+                return $this->getWeatherByCityCode($cityCode);
             } else {
                 throw new \Exception('找不到指定城市');
             }
@@ -40,6 +46,16 @@ class WeatherController extends Controller
             throw new \Exception($e->getMessage());
         }
 
+    }
+
+    private function getWeatherByCityCode(string $cityCode): BaseResource
+    {
+        $weatherInfo = $this->send('weather', ['city' => $cityCode]);
+        if($weatherInfo['status'] && $weatherInfo['infocode'] == config('weather.amap.response.infocode')) {
+            return new BaseResource($weatherInfo['lives'][0]);
+        }
+
+        throw new \Exception('找不到指定城市天气');
     }
 
     /**
