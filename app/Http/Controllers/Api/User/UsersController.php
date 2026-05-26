@@ -21,13 +21,12 @@ class UsersController extends Controller
     /**
      * 获取用户列表
      *
-     * @param Request $request
-     * @param User $user
+     * @param UserRequest $request
      * @return \Illuminate\Http\Resources\Json\AnonymousResourceCollection
      * @author zhouxufeng <zxf@netsun.com>
-     * @date 2023/6/8 10:10
+     * @date 2026/5/26
      */
-    public function index(Request $request)
+    public function index(UserRequest $request)
     {
         $users = QueryBuilder::for(User::class)
             ->allowedIncludes('member', 'roles')
@@ -37,7 +36,7 @@ class UsersController extends Controller
                 AllowedFilter::exact('gender', 'member.gender'),
                 AllowedFilter::exact('status'),
                 AllowedFilter::exact('roles.id'),
-            ])->paginate();
+            ])->paginate($request->perPage());
 
         $list = UserResource::collection($users);
         return $list;
@@ -61,13 +60,13 @@ class UsersController extends Controller
     /**
      * 修改状态
      *
-     * @param UserRequest $request
      * @param User $user
+     * @param UserRequest $request
      * @return UserResource
      * @author zhouxufeng <zxf@netsun.com>
-     * @date 2024/3/8 09:13
+     * @date 2026/5/26
      */
-    public function status(User $user, FormRequest $request)
+    public function status(User $user, UserRequest $request)
     {
         $user->status = $request->get('status');
         $user->edit();

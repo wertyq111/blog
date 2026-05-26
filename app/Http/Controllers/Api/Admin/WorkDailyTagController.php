@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Api\Admin;
 
 use App\Http\Controllers\Api\Controller;
-use App\Http\Requests\Api\FormRequest;
+use App\Http\Requests\Api\Admin\WorkDailyTagRequest;
 use App\Models\Admin\WorkDailyTag;
 use Illuminate\Http\JsonResponse;
 
@@ -13,6 +13,8 @@ class WorkDailyTagController extends Controller
      * 标签列表（系统预设 + 当前用户创建的）
      *
      * @return JsonResponse
+     * @author zhouxufeng <zxf@netsun.com>
+     * @date 2026/5/26
      */
     public function list(): JsonResponse
     {
@@ -33,15 +35,14 @@ class WorkDailyTagController extends Controller
     /**
      * 新增标签
      *
-     * @param FormRequest $request
+     * @param WorkDailyTagRequest $request
      * @return JsonResponse
+     * @author zhouxufeng <zxf@netsun.com>
+     * @date 2026/5/26
      */
-    public function add(FormRequest $request): JsonResponse
+    public function add(WorkDailyTagRequest $request): JsonResponse
     {
-        $name = trim((string) $request->input('name', ''));
-        if ($name === '') {
-            return response()->json(['code' => 422, 'msg' => '标签名称不能为空', 'data' => null], 422);
-        }
+        $name = trim((string) $request->input('name'));
 
         $user = auth('api')->user();
 
@@ -76,6 +77,8 @@ class WorkDailyTagController extends Controller
      *
      * @param WorkDailyTag $workDailyTag
      * @return JsonResponse
+     * @author zhouxufeng <zxf@netsun.com>
+     * @date 2026/5/26
      */
     public function delete(WorkDailyTag $workDailyTag): JsonResponse
     {

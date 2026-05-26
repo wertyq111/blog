@@ -168,6 +168,13 @@ class DashboardStatsTest extends TestCase
         $this->assertIsInt($response->json('data.matrix.rows.0.cells.0'));
     }
 
+    /**
+     * 创建仪表盘测试表结构。
+     *
+     * @return void
+     * @author zhouxufeng <zxf@netsun.com>
+     * @date 2026/5/26
+     */
     private function createDashboardSchema(): void
     {
         Schema::create('users', function (Blueprint $table) {
@@ -221,6 +228,21 @@ class DashboardStatsTest extends TestCase
             $table->unsignedInteger('update_user')->default(0);
             $table->unsignedInteger('updated_at')->default(0);
             $table->unsignedInteger('deleted_at')->default(0);
+        });
+
+        Schema::create('work_daily_tags', function (Blueprint $table) {
+            $table->id();
+            $table->string('name', 50);
+            $table->unsignedInteger('create_user')->default(0);
+            $table->unsignedInteger('created_at')->default(0);
+            $table->unsignedInteger('update_user')->default(0);
+            $table->unsignedInteger('updated_at')->default(0);
+            $table->unsignedInteger('deleted_at')->default(0);
+        });
+
+        Schema::create('work_daily_log_tag', function (Blueprint $table) {
+            $table->unsignedBigInteger('work_daily_log_id')->default(0);
+            $table->unsignedBigInteger('work_daily_tag_id')->default(0);
         });
 
         Schema::create('work_docs', function (Blueprint $table) {

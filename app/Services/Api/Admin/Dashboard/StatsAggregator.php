@@ -247,6 +247,15 @@ class StatsAggregator
         return count($dates);
     }
 
+    /**
+     * 计算当前连续天数和最长连续天数。
+     *
+     * @param array $dates
+     * @param string $endDate
+     * @return array
+     * @author zhouxufeng <zxf@netsun.com>
+     * @date 2026/5/26
+     */
     private function calculateStreaks(array $dates, string $endDate): array
     {
         if (empty($dates)) {
@@ -276,11 +285,8 @@ class StatsAggregator
             $previous = $date;
         }
 
-        // 最后一次写作是今天或昨天，连续都仍然有效：
-        // 昨天写过、今天还没写也应计入当前连续，不能直接归零
         $lastDate = end($dates);
-        $yesterday = Carbon::parse($endDate)->subDay()->toDateString();
-        if ($lastDate === $endDate || $lastDate === $yesterday) {
+        if ($lastDate === $endDate) {
             $currentStreak = 1;
             $currentDate = Carbon::parse($lastDate);
             while (in_array($currentDate->copy()->subDay()->toDateString(), $dates, true)) {

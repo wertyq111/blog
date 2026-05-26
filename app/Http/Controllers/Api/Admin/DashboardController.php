@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\Admin;
 
 use App\Http\Controllers\Api\Controller;
+use App\Http\Requests\Api\Admin\DashboardStatsRequest;
 use App\Models\Admin\WorkDailyLog;
 use App\Services\Api\Admin\Dashboard\DashboardCache;
 use Illuminate\Support\Facades\DB;
@@ -11,10 +12,20 @@ use App\Services\Api\Admin\Dashboard\PlatformBreakdown;
 use App\Services\Api\Admin\Dashboard\StatsAggregator;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 
 class DashboardController extends Controller
 {
+    /**
+     * 初始化工作台统计依赖。
+     *
+     * @param DashboardCache $dashboardCache
+     * @param StatsAggregator $statsAggregator
+     * @param HeatmapBuilder $heatmapBuilder
+     * @param PlatformBreakdown $platformBreakdown
+     * @return void
+     * @author zhouxufeng <zxf@netsun.com>
+     * @date 2026/5/26
+     */
     public function __construct(
         private readonly DashboardCache $dashboardCache,
         private readonly StatsAggregator $statsAggregator,
@@ -23,7 +34,15 @@ class DashboardController extends Controller
     ) {
     }
 
-    public function stats(Request $request): JsonResponse
+    /**
+     * 获取工作台统计。
+     *
+     * @param DashboardStatsRequest $request
+     * @return JsonResponse
+     * @author zhouxufeng <zxf@netsun.com>
+     * @date 2026/5/26
+     */
+    public function stats(DashboardStatsRequest $request): JsonResponse
     {
         $user = auth('api')->user();
         if (!$user) {
@@ -32,14 +51,6 @@ class DashboardController extends Controller
 
         $view = $request->get('view', 'overview');
         $range = $request->get('range', 'all');
-
-        if (!in_array($view, ['overview', 'platform', 'hour', 'tag'], true)) {
-            return response()->json(['code' => 422, 'msg' => '参数错误：view', 'data' => null], 422);
-        }
-
-        if (!in_array($range, ['all', '30d', '7d', 'today'], true)) {
-            return response()->json(['code' => 422, 'msg' => '参数错误：range', 'data' => null], 422);
-        }
 
         $isManager = $this->isManager($user);
         [$response, $cacheHit] = $this->dashboardCache->remember($user->id, $isManager, $view, $range, function () use ($user, $isManager, $view, $range) {

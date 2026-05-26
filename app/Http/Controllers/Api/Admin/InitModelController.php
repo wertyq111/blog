@@ -3,38 +3,44 @@
 namespace App\Http\Controllers\Api\Admin;
 
 use App\Http\Controllers\Api\Controller;
-use App\Http\Requests\Api\Admin\MenuRequest;
-use App\Http\Requests\Api\FormRequest;
+use App\Http\Requests\Api\Admin\InitModelRequest;
 use App\Http\Resources\BaseResource;
 use App\Models\Admin\InitModel;
 use App\Services\Api\Admin\InitModelService;
-use GuzzleHttp\Utils;
 
 class InitModelController extends Controller
 {
-    public function __construct()
+    /**
+     * 初始化模型初始化服务。
+     *
+     * @param InitModelService $initModelService
+     * @return void
+     * @author zhouxufeng <zxf@netsun.com>
+     * @date 2026/5/26
+     */
+    public function __construct(private readonly InitModelService $initModelService)
     {
         parent::__construct();
-        $this->service = new InitModelService();
     }
 
 
     /**
-     * 服务器路径列表 - 分页
+     * 模型初始化列表 - 分页
      *
-     * @param FormRequest $request
+     * @param InitModelRequest $request
      * @param InitModel $initModel
      * @return BaseResource
      * @author zhouxufeng <zxf@netsun.com>
-     * @date 2024/3/18 09:52
+     * @date 2026/5/26
      */
-    public function index(FormRequest $request, InitModel $initModel)
+    public function index(InitModelRequest $request, InitModel $initModel)
     {
         // 生成允许过滤字段数组
         $allowedFilters = $request->generateAllowedFilters($initModel->getRequestFilters());
 
         $config = [
-            'allowedFilters' => $allowedFilters
+            'allowedFilters' => $allowedFilters,
+            'perPage' => $request->perPage(),
         ];
         $initModels = $this->queryBuilder($initModel, true, $config);
 
@@ -42,7 +48,7 @@ class InitModelController extends Controller
     }
 
     /**
-     * 服务器路径详情
+     * 模型初始化详情
      *
      * @param InitModel $initModel
      * @return BaseResource
@@ -55,15 +61,15 @@ class InitModelController extends Controller
     }
 
     /**
-     * 添加服务器路径
+     * 添加模型初始化
      *
-     * @param MenuRequest $request
+     * @param InitModelRequest $request
      * @param InitModel $initModel
      * @return BaseResource
      * @author zhouxufeng <zxf@netsun.com>
-     * @date 2024/3/11 13:07
+     * @date 2026/5/26
      */
-    public function add(FormRequest $request, InitModel $initModel)
+    public function add(InitModelRequest $request, InitModel $initModel)
     {
         $data = $request->getSnakeRequest();
 
@@ -75,15 +81,15 @@ class InitModelController extends Controller
     }
 
     /**
-     * 编辑服务器路径
+     * 编辑模型初始化
      *
      * @param InitModel $initModel
-     * @param FormRequest $request
+     * @param InitModelRequest $request
      * @return BaseResource
      * @author zhouxufeng <zxf@netsun.com>
-     * @date 2024/3/11 13:08
+     * @date 2026/5/26
      */
-    public function edit(InitModel $initModel, FormRequest $request)
+    public function edit(InitModel $initModel, InitModelRequest $request)
     {
         $data = $request->getSnakeRequest();
 
@@ -95,25 +101,25 @@ class InitModelController extends Controller
     }
 
     /**
-     * 服务器路径转换
+     * 模型初始化转换
      *
      * @param InitModel $initModel
-     * @param FormRequest $request
+     * @param InitModelRequest $request
      * @return \Illuminate\Http\JsonResponse
      * @author zhouxufeng <zxf@netsun.com>
-     * @date 2024/4/28 13:24
+     * @date 2026/5/26
      */
-    public function convert(InitModel $initModel, FormRequest $request)
+    public function convert(InitModel $initModel, InitModelRequest $request)
     {
-        $data = $request->getSnakeRequest();
+        $data = $request->validated();
 
-        $initModels = $this->service->convert($initModel, $data['columns']);
+        $initModels = $this->initModelService->convert($initModel, $data['columns']);
 
         return response()->json($initModels);
     }
 
     /**
-     * 删除服务器路径
+     * 删除模型初始化
      *
      * @param InitModel $initModel
      * @return \Illuminate\Http\JsonResponse
@@ -130,21 +136,14 @@ class InitModelController extends Controller
     /**
      * 兼容旧版前端批量删除
      *
-     * @param FormRequest $request
+     * @param InitModelRequest $request
      * @return \Illuminate\Http\JsonResponse
+     * @author zhouxufeng <zxf@netsun.com>
+     * @date 2026/5/26
      */
-    public function batchDelete(FormRequest $request)
+    public function batchDelete(InitModelRequest $request)
     {
-        $data = $request->getSnakeRequest();
-        $ids = $data['id'] ?? [];
-        $ids = is_array($ids) ? $ids : [$ids];
-        $ids = array_values(array_filter($ids, static function ($id) {
-            return is_numeric($id);
-        }));
-
-        if (!empty($ids)) {
-            InitModel::query()->whereIn('id', $ids)->delete();
-        }
+        InitModel::query()->whereIn('id', $request->integerIds())->delete();
 
         return response()->json([]);
     }
