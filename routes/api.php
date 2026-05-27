@@ -338,6 +338,16 @@ Route::name('api')->group(function () {
         Route::get('work-daily/report/week', [WorkDailyLogController::class, 'reportWeek'])->name('work-daily.report-week');
         // 年报导出
         Route::get('work-daily/report/year', [WorkDailyLogController::class, 'reportYear'])->name('work-daily.report-year');
+        // 异步报表导出
+        Route::post('work-daily/report/export', [WorkDailyLogController::class, 'reportExport'])->name('work-daily.report-export');
+        // 当前报表导出任务
+        Route::get('work-daily/report/export/current', [WorkDailyLogController::class, 'currentReportExport'])->name('work-daily.report-export-current');
+        // 报表导出任务列表（当前用户）
+        Route::get('work-daily/report/export/list', [WorkDailyLogController::class, 'listReportExports'])->name('work-daily.report-export-list');
+        // 报表导出任务详情
+        Route::get('work-daily/report/export/{export}', [WorkDailyLogController::class, 'reportExportInfo'])->name('work-daily.report-export-info');
+        // 报表导出文件下载
+        Route::get('work-daily/report/export/{export}/download', [WorkDailyLogController::class, 'downloadReportExport'])->name('work-daily.report-export-download');
         // OpenClaw 报表模型列表
         Route::get('work-daily/report/models', [WorkDailyLogController::class, 'reportModels'])->name('work-daily.report-models');
 

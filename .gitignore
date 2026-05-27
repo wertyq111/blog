@@ -29,3 +29,6 @@ docker-compose.yml
 # CodeGraph (local code index, do not commit)
 .cgcignore
 .codegraph/
+
+# 本机开发脚本（桥服务/隧道/socat 等本机基础设施，不入仓）
+/scripts/
