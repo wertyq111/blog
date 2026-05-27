@@ -53,6 +53,14 @@ class WorkDailyLogRequest extends FormRequest
                 'year' => ['required', 'date_format:Y'],
                 'model' => ['nullable', 'string', 'max:120'],
             ],
+            'reportExport' => [
+                'type' => ['required', 'in:month,week,year'],
+                'month' => ['nullable', 'date_format:Y-m'],
+                'start_date' => ['nullable', 'date'],
+                'end_date' => ['nullable', 'date'],
+                'year' => ['nullable', 'date_format:Y'],
+                'model' => ['nullable', 'string', 'max:120'],
+            ],
             default => [],
         };
     }
@@ -67,6 +75,30 @@ class WorkDailyLogRequest extends FormRequest
      */
     public function withValidator(Validator $validator): void
     {
+        if ($this->actionMethod() === 'reportExport') {
+            $validator->after(function (Validator $validator) {
+                $type = (string)$this->input('type');
+                if ($type === 'month' && !$this->input('month')) {
+                    $validator->errors()->add('month', '请选择月份');
+                }
+                if ($type === 'week') {
+                    if (!$this->input('start_date')) {
+                        $validator->errors()->add('start_date', '请选择开始日期');
+                    }
+                    if (!$this->input('end_date')) {
+                        $validator->errors()->add('end_date', '请选择结束日期');
+                    }
+                    if ($this->input('start_date') && $this->input('end_date') && $this->input('start_date') > $this->input('end_date')) {
+                        $validator->errors()->add('end_date', '结束日期不能早于开始日期');
+                    }
+                }
+                if ($type === 'year' && !$this->input('year')) {
+                    $validator->errors()->add('year', '请选择年份');
+                }
+            });
+            return;
+        }
+
         if (!in_array($this->actionMethod(), ['add', 'edit'], true)) {
             return;
         }
@@ -106,6 +138,7 @@ class WorkDailyLogRequest extends FormRequest
             'year' => '年份',
             'month' => '月份',
             'model' => '模型',
+            'type' => '报表类型',
         ]);
     }
 }

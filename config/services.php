@@ -43,6 +43,18 @@ return [
         'gateway_url' => env('OPENCLAW_GATEWAY_URL'),
     ],
 
+    'local_codex' => [
+        'bridge_url' => env('LOCAL_CODEX_BRIDGE_URL'),
+        'bridge_token' => env('LOCAL_CODEX_BRIDGE_TOKEN'),
+        'model' => env('LOCAL_CODEX_MODEL', 'local-codex/codex-cli'),
+    ],
+
+    'local_gemini' => [
+        'bridge_url' => env('LOCAL_GEMINI_BRIDGE_URL'),
+        'bridge_token' => env('LOCAL_GEMINI_BRIDGE_TOKEN'),
+        'model' => env('LOCAL_GEMINI_MODEL', 'local-gemini/gemini-cli'),
+    ],
+
     'client_ip_override' => [
         'source' => env('CLIENT_IP_OVERRIDE_SOURCE'),
         'target' => env('CLIENT_IP_OVERRIDE_TARGET'),

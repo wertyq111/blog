@@ -32,10 +32,11 @@ blog-dev
 ├── routes/                 API 和 Web 路由
 ├── runtimes/               Sail 镜像文件
 ├── tests/                  PHPUnit 测试
+├── scripts/                本机开发脚本（不入仓，见下文「本机开发脚本」一节）
 ├── .env.example            本地环境模板
 ├── artisan                 Laravel CLI 入口
 ├── composer.json           PHP 依赖和 Composer 脚本
-├── docker-compose.yml      Sail 服务：app、MySQL、Redis、Mailpit
+├── docker-compose.yml      Sail 服务：app、queue worker、MySQL、Redis、Mailpit
 └── package.json            Vite 脚本
 ```
 
@@ -106,6 +107,8 @@ MAIL_PORT=${FORWARD_MAILPIT_PORT}
 | 短信 | `SMS_ALIYUN_ACCESS_KEY_ID`、`SMS_ALIYUN_ACCESS_KEY_SECRET`、`SMS_ALIYUN_TEMPLATE_REGISTER` |
 | 客户端 IP 映射 | `CLIENT_IP_OVERRIDE_SOURCE`、`CLIENT_IP_OVERRIDE_TARGET` |
 | 工作日报 AI 汇总 | `OPENCLAW_GATEWAY_URL`、`OPENCLAW_GATEWAY_TOKEN`、`OPENCLAW_MODEL`、`OPENCLAW_REPORT_MODELS`、`OPENCLAW_BAILIAN_API_KEY` |
+| 本机 CLI 桥（Codex） | `LOCAL_CODEX_BRIDGE_URL`、`LOCAL_CODEX_BRIDGE_TOKEN`、`LOCAL_CODEX_MODEL` |
+| 本机 CLI 桥（Gemini） | `LOCAL_GEMINI_BRIDGE_URL`、`LOCAL_GEMINI_BRIDGE_TOKEN`、`LOCAL_GEMINI_MODEL` |
 
 ## 安装依赖
 
@@ -198,6 +201,49 @@ npm install
 npm run dev
 npm run build
 ```
+
+## 异步队列
+
+工作日报报表导出等耗时任务走 Redis 队列 `work-daily-report`，由 `docker-compose.yml` 里独立的 `queue` 服务消费（与 `blog` app 容器同镜像、共享代码卷，`restart: unless-stopped`，容器/服务器重启会自动拉起）。配置：
+
+| 项 | 值 |
+| --- | --- |
+| `QUEUE_CONNECTION` | `redis` |
+| 子队列名 | `work-daily-report` |
+| Job 类 | `App\Jobs\GenerateWorkDailyReportExport` |
+
+常用命令：
+
+```bash
+# 看 worker 日志
+./vendor/bin/sail logs -f queue
+# 重启 worker（拉新代码时）
+./vendor/bin/sail restart queue
+# 查队列长度
+./vendor/bin/sail redis redis-cli LLEN blog_database_queues:work-daily-report
+# 查失败任务
+./vendor/bin/sail artisan queue:failed
+```
+
+如果新增 ShouldQueue 任务用其它子队列名，可在 `docker-compose.yml` 的 `queue` 服务 command 里用 `--queue=a,b,c` 同时消费多个队列。
+
+## 本机开发脚本
+
+`scripts/` 目录里放本机一次性开发基础设施（桥服务、SSH 隧道辅助、远端转发管理脚本等），**已在 `.gitignore` 里排除，不进仓库**。原因是：
+
+- 这些脚本含本机/远端的私有端口、隧道目标、个人开发机布局，不适合公开。
+- 不同开发者本机环境差异大，统一规范没有意义；按需自取。
+
+里面常见的脚本类型：
+
+| 用途 | 形态 |
+| --- | --- |
+| 本机 AI CLI 桥服务（Codex/Gemini 等） | Python HTTP 服务，把本机 CLI 包装成 OpenAI 兼容 `/v1/chat/completions` |
+| 本机桥的统一开关 | bash 脚本：用清单数组维护多条桥（tmux session + SSH 反向隧道），`up/down/status/restart [name]` |
+| 远端 docker bridge 转发 | bash 脚本（在远端执行）：用 socat 把 SSH 隧道在远端回环口的端口暴露给 Sail 容器 `host.docker.internal` |
+
+具体的桥架构、端口、启动顺序看项目根目录 `lessons.md` 的对应条目（端口属于本机配置，不写进 README）。
+
 
 ## 测试
 

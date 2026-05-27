@@ -4,10 +4,14 @@ namespace App\Http\Controllers\Api\Admin;
 
 use App\Http\Controllers\Api\Controller;
 use App\Http\Requests\Api\Admin\WorkDailyLogRequest;
+use App\Jobs\GenerateWorkDailyReportExport;
 use App\Models\Admin\WorkDailyLog;
+use App\Models\Admin\WorkDailyReportExport;
 use App\Models\Admin\WorkPlatform;
 use App\Services\Api\Admin\WorkDailyLogService;
+use App\Services\Api\Admin\WorkDailyReportService;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Spatie\QueryBuilder\QueryBuilder;
@@ -22,7 +26,10 @@ class WorkDailyLogController extends Controller
      * @author zhouxufeng <zxf@netsun.com>
      * @date 2026/5/26
      */
-    public function __construct(private readonly WorkDailyLogService $workDailyLogService)
+    public function __construct(
+        private readonly WorkDailyLogService $workDailyLogService,
+        private readonly WorkDailyReportService $workDailyReportService
+    )
     {
         parent::__construct();
     }
@@ -260,15 +267,11 @@ class WorkDailyLogController extends Controller
     public function reportMonth(WorkDailyLogRequest $request, WorkDailyLog $workDailyLog)
     {
         $month = $request->get('month');
-
-        $start = Carbon::createFromFormat('Y-m', $month)->startOfMonth()->toDateString();
-        $end = Carbon::createFromFormat('Y-m', $month)->endOfMonth()->toDateString();
-
-        $logs = $this->fetchLogs($workDailyLog, $start, $end);
         $model = $this->resolveReportModel($request);
 
-        $title = "牛马日常月报 - {$month}";
-        $markdown = $this->buildSummaryMarkdown($title, $logs, 'month', $model);
+        $markdown = $this->workDailyReportService->generateForUser((int)auth('api')->id(), 'month', [
+            'month' => $month,
+        ], $model);
 
         return response($markdown, 200, ['Content-Type' => 'text/markdown; charset=UTF-8']);
     }
@@ -287,11 +290,12 @@ class WorkDailyLogController extends Controller
         $start = $request->get('start_date');
         $end = $request->get('end_date');
 
-        $logs = $this->fetchLogs($workDailyLog, $start, $end);
         $model = $this->resolveReportModel($request);
 
-        $title = "牛马日常周报 - {$start} ~ {$end}";
-        $markdown = $this->buildSummaryMarkdown($title, $logs, 'week', $model);
+        $markdown = $this->workDailyReportService->generateForUser((int)auth('api')->id(), 'week', [
+            'start_date' => $start,
+            'end_date' => $end,
+        ], $model);
 
         return response($markdown, 200, ['Content-Type' => 'text/markdown; charset=UTF-8']);
     }
@@ -308,17 +312,137 @@ class WorkDailyLogController extends Controller
     public function reportYear(WorkDailyLogRequest $request, WorkDailyLog $workDailyLog)
     {
         $year = $request->get('year');
-
-        $start = Carbon::createFromFormat('Y', $year)->startOfYear()->toDateString();
-        $end = Carbon::createFromFormat('Y', $year)->endOfYear()->toDateString();
-
-        $logs = $this->fetchLogs($workDailyLog, $start, $end);
         $model = $this->resolveReportModel($request);
 
-        $title = "牛马日常年报 - {$year}";
-        $markdown = $this->buildSummaryMarkdown($title, $logs, 'year', $model);
+        $markdown = $this->workDailyReportService->generateForUser((int)auth('api')->id(), 'year', [
+            'year' => $year,
+        ], $model);
 
         return response($markdown, 200, ['Content-Type' => 'text/markdown; charset=UTF-8']);
+    }
+
+    /**
+     * 创建异步报表导出任务。
+     *
+     * @param WorkDailyLogRequest $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function reportExport(WorkDailyLogRequest $request)
+    {
+        $userId = (int)auth('api')->id();
+        $type = (string)$request->get('type');
+        $payload = $this->resolveReportExportPayload($request, $type);
+        $model = $this->resolveReportModel($request);
+
+        $result = Cache::store('redis')
+            ->lock('work-daily-report-export:' . $userId, 10)
+            ->block(5, function () use ($userId, $type, $payload, $model) {
+                $activeExport = WorkDailyReportExport::query()
+                    ->where('user_id', $userId)
+                    ->whereIn('status', WorkDailyReportExport::activeStatuses())
+                    ->orderByDesc('id')
+                    ->first();
+
+                if ($activeExport) {
+                    return [
+                        'blocked' => true,
+                        'export' => $this->workDailyReportService->exportData($activeExport),
+                    ];
+                }
+
+                $export = $this->workDailyReportService->createExport($userId, $type, $payload, $model);
+                GenerateWorkDailyReportExport::dispatch($export->id);
+
+                return [
+                    'blocked' => false,
+                    'export' => $this->workDailyReportService->exportData($export),
+                ];
+            });
+
+        return response()->json($result);
+    }
+
+    /**
+     * 获取当前用户最近的报表导出任务。
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function currentReportExport()
+    {
+        $export = WorkDailyReportExport::query()
+            ->where('user_id', (int)auth('api')->id())
+            ->orderByDesc('id')
+            ->first();
+
+        return response()->json([
+            'export' => $export ? $this->workDailyReportService->exportData($export) : null,
+            'active' => $export ? in_array($export->status, WorkDailyReportExport::activeStatuses(), true) : false,
+        ]);
+    }
+
+    /**
+     * 获取当前用户的报表导出任务分页列表。
+     *
+     * @param WorkDailyLogRequest $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function listReportExports(WorkDailyLogRequest $request)
+    {
+        $userId = (int)auth('api')->id();
+        $pageSize = max(1, min(50, (int)$request->get('page_size', 20)));
+
+        $paginator = WorkDailyReportExport::query()
+            ->where('user_id', $userId)
+            ->orderByDesc('id')
+            ->paginate($pageSize);
+
+        $items = collect($paginator->items())
+            ->map(fn(WorkDailyReportExport $export) => $this->workDailyReportService->exportData($export))
+            ->all();
+
+        return response()->json([
+            'items' => $items,
+            'total' => $paginator->total(),
+            'page' => $paginator->currentPage(),
+            'pageSize' => $paginator->perPage(),
+        ]);
+    }
+
+    /**
+     * 获取报表导出任务详情。
+     *
+     * @param WorkDailyReportExport $export
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function reportExportInfo(WorkDailyReportExport $export)
+    {
+        $this->authorizeReportExport($export);
+
+        return response()->json([
+            'export' => $this->workDailyReportService->exportData($export),
+            'active' => in_array($export->status, WorkDailyReportExport::activeStatuses(), true),
+        ]);
+    }
+
+    /**
+     * 下载已完成的报表 Markdown 文件。
+     *
+     * @param WorkDailyReportExport $export
+     * @return \Illuminate\Http\Response
+     */
+    public function downloadReportExport(WorkDailyReportExport $export)
+    {
+        $this->authorizeReportExport($export);
+        if (!$export->isCompleted()) {
+            abort(409, '导出任务尚未完成');
+        }
+
+        $fileName = $export->file_name ?: '工作报表.md';
+
+        return response((string)$export->content, 200, [
+            'Content-Type' => 'text/markdown; charset=UTF-8',
+            'Content-Disposition' => "attachment; filename*=UTF-8''" . rawurlencode($fileName),
+        ]);
     }
 
     /**
@@ -492,7 +616,7 @@ class WorkDailyLogController extends Controller
             "- 保持简洁、可汇报\n\n" .
             "原始记录：\n{$source}";
 
-        $summary = $this->callOpenClaw($prompt, $model);
+        $summary = $this->callReportModel($prompt, $model);
 
         if (!$summary) {
             return $this->buildMarkdown($title, $logs);
@@ -502,9 +626,32 @@ class WorkDailyLogController extends Controller
     }
 
     /**
+     * 调用报表模型生成总结
+     *
+     * @param string $prompt
+     * @param string|null $model
+     * @return string|null
+     */
+    private function callReportModel(string $prompt, ?string $model = null): ?string
+    {
+        $targetModel = $model ?: env('OPENCLAW_MODEL', 'github-copilot/gpt-5.2-codex');
+
+        if ($this->isLocalCodexModel($targetModel)) {
+            return $this->callLocalCodex($prompt, $targetModel);
+        }
+
+        if ($this->isLocalGeminiModel($targetModel)) {
+            return $this->callLocalGemini($prompt, $targetModel);
+        }
+
+        return $this->callOpenClaw($prompt, $targetModel);
+    }
+
+    /**
      * 调用 OpenClaw Gateway 生成总结
      *
      * @param string $prompt
+     * @param string|null $model
      * @return string|null
      */
     private function callOpenClaw(string $prompt, ?string $model = null): ?string
@@ -556,6 +703,98 @@ class WorkDailyLogController extends Controller
             Log::error('OpenClaw summary exception: ' . $e->getMessage());
             return null;
         }
+    }
+
+    /**
+     * 调用本机 Codex CLI bridge 生成总结
+     *
+     * @param string $prompt
+     * @param string $model
+     * @return string
+     */
+    private function callLocalCodex(string $prompt, string $model): string
+    {
+        $baseUrl = $this->resolveLocalCodexBridgeUrl();
+        if (!$baseUrl) {
+            throw new \RuntimeException('LOCAL_CODEX_BRIDGE_URL 未配置');
+        }
+
+        $headers = [];
+        $token = config('services.local_codex.bridge_token');
+        if (is_string($token) && trim($token) !== '') {
+            $headers['Authorization'] = 'Bearer ' . trim($token);
+        }
+
+        try {
+            $response = Http::withHeaders($headers)
+                ->timeout(240)
+                ->post($baseUrl . '/v1/chat/completions', [
+                    'model' => $model,
+                    'messages' => [
+                        ['role' => 'system', 'content' => '你是一个擅长按平台归纳工作日志的助手，输出中文 Markdown。'],
+                        ['role' => 'user', 'content' => $prompt],
+                    ],
+                ]);
+        } catch (\Illuminate\Http\Client\ConnectionException $e) {
+            throw new \RuntimeException($this->bridgeUnreachableMessage('Codex'), 0, $e);
+        }
+
+        if (!$response->ok()) {
+            throw new \RuntimeException('Local Codex summary failed: ' . $response->status() . ' ' . $response->body());
+        }
+
+        $content = $response->json('choices.0.message.content');
+        if (!is_string($content) || trim($content) === '') {
+            throw new \RuntimeException('Local Codex summary returned empty content');
+        }
+
+        return $content;
+    }
+
+    /**
+     * 调用本机 Gemini CLI bridge 生成总结
+     *
+     * @param string $prompt
+     * @param string $model
+     * @return string
+     */
+    private function callLocalGemini(string $prompt, string $model): string
+    {
+        $baseUrl = $this->resolveLocalGeminiBridgeUrl();
+        if (!$baseUrl) {
+            throw new \RuntimeException('LOCAL_GEMINI_BRIDGE_URL 未配置');
+        }
+
+        $headers = [];
+        $token = config('services.local_gemini.bridge_token');
+        if (is_string($token) && trim($token) !== '') {
+            $headers['Authorization'] = 'Bearer ' . trim($token);
+        }
+
+        try {
+            $response = Http::withHeaders($headers)
+                ->timeout(240)
+                ->post($baseUrl . '/v1/chat/completions', [
+                    'model' => $model,
+                    'messages' => [
+                        ['role' => 'system', 'content' => '你是一个擅长按平台归纳工作日志的助手，输出中文 Markdown。'],
+                        ['role' => 'user', 'content' => $prompt],
+                    ],
+                ]);
+        } catch (\Illuminate\Http\Client\ConnectionException $e) {
+            throw new \RuntimeException($this->bridgeUnreachableMessage('Gemini'), 0, $e);
+        }
+
+        if (!$response->ok()) {
+            throw new \RuntimeException('Local Gemini summary failed: ' . $response->status() . ' ' . $response->body());
+        }
+
+        $content = $response->json('choices.0.message.content');
+        if (!is_string($content) || trim($content) === '') {
+            throw new \RuntimeException('Local Gemini summary returned empty content');
+        }
+
+        return $content;
     }
 
     /**
@@ -757,6 +996,39 @@ class WorkDailyLogController extends Controller
     }
 
     /**
+     * 从请求中读取异步报表任务参数。
+     *
+     * @param WorkDailyLogRequest $request
+     * @param string $type
+     * @return array
+     */
+    private function resolveReportExportPayload(WorkDailyLogRequest $request, string $type): array
+    {
+        return match ($type) {
+            'month' => ['month' => $request->get('month')],
+            'week' => [
+                'start_date' => $request->get('start_date'),
+                'end_date' => $request->get('end_date'),
+            ],
+            'year' => ['year' => $request->get('year')],
+            default => throw new \InvalidArgumentException('报表类型不正确'),
+        };
+    }
+
+    /**
+     * 限制用户只能查看和下载自己的导出记录。
+     *
+     * @param WorkDailyReportExport $export
+     * @return void
+     */
+    private function authorizeReportExport(WorkDailyReportExport $export): void
+    {
+        if ((int)$export->user_id !== (int)auth('api')->id()) {
+            abort(403, '无权访问该导出记录');
+        }
+    }
+
+    /**
      * 拉取 OpenClaw 模型列表
      *
      * @param string $defaultModel
@@ -766,6 +1038,8 @@ class WorkDailyLogController extends Controller
     {
         $configuredModels = $this->parseConfiguredReportModels();
         if (!empty($configuredModels)) {
+            $configuredModels = $this->withLocalCodexModel($configuredModels);
+            $configuredModels = $this->withLocalGeminiModel($configuredModels);
             if (!in_array($defaultModel, $configuredModels, true)) {
                 array_unshift($configuredModels, $defaultModel);
             }
@@ -774,7 +1048,7 @@ class WorkDailyLogController extends Controller
 
         $baseUrl = $this->resolveOpenClawGatewayUrl();
         if (!$baseUrl) {
-            return [$defaultModel];
+            return $this->withLocalGeminiModel($this->withLocalCodexModel([$defaultModel]));
         }
 
         $token = env('OPENCLAW_GATEWAY_TOKEN');
@@ -817,7 +1091,7 @@ class WorkDailyLogController extends Controller
             array_unshift($models, $defaultModel);
         }
 
-        return $models;
+        return $this->withLocalGeminiModel($this->withLocalCodexModel($models));
     }
 
     private function resolveOpenClawGatewayUrl(): ?string
@@ -827,6 +1101,64 @@ class WorkDailyLogController extends Controller
         return is_string($baseUrl) && trim($baseUrl) !== ''
             ? rtrim($baseUrl, '/')
             : null;
+    }
+
+    private function resolveLocalCodexBridgeUrl(): ?string
+    {
+        $baseUrl = config('services.local_codex.bridge_url');
+
+        return is_string($baseUrl) && trim($baseUrl) !== ''
+            ? rtrim($baseUrl, '/')
+            : null;
+    }
+
+    private function resolveLocalGeminiBridgeUrl(): ?string
+    {
+        $baseUrl = config('services.local_gemini.bridge_url');
+
+        return is_string($baseUrl) && trim($baseUrl) !== ''
+            ? rtrim($baseUrl, '/')
+            : null;
+    }
+
+    private function isLocalCodexModel(string $model): bool
+    {
+        return str_starts_with($model, 'local-codex/');
+    }
+
+    private function isLocalGeminiModel(string $model): bool
+    {
+        return str_starts_with($model, 'local-gemini/');
+    }
+
+    private function bridgeUnreachableMessage(string $name): string
+    {
+        return sprintf(
+            '本机 %s CLI 桥未连通。请在本机执行 `scripts/local-bridges.sh up`，并在远端执行 `scripts/remote-bridges-socat.sh up`，确保桥服务/SSH 隧道/socat 转发全部就位后重试。',
+            $name
+        );
+    }
+
+    private function withLocalCodexModel(array $models): array
+    {
+        $localModel = config('services.local_codex.model', 'local-codex/codex-cli');
+        if (!is_string($localModel) || trim($localModel) === '') {
+            $localModel = 'local-codex/codex-cli';
+        }
+        $models[] = trim($localModel);
+
+        return array_values(array_unique(array_filter($models)));
+    }
+
+    private function withLocalGeminiModel(array $models): array
+    {
+        $localModel = config('services.local_gemini.model', 'local-gemini/gemini-cli');
+        if (!is_string($localModel) || trim($localModel) === '') {
+            $localModel = 'local-gemini/gemini-cli';
+        }
+        $models[] = trim($localModel);
+
+        return array_values(array_unique(array_filter($models)));
     }
 
     /**
