@@ -170,30 +170,61 @@ class WorkDailyReportService
         }
 
         $source = '';
+        $recordCount = 0;
         foreach ($platformGroups as $platform => $items) {
             $source .= "## {$platform}\n";
             foreach ($items as $item) {
+                $recordCount++;
                 $source .= "- {$item['date']}: " . str_replace("\n", ' ', trim((string)$item['content'])) . "\n";
             }
             $source .= "\n";
         }
 
+        $typeLabel = match ($type) {
+            'month' => '月报',
+            'week' => '周报',
+            'year' => '年报',
+            default => '报表',
+        };
+        $platformNames = implode('、', array_keys($platformGroups));
         $styleHint = match ($type) {
-            'month' => '月报风格：强调本月对各平台做了哪些操作/修改、完善了哪些模块，突出产出与改进。',
-            'week' => '周报风格：简洁列出本周重点事项、进展、问题与解决，按平台归纳。',
-            'year' => '年报风格：年终总结语气，按平台归纳年度成果、关键项目、优化与经验沉淀。',
+            'month' => '月报风格：强调本月完成模块、修复问题、体验改进、可见产出和月度学习模式。',
+            'week' => '周报风格：强调本周重点进展、已解决问题、阻塞点和下周可延续动作。',
+            'year' => '年报风格：强调年度成果、关键项目、长期改进、经验沉淀和下一年方向。',
             default => '按平台归纳总结，突出产出。',
         };
 
-        $prompt = "请按 work-daily-report skill 的规则整理工作日志报表。输出中文 Markdown：\n" .
-            "- 顶部只保留一个一级标题：# {$title}\n" .
-            "- 每个平台一个二级标题\n" .
-            "- 每个平台用 3-6 条要点总结，不要逐条复述\n" .
-            "- {$styleHint}\n" .
-            "- 保持简洁、可汇报\n\n" .
-            "原始记录：\n{$source}";
+        // SKILL 是结构与规则的唯一权威，prompt 只塞输入变量，避免与 SKILL 漂移。
+        $skill = $this->loadReportSkill();
+        $prompt = "请按下面注入的 work-daily-report skill 整理工作日志，输出中文 Markdown。\n" .
+            "不要解释过程，只输出最终报表。\n\n" .
+            "<skill name=\"work-daily-report\">\n{$skill}\n</skill>\n\n" .
+            "报表输入：\n" .
+            "- title: {$title}\n" .
+            "- type: {$type}\n" .
+            "- report_type_label: {$typeLabel}\n" .
+            "- platform_count: " . count($platformGroups) . "\n" .
+            "- record_count: {$recordCount}\n" .
+            "- platforms: {$platformNames}\n" .
+            "- style: {$styleHint}\n\n" .
+            "原始记录（已按平台分组）：\n{$source}";
 
         return $this->normalizeSummaryMarkdown($title, $this->callReportModel($prompt, $model));
+    }
+
+    private function loadReportSkill(): string
+    {
+        $path = resource_path('ai/skills/work-daily-report/SKILL.md');
+        if (!is_file($path)) {
+            throw new \RuntimeException('work-daily-report skill file not found');
+        }
+
+        $skill = trim((string)file_get_contents($path));
+        if ($skill === '') {
+            throw new \RuntimeException('work-daily-report skill file is empty');
+        }
+
+        return $skill;
     }
 
     private function buildMarkdown(string $title, Collection $logs): string
