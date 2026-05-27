@@ -77,33 +77,33 @@ class DashboardController extends Controller
             'end' => Carbon::today('Asia/Shanghai')->toDateString(),
         ];
 
+        // 所有 view 共通：当前窗口的日志一次拿到，组装共通基础数据，避免切 tab 时 KPI/热力/趋势/最近 5 条日志/标签 直接清空。
+        $overviewLogs = $this->statsAggregator->fetchLogsBetween($overviewWindow['start'], $overviewWindow['end'], $userId, $isManager);
+        $allLogIds = $overviewLogs->pluck('id')->all();
+
+        $recentLogs = WorkDailyLog::query()
+            ->with('tags:id,name')
+            ->when(!$isManager, fn ($q) => $q->where('create_user', $userId))
+            ->orderBy('log_date', 'desc')
+            ->orderBy('id', 'desc')
+            ->limit(5)
+            ->get();
+
         $response = [
             'view' => $view,
             'range' => $range,
             'generated_at' => time(),
-        ];
-
-        if ($view === 'overview') {
-            $overviewLogs = $this->statsAggregator->fetchLogsBetween($overviewWindow['start'], $overviewWindow['end'], $userId, $isManager);
-            $response['metrics'] = $this->statsAggregator->build($overviewLogs, $overviewWindow, $range, $userId, $isManager);
-            $response['heatmap'] = $this->heatmapBuilder->build(
+            'metrics' => $this->statsAggregator->build($overviewLogs, $overviewWindow, $range, $userId, $isManager),
+            'heatmap' => $this->heatmapBuilder->build(
                 $this->statsAggregator->fetchLogsBetween($heatmapWindow['start'], $heatmapWindow['end'], $userId, $isManager),
                 $heatmapWindow
-            );
-            $response['trend_30d'] = $this->heatmapBuilder->buildTrend(
+            ),
+            'trend_30d' => $this->heatmapBuilder->buildTrend(
                 $this->statsAggregator->fetchLogsBetween($trendWindow['start'], $trendWindow['end'], $userId, $isManager),
                 $trendWindow
-            );
-            $response['platform_dist'] = $this->platformBreakdown->buildDist($overviewLogs);
-            $recentLogs = WorkDailyLog::query()
-                ->with('tags:id,name')
-                ->when(!$isManager, fn ($q) => $q->where('create_user', $userId))
-                ->orderBy('log_date', 'desc')
-                ->orderBy('id', 'desc')
-                ->limit(5)
-                ->get();
-
-            $response['recent_logs'] = $recentLogs
+            ),
+            'platform_dist' => $this->platformBreakdown->buildDist($overviewLogs),
+            'recent_logs' => $recentLogs
                 ->map(fn ($log) => [
                     'id'          => $log->id,
                     'log_date'    => $log->log_date,
@@ -112,22 +112,20 @@ class DashboardController extends Controller
                     'tags'        => $log->tags->pluck('name')->all(),
                 ])
                 ->values()
-                ->all();
+                ->all(),
+            'tag_ranking' => $this->buildTagRanking($allLogIds),
+        ];
 
-            // 标签 Top 10 排行（基于所有日志）
-            $allLogIds = $overviewLogs->pluck('id')->all();
-            $response['tag_ranking'] = $this->buildTagRanking($allLogIds);
-
+        if ($view === 'overview') {
             return $response;
         }
 
         if ($view === 'platform') {
-            $platformLogs = $this->statsAggregator->fetchLogsBetween($overviewWindow['start'], $overviewWindow['end'], $userId, $isManager);
             $matrixWindow = [
                 'start' => Carbon::today('Asia/Shanghai')->subMonths(11)->startOfMonth()->toDateString(),
                 'end' => Carbon::today('Asia/Shanghai')->endOfMonth()->toDateString(),
             ];
-            $response['rank'] = $this->platformBreakdown->buildRank($platformLogs);
+            $response['rank'] = $this->platformBreakdown->buildRank($overviewLogs);
             $response['matrix'] = $this->platformBreakdown->buildMatrix(
                 $this->statsAggregator->fetchLogsBetween($matrixWindow['start'], $matrixWindow['end'], $userId, $isManager)
             );
@@ -136,17 +134,14 @@ class DashboardController extends Controller
         }
 
         if ($view === 'hour') {
-            $hourLogs = $this->statsAggregator->fetchLogsBetween($overviewWindow['start'], $overviewWindow['end'], $userId, $isManager);
-            $response['hour_dist'] = $this->statsAggregator->buildHourDist($hourLogs);
-            $response['week_dist'] = $this->statsAggregator->buildWeekDist($hourLogs);
+            // metrics 里已经有 hour_dist / week_dist；保留顶层是为了 hour 视图组件可能依赖的旧路径，兼容前端两种读取方式。
+            $response['hour_dist'] = $this->statsAggregator->buildHourDist($overviewLogs);
+            $response['week_dist'] = $this->statsAggregator->buildWeekDist($overviewLogs);
 
             return $response;
         }
 
-        // view === 'tag'
-        $tagLogs = $this->statsAggregator->fetchLogsBetween($overviewWindow['start'], $overviewWindow['end'], $userId, $isManager);
-        $response['tags'] = $this->buildTagRanking($tagLogs->pluck('id')->all());
-
+        // view === 'tag'：tag_ranking 已在共通基础里
         return $response;
     }
 
