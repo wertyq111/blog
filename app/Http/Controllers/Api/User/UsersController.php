@@ -234,7 +234,7 @@ class UsersController extends Controller
     protected function loadCurrentUserProfile()
     {
         $user = auth()->user();
-        $user = QueryBuilder::for(User::class)->allowedIncludes('member')->where(['id' => $user->id])->first();
+        $user = QueryBuilder::for(User::class)->allowedIncludes('member')->with('roles')->where(['id' => $user->id])->first();
         if ($user && $user->member) {
             $user->member->avatar = $user->member->avatar
                 ? $this->qiniuService->getPrivateUrl($user->member->avatar)
