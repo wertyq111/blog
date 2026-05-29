@@ -136,6 +136,8 @@ Route::name('api')->group(function () {
         Route::get('users/list', [UsersController::class, 'index'])->name('users.index');
         // 验证用户
         Route::get('users/checkUser', [UsersController::class, 'checkUser'])->name('users.checkUser');
+        // 未关联会员的用户列表
+        Route::get('users/unbound', [UsersController::class, 'unbound'])->name('users.unbound');
         // 用户详情
         Route::get('users/{user}', [UsersController::class, 'show'])->name('users.show');
         // 创建用户
