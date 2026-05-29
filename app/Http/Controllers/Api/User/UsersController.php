@@ -43,6 +43,22 @@ class UsersController extends Controller
     }
 
     /**
+     * 获取未关联会员的用户列表
+     *
+     * @return BaseResource
+     * @author zhouxufeng <zxf@netsun.com>
+     * @date 2026/5/29
+     */
+    public function unbound()
+    {
+        $users = QueryBuilder::for(User::class)
+            ->whereDoesntHave('member')
+            ->get(['id', 'username', 'phone', 'email']);
+
+        return new BaseResource($users);
+    }
+
+    /**
      * 获取用户详情
      *
      * @param User $user
