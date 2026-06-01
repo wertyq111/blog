@@ -50,6 +50,15 @@ Controller 只负责接 HTTP 请求、调用业务对象、返回响应。参数
 - 测试先覆盖稳定契约，再覆盖这次真正改动的业务结果。
 - 后端运行验证以远端环境为准；本地只做语法检查和必要的快速反馈。
 
+### 测试格式（Pest）
+
+- 测试文件统一用 **Pest** 格式：文件顶部 `uses(Tests\TestCase::class);`，用例写成 `it('中文描述', function () { ... });`，断言优先用 `expect()->toBe()/toEqual()/toHaveCount()` 等链式风格，HTTP 断言仍可用 `$this->getJson(...)->assertJsonPath(...)`（`it` 闭包内 `$this` 即 `TestCase`）。新样板参考 `ServerPathControllerTest`、`TodoItemControllerTest`、`StatsAggregatorTest`。
+- **不要在 Pest 文件里写 PHPUnit 类**（`it()`/`uses()` 等函数不能存在于 `extends TestCase` 的类里）。当需要改动一个仍是 PHPUnit 类风格的旧测试文件时，**整文件转成 Pest**，不要在同一文件混两种风格。
+- 类的 `setUp`/`tearDown` 对应 Pest 的 `beforeEach()`/`afterEach()`；类的私有辅助方法改为**带文件前缀的全局函数**（如 `dashboardCreateUser()`、`statsInvokeStreaks()`），前缀用于避免与其它 Pest 文件的全局函数重名。
+- 测试私有方法用 `ReflectionMethod`（`setAccessible(true)`）调用，不要为了可测性把私有方法改成 public。
+- 涉及“今天/当前时间”的用例必须用 `Carbon::setTestNow()` 钉死到**固定日期并注明周几**，并在 `afterEach()` 用 `Carbon::setTestNow()` 复位；**禁止用相对日期**（`Carbon::today()->subDay()` 等），否则结果随运行日漂移，在“按工作日”等口径下会变成 flaky 测试。
+- 本地 `vendor` 可能不含 `pest`（dev 依赖未装），后端测试一律在远端执行：`./vendor/bin/sail pest [文件路径]`。
+
 ## ServerPath 样板
 
 `ServerPathController` 是当前后台 CRUD 新样板：

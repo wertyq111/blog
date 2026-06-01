@@ -258,19 +258,25 @@ class StatsAggregator
      */
     private function calculateStreaks(array $dates, string $endDate): array
     {
-        if (empty($dates)) {
+        // 周末（周六、周日）中性跳过：不计入连续口径，也不打断连续
+        $workdayDates = array_values(array_filter(
+            $dates,
+            fn ($date) => !Carbon::parse($date)->isWeekend()
+        ));
+
+        if (empty($workdayDates)) {
             return [0, 0, ['start' => null, 'end' => null]];
         }
 
-        $currentStreak = 0;
         $longestStreak = 0;
         $longestRange = ['start' => null, 'end' => null];
         $currentRun = 0;
         $runStart = null;
         $previous = null;
 
-        foreach ($dates as $date) {
-            if ($previous && Carbon::parse($previous)->addDay()->toDateString() === $date) {
+        foreach ($workdayDates as $date) {
+            // 相邻判定按“下一个工作日”：周五的下一个工作日是周一，跨周末不断
+            if ($previous && $this->nextWorkday($previous) === $date) {
                 $currentRun++;
             } else {
                 $currentRun = 1;
@@ -285,17 +291,77 @@ class StatsAggregator
             $previous = $date;
         }
 
-        $lastDate = end($dates);
-        if ($lastDate === $endDate) {
-            $currentStreak = 1;
-            $currentDate = Carbon::parse($lastDate);
-            while (in_array($currentDate->copy()->subDay()->toDateString(), $dates, true)) {
-                $currentStreak++;
-                $currentDate->subDay();
-            }
-        }
+        $currentStreak = $this->currentWorkdayStreak($workdayDates, $endDate);
 
         return [$currentStreak, $longestStreak, $longestRange];
+    }
+
+    /**
+     * 计算当前连续工作日数。工作日当天未写则归零（保留催写语义），周末则保留上一个工作日的连续。
+     *
+     * @param array $workdayDates 升序排列、仅含工作日的活跃日期
+     * @param string $endDate 基准日（通常为今天）
+     * @return int
+     * @author zhouxufeng <zxf@netsun.com>
+     * @date 2026/6/1
+     */
+    private function currentWorkdayStreak(array $workdayDates, string $endDate): int
+    {
+        // 基准工作日：今天是工作日则取今天，今天是周末则回看上一个工作日
+        $anchor = Carbon::parse($endDate)->isWeekend()
+            ? $this->previousWorkday($endDate)
+            : $endDate;
+
+        $lastActive = end($workdayDates);
+        if ($lastActive !== $anchor) {
+            return 0;
+        }
+
+        $lookup = array_flip($workdayDates);
+        $streak = 1;
+        $cursor = $lastActive;
+        while (isset($lookup[$prev = $this->previousWorkday($cursor)])) {
+            $streak++;
+            $cursor = $prev;
+        }
+
+        return $streak;
+    }
+
+    /**
+     * 取指定日期之后的下一个工作日（跳过周六、周日）。
+     *
+     * @param string $date
+     * @return string
+     * @author zhouxufeng <zxf@netsun.com>
+     * @date 2026/6/1
+     */
+    private function nextWorkday(string $date): string
+    {
+        $cursor = Carbon::parse($date)->addDay();
+        while ($cursor->isWeekend()) {
+            $cursor->addDay();
+        }
+
+        return $cursor->toDateString();
+    }
+
+    /**
+     * 取指定日期之前的上一个工作日（跳过周六、周日）。
+     *
+     * @param string $date
+     * @return string
+     * @author zhouxufeng <zxf@netsun.com>
+     * @date 2026/6/1
+     */
+    private function previousWorkday(string $date): string
+    {
+        $cursor = Carbon::parse($date)->subDay();
+        while ($cursor->isWeekend()) {
+            $cursor->subDay();
+        }
+
+        return $cursor->toDateString();
     }
 
     private function calculatePeakHour(Collection $logs): array
