@@ -644,6 +644,10 @@ class WorkDailyLogController extends Controller
             return $this->callLocalGemini($prompt, $targetModel);
         }
 
+        if ($this->isLocalClaudeModel($targetModel)) {
+            return $this->callLocalClaude($prompt, $targetModel);
+        }
+
         return $this->callOpenClaw($prompt, $targetModel);
     }
 
@@ -792,6 +796,45 @@ class WorkDailyLogController extends Controller
         $content = $response->json('choices.0.message.content');
         if (!is_string($content) || trim($content) === '') {
             throw new \RuntimeException('Local Gemini summary returned empty content');
+        }
+
+        return $content;
+    }
+
+    private function callLocalClaude(string $prompt, string $model): string
+    {
+        $baseUrl = $this->resolveLocalClaudeBridgeUrl();
+        if (!$baseUrl) {
+            throw new \RuntimeException('LOCAL_CLAUDE_BRIDGE_URL 未配置');
+        }
+
+        $headers = [];
+        $token = config('services.local_claude.bridge_token');
+        if (is_string($token) && trim($token) !== '') {
+            $headers['Authorization'] = 'Bearer ' . trim($token);
+        }
+
+        try {
+            $response = Http::withHeaders($headers)
+                ->timeout(240)
+                ->post($baseUrl . '/v1/chat/completions', [
+                    'model' => $model,
+                    'messages' => [
+                        ['role' => 'system', 'content' => '你是一个擅长按平台归纳工作日志的助手，输出中文 Markdown。'],
+                        ['role' => 'user', 'content' => $prompt],
+                    ],
+                ]);
+        } catch (\Illuminate\Http\Client\ConnectionException $e) {
+            throw new \RuntimeException($this->bridgeUnreachableMessage('Claude'), 0, $e);
+        }
+
+        if (!$response->ok()) {
+            throw new \RuntimeException('Local Claude summary failed: ' . $response->status() . ' ' . $response->body());
+        }
+
+        $content = $response->json('choices.0.message.content');
+        if (!is_string($content) || trim($content) === '') {
+            throw new \RuntimeException('Local Claude summary returned empty content');
         }
 
         return $content;
@@ -1040,6 +1083,7 @@ class WorkDailyLogController extends Controller
         if (!empty($configuredModels)) {
             $configuredModels = $this->withLocalCodexModel($configuredModels);
             $configuredModels = $this->withLocalGeminiModel($configuredModels);
+            $configuredModels = $this->withLocalClaudeModel($configuredModels);
             if (!in_array($defaultModel, $configuredModels, true)) {
                 array_unshift($configuredModels, $defaultModel);
             }
@@ -1048,7 +1092,7 @@ class WorkDailyLogController extends Controller
 
         $baseUrl = $this->resolveOpenClawGatewayUrl();
         if (!$baseUrl) {
-            return $this->withLocalGeminiModel($this->withLocalCodexModel([$defaultModel]));
+            return $this->withLocalClaudeModel($this->withLocalGeminiModel($this->withLocalCodexModel([$defaultModel])));
         }
 
         $token = env('OPENCLAW_GATEWAY_TOKEN');
@@ -1091,7 +1135,7 @@ class WorkDailyLogController extends Controller
             array_unshift($models, $defaultModel);
         }
 
-        return $this->withLocalGeminiModel($this->withLocalCodexModel($models));
+        return $this->withLocalClaudeModel($this->withLocalGeminiModel($this->withLocalCodexModel($models)));
     }
 
     private function resolveOpenClawGatewayUrl(): ?string
@@ -1106,6 +1150,15 @@ class WorkDailyLogController extends Controller
     private function resolveLocalCodexBridgeUrl(): ?string
     {
         $baseUrl = config('services.local_codex.bridge_url');
+
+        return is_string($baseUrl) && trim($baseUrl) !== ''
+            ? rtrim($baseUrl, '/')
+            : null;
+    }
+
+    private function resolveLocalClaudeBridgeUrl(): ?string
+    {
+        $baseUrl = config('services.local_claude.bridge_url');
 
         return is_string($baseUrl) && trim($baseUrl) !== ''
             ? rtrim($baseUrl, '/')
@@ -1129,6 +1182,11 @@ class WorkDailyLogController extends Controller
     private function isLocalGeminiModel(string $model): bool
     {
         return str_starts_with($model, 'local-gemini/');
+    }
+
+    private function isLocalClaudeModel(string $model): bool
+    {
+        return str_starts_with($model, 'local-claude/');
     }
 
     private function bridgeUnreachableMessage(string $name): string
@@ -1155,6 +1213,17 @@ class WorkDailyLogController extends Controller
         $localModel = config('services.local_gemini.model', 'local-gemini/gemini-cli');
         if (!is_string($localModel) || trim($localModel) === '') {
             $localModel = 'local-gemini/gemini-cli';
+        }
+        $models[] = trim($localModel);
+
+        return array_values(array_unique(array_filter($models)));
+    }
+
+    private function withLocalClaudeModel(array $models): array
+    {
+        $localModel = config('services.local_claude.model', 'local-claude/claude-cli');
+        if (!is_string($localModel) || trim($localModel) === '') {
+            $localModel = 'local-claude/claude-cli';
         }
         $models[] = trim($localModel);
 
