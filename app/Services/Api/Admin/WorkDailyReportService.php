@@ -334,6 +334,10 @@ class WorkDailyReportService
             return $this->callLocalGemini($prompt, $targetModel);
         }
 
+        if ($this->isLocalClaudeModel($targetModel)) {
+            return $this->callLocalClaude($prompt, $targetModel);
+        }
+
         return $this->callOpenClaw($prompt, $targetModel);
     }
 
@@ -463,6 +467,45 @@ class WorkDailyReportService
         return $content;
     }
 
+    private function callLocalClaude(string $prompt, string $model): string
+    {
+        $baseUrl = $this->resolveLocalClaudeBridgeUrl();
+        if (!$baseUrl) {
+            throw new \RuntimeException('LOCAL_CLAUDE_BRIDGE_URL 未配置');
+        }
+
+        $headers = [];
+        $token = config('services.local_claude.bridge_token');
+        if (is_string($token) && trim($token) !== '') {
+            $headers['Authorization'] = 'Bearer ' . trim($token);
+        }
+
+        try {
+            $response = Http::withHeaders($headers)
+                ->timeout(240)
+                ->post($baseUrl . '/v1/chat/completions', [
+                    'model' => $model,
+                    'messages' => [
+                        ['role' => 'system', 'content' => '你是一个擅长按平台归纳工作日志的助手，输出中文 Markdown。'],
+                        ['role' => 'user', 'content' => $prompt],
+                    ],
+                ]);
+        } catch (\Illuminate\Http\Client\ConnectionException $e) {
+            throw new \RuntimeException($this->bridgeUnreachableMessage('Claude'), 0, $e);
+        }
+
+        if (!$response->ok()) {
+            throw new \RuntimeException('Local Claude summary failed: ' . $response->status() . ' ' . $this->extractResponseError($response->body()));
+        }
+
+        $content = $response->json('choices.0.message.content');
+        if (!is_string($content) || trim($content) === '') {
+            throw new \RuntimeException('Local Claude summary returned empty content');
+        }
+
+        return $content;
+    }
+
     private function callBailianDirect(string $prompt, string $model): string
     {
         $apiKey = env('OPENCLAW_BAILIAN_API_KEY');
@@ -526,6 +569,15 @@ class WorkDailyReportService
             : null;
     }
 
+    private function resolveLocalClaudeBridgeUrl(): ?string
+    {
+        $baseUrl = config('services.local_claude.bridge_url');
+
+        return is_string($baseUrl) && trim($baseUrl) !== ''
+            ? rtrim($baseUrl, '/')
+            : null;
+    }
+
     private function isLocalCodexModel(string $model): bool
     {
         return str_starts_with($model, 'local-codex/');
@@ -534,6 +586,11 @@ class WorkDailyReportService
     private function isLocalGeminiModel(string $model): bool
     {
         return str_starts_with($model, 'local-gemini/');
+    }
+
+    private function isLocalClaudeModel(string $model): bool
+    {
+        return str_starts_with($model, 'local-claude/');
     }
 
     private function bridgeUnreachableMessage(string $name): string
