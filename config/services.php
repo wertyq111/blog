@@ -55,6 +55,12 @@ return [
         'model' => env('LOCAL_GEMINI_MODEL', 'local-gemini/gemini-cli'),
     ],
 
+    'local_claude' => [
+        'bridge_url' => env('LOCAL_CLAUDE_BRIDGE_URL'),
+        'bridge_token' => env('LOCAL_CLAUDE_BRIDGE_TOKEN'),
+        'model' => env('LOCAL_CLAUDE_MODEL', 'local-claude/claude-cli'),
+    ],
+
     'client_ip_override' => [
         'source' => env('CLIENT_IP_OVERRIDE_SOURCE'),
         'target' => env('CLIENT_IP_OVERRIDE_TARGET'),
