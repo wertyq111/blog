@@ -26,6 +26,10 @@ use App\Http\Controllers\Api\Admin\WorkPlatformController;
 use App\Http\Controllers\Api\Admin\WorkDocController;
 use App\Http\Controllers\Api\Admin\WorkDocCategoryController;
 use App\Http\Controllers\Api\Admin\TodoItemController;
+use App\Http\Controllers\Api\Admin\PomoTaskController;
+use App\Http\Controllers\Api\Admin\PomoSettingController;
+use App\Http\Controllers\Api\Admin\PomoStatsController;
+use App\Models\Admin\PomoTask;
 use App\Http\Controllers\Api\Admin\DashboardController;
 use App\Http\Controllers\Api\Web\ArticlesController;
 use App\Http\Controllers\Api\Web\CategoriesController;
@@ -390,6 +394,27 @@ Route::name('api')->group(function () {
         Route::post('todo/status/{todoItem}', [TodoItemController::class, 'updateStatus'])->name('todo.update-status');
         Route::post('todo/{todoItem}', [TodoItemController::class, 'edit'])->name('todo.edit');
         Route::delete('todo/{todoItem}', [TodoItemController::class, 'delete'])->name('todo.delete');
+
+        /** 番茄钟 + 提醒清单接口开始 */
+        // 番茄钟设置：读取 / 保存
+        Route::get('pomo/setting', [PomoSettingController::class, 'show'])->name('pomo.setting.show');
+        Route::post('pomo/setting', [PomoSettingController::class, 'save'])->name('pomo.setting.save');
+        // 提醒清单任务列表
+        Route::get('pomo/task/index', [PomoTaskController::class, 'index'])->name('pomo.task.index')
+            ->middleware('filter.process:' . PomoTask::class);
+        // 勾选完成 / 番茄数 +1 / 添加 / 批量删除（须排在通配 {pomoTask} 之前）
+        Route::post('pomo/task/toggle-done/{pomoTask}', [PomoTaskController::class, 'toggleDone'])->name('pomo.task.toggle-done');
+        Route::post('pomo/task/increment/{pomoTask}', [PomoTaskController::class, 'increment'])->name('pomo.task.increment');
+        Route::post('pomo/task/add', [PomoTaskController::class, 'add'])->name('pomo.task.add');
+        Route::post('pomo/task/delete', [PomoTaskController::class, 'batchDelete'])->name('pomo.task.batch-delete');
+        // 任务详情 / 编辑 / 删除
+        Route::get('pomo/task/{pomoTask}', [PomoTaskController::class, 'info'])->name('pomo.task.info');
+        Route::post('pomo/task/{pomoTask}', [PomoTaskController::class, 'edit'])->name('pomo.task.edit');
+        Route::delete('pomo/task/{pomoTask}', [PomoTaskController::class, 'delete'])->name('pomo.task.delete');
+        // 完成段记录 / 近 7 天统计
+        Route::post('pomo/session', [PomoStatsController::class, 'storeSession'])->name('pomo.session.store');
+        Route::get('pomo/stats/week', [PomoStatsController::class, 'week'])->name('pomo.stats.week');
+        /** 番茄钟 + 提醒清单接口结束 */
         /** 开发助手接口结束 */
         /** 笔记接口开始 */
         // 文章列表
