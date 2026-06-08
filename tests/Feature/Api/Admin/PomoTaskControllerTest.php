@@ -128,7 +128,7 @@ it('番茄数 +1', function () {
 
     $this->withHeader('Authorization', "Bearer {$token}")
         ->postJson("/api/pomo/task/increment/{$id}")
-        ->assertOk()->assertJsonPath('data.completed_pomos', 1);
+        ->assertOk()->assertJsonPath('data.completedPomos', 1);
 });
 
 it('删除任务', function () {

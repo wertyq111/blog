@@ -69,8 +69,8 @@ it('首次读取设置返回默认值', function () {
         ->getJson('/api/pomo/setting')
         ->assertOk()
         ->assertJsonPath('code', 0)
-        ->assertJsonPath('data.focus_min', 25)
-        ->assertJsonPath('data.long_break_every', 4);
+        ->assertJsonPath('data.focusMin', 25)
+        ->assertJsonPath('data.longBreakEvery', 4);
 });
 
 it('保存设置后再次读取返回新值且按用户隔离', function () {
@@ -90,15 +90,15 @@ it('保存设置后再次读取返回新值且按用户隔离', function () {
         ])
         ->assertOk()
         ->assertJsonPath('code', 0)
-        ->assertJsonPath('data.focus_min', 50);
+        ->assertJsonPath('data.focusMin', 50);
 
     expect(PomoSetting::where('create_user', $user->id)->count())->toBe(1);
 
     $this->withHeader('Authorization', "Bearer {$token}")
         ->getJson('/api/pomo/setting')
         ->assertOk()
-        ->assertJsonPath('data.focus_min', 50)
-        ->assertJsonPath('data.white_noise', 'rain');
+        ->assertJsonPath('data.focusMin', 50)
+        ->assertJsonPath('data.whiteNoise', 'rain');
 });
 
 /**
