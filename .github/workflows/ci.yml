@@ -1,0 +1,53 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# 只跑 Pest（真实门禁）；不挂 Pint —— 仓库存量代码尚未全部符合 Pint 风格，
+# 待单独治理后再考虑加入。
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_DATABASE: testing
+          MYSQL_ROOT_PASSWORD: root
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.2"
+          extensions: mbstring, curl, simplexml, pdo_mysql, sqlite3, pdo_sqlite, bcmath, gd, exif, zip
+          coverage: none
+
+      - name: Prepare environment
+        run: |
+          cp .env.example .env
+          # CI 用 mysql service（与远端测试环境一致）；phpunit.xml 已把 DB_DATABASE 覆盖为 testing
+          sed -i 's/^DB_HOST=.*/DB_HOST=127.0.0.1/' .env
+          sed -i 's/^DB_PASSWORD=.*/DB_PASSWORD=root/' .env
+
+      - name: Install dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Generate app key
+        run: php artisan key:generate
+
+      - name: Run tests (Pest)
+        run: ./vendor/bin/pest
