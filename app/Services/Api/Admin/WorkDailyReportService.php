@@ -42,8 +42,9 @@ class WorkDailyReportService
         $user = User::query()->with('roles')->findOrFail($export->user_id);
         $logs = $this->fetchLogs($user, $export->period_start, $export->period_end);
         $title = $this->buildTitle($export->type, $export->period_start, $export->period_end);
+        $previousOverview = $this->findPreviousOverview($export->user_id, $export->type, $export->period_start);
 
-        return $this->buildSummaryMarkdown($title, $logs, $export->type, $export->model);
+        return $this->buildSummaryMarkdown($title, $logs, $export->type, $export->model, $previousOverview);
     }
 
     public function generateForUser(int $userId, string $type, array $payload, ?string $model): string
@@ -52,8 +53,9 @@ class WorkDailyReportService
         $user = User::query()->with('roles')->findOrFail($userId);
         $logs = $this->fetchLogs($user, $start, $end);
         $title = $this->buildTitle($type, $start, $end);
+        $previousOverview = $this->findPreviousOverview($userId, $type, $start);
 
-        return $this->buildSummaryMarkdown($title, $logs, $type, $model);
+        return $this->buildSummaryMarkdown($title, $logs, $type, $model, $previousOverview);
     }
 
     public function exportData(WorkDailyReportExport $export): array
@@ -138,7 +140,7 @@ class WorkDailyReportService
         };
     }
 
-    private function buildSummaryMarkdown(string $title, Collection $logs, string $type, ?string $model): string
+    private function buildSummaryMarkdown(string $title, Collection $logs, string $type, ?string $model, ?string $previousOverview = null): string
     {
         if ($logs->isEmpty()) {
             return "# {$title}\n\n暂无记录。\n";
@@ -207,9 +209,45 @@ class WorkDailyReportService
             "- record_count: {$recordCount}\n" .
             "- platforms: {$platformNames}\n" .
             "- style: {$styleHint}\n\n" .
+            ($previousOverview === null
+                ? ''
+                : "上一期报表概览（previous_summary，仅用于趋势对比）：\n{$previousOverview}\n\n") .
             "原始记录（已按平台分组）：\n{$source}";
 
         return $this->normalizeSummaryMarkdown($title, $this->callReportModel($prompt, $model));
+    }
+
+    public function findPreviousOverview(int $userId, string $type, string $periodStart): ?string
+    {
+        $previous = WorkDailyReportExport::query()
+            ->where('user_id', $userId)
+            ->where('type', $type)
+            ->where('status', WorkDailyReportExport::STATUS_COMPLETED)
+            ->where('period_end', '<', $periodStart)
+            ->orderBy('period_end', 'desc')
+            ->orderBy('id', 'desc')
+            ->first();
+
+        if (!$previous || trim((string)$previous->content) === '') {
+            return null;
+        }
+
+        return $this->extractOverview((string)$previous->content);
+    }
+
+    public function extractOverview(string $markdown): ?string
+    {
+        // 兼容带图标的新格式（## 🏝️ 概览）和无图标的历史格式（## 概览）
+        if (!preg_match('/^##\s[^\n]*概览[^\n]*$\R(.*?)(?=^#{1,6}\s|\z)/msu', $markdown, $matches)) {
+            return null;
+        }
+
+        $overview = trim($matches[1]);
+        if ($overview === '') {
+            return null;
+        }
+
+        return mb_substr($overview, 0, 600);
     }
 
     private function loadReportSkill(): string
