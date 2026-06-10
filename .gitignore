@@ -4,7 +4,6 @@
 /public/hot
 /public/storage
 public/uploads
-bootstrap/app.php
 setup.sh
 /storage/*.key
 /vendor
