@@ -11,6 +11,7 @@ use App\Models\Admin\WorkPlatform;
 use App\Services\Api\Admin\WorkDailyLogService;
 use App\Services\Api\Admin\WorkDailyReportService;
 use Carbon\Carbon;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -425,24 +426,81 @@ class WorkDailyLogController extends Controller
     }
 
     /**
-     * 下载已完成的报表 Markdown 文件。
+     * 下载已完成的报表文件，format=md 为 Markdown 原文，format=html 为自带阅读样式的 HTML。
      *
+     * @param Request $request
      * @param WorkDailyReportExport $export
      * @return \Illuminate\Http\Response
+     * @author zhouxufeng <zxf@netsun.com>
+     * @date 2026/6/12
      */
-    public function downloadReportExport(WorkDailyReportExport $export)
+    public function downloadReportExport(Request $request, WorkDailyReportExport $export)
     {
         $this->authorizeReportExport($export);
         if (!$export->isCompleted()) {
             abort(409, '导出任务尚未完成');
         }
 
+        $format = (string)$request->query('format', 'md');
+        if (!in_array($format, ['md', 'html'], true)) {
+            abort(422, '不支持的下载格式');
+        }
+
         $fileName = $export->file_name ?: '工作报表.md';
+
+        if ($format === 'html') {
+            $htmlName = preg_replace('/\.md$/u', '', $fileName) . '.html';
+
+            return response($this->workDailyReportService->renderHtml($export), 200, [
+                'Content-Type' => 'text/html; charset=UTF-8',
+                'Content-Disposition' => "attachment; filename*=UTF-8''" . rawurlencode($htmlName),
+            ]);
+        }
 
         return response((string)$export->content, 200, [
             'Content-Type' => 'text/markdown; charset=UTF-8',
             'Content-Disposition' => "attachment; filename*=UTF-8''" . rawurlencode($fileName),
         ]);
+    }
+
+    /**
+     * 编辑保存已完成报表的 Markdown 内容。
+     *
+     * @param WorkDailyLogRequest $request
+     * @param WorkDailyReportExport $export
+     * @return \Illuminate\Http\JsonResponse
+     * @author zhouxufeng <zxf@netsun.com>
+     * @date 2026/6/12
+     */
+    public function updateReportExportContent(WorkDailyLogRequest $request, WorkDailyReportExport $export)
+    {
+        $this->authorizeReportExport($export);
+        if (!$export->isCompleted()) {
+            abort(409, '仅可编辑已完成的报表');
+        }
+
+        $export = $this->workDailyReportService->updateExportContent($export, (string)$request->get('content'));
+
+        return response()->json([
+            'export' => $this->workDailyReportService->exportData($export),
+        ]);
+    }
+
+    /**
+     * 删除报表导出记录。
+     *
+     * @param WorkDailyReportExport $export
+     * @return \Illuminate\Http\JsonResponse
+     * @author zhouxufeng <zxf@netsun.com>
+     * @date 2026/6/12
+     */
+    public function deleteReportExport(WorkDailyReportExport $export)
+    {
+        $this->authorizeReportExport($export);
+
+        $export->delete();
+
+        return response()->json([]);
     }
 
     /**
