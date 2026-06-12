@@ -10,6 +10,7 @@ use Carbon\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
 class WorkDailyReportService
 {
@@ -73,6 +74,25 @@ class WorkDailyReportService
             'startedAt' => $export->started_at,
             'finishedAt' => $export->finished_at,
         ];
+    }
+
+    public function updateExportContent(WorkDailyReportExport $export, string $content): WorkDailyReportExport
+    {
+        $export->content = $content;
+        $export->save();
+
+        return $export;
+    }
+
+    public function renderHtml(WorkDailyReportExport $export): string
+    {
+        $body = Str::markdown((string)$export->content, [
+            'html_input' => 'strip',
+            'allow_unsafe_links' => false,
+        ]);
+        $title = preg_replace('/\.md$/u', '', (string)$export->file_name) ?: '工作报表';
+
+        return view('exports.work-daily-report', ['title' => $title, 'body' => $body])->render();
     }
 
     public function resolveRange(string $type, array $payload): array
