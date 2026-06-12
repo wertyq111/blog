@@ -354,6 +354,10 @@ Route::name('api')->group(function () {
         Route::get('work-daily/report/export/{export}', [WorkDailyLogController::class, 'reportExportInfo'])->name('work-daily.report-export-info');
         // 报表导出文件下载
         Route::get('work-daily/report/export/{export}/download', [WorkDailyLogController::class, 'downloadReportExport'])->name('work-daily.report-export-download');
+        // 报表导出内容编辑保存
+        Route::post('work-daily/report/export/{export}/content', [WorkDailyLogController::class, 'updateReportExportContent'])->name('work-daily.report-export-content');
+        // 报表导出记录删除
+        Route::delete('work-daily/report/export/{export}', [WorkDailyLogController::class, 'deleteReportExport'])->name('work-daily.report-export-delete');
         // OpenClaw 报表模型列表
         Route::get('work-daily/report/models', [WorkDailyLogController::class, 'reportModels'])->name('work-daily.report-models');
 

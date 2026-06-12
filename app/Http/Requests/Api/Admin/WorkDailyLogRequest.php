@@ -61,6 +61,9 @@ class WorkDailyLogRequest extends FormRequest
                 'year' => ['nullable', 'date_format:Y'],
                 'model' => ['nullable', 'string', 'max:120'],
             ],
+            'updateReportExportContent' => [
+                'content' => ['required', 'string'],
+            ],
             default => [],
         };
     }
