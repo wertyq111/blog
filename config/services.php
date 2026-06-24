@@ -49,10 +49,10 @@ return [
         'model' => env('LOCAL_CODEX_MODEL', 'local-codex/codex-cli'),
     ],
 
-    'local_gemini' => [
-        'bridge_url' => env('LOCAL_GEMINI_BRIDGE_URL'),
-        'bridge_token' => env('LOCAL_GEMINI_BRIDGE_TOKEN'),
-        'model' => env('LOCAL_GEMINI_MODEL', 'local-gemini/gemini-cli'),
+    'local_agy' => [
+        'bridge_url' => env('LOCAL_AGY_BRIDGE_URL', 'http://host.docker.internal:19198'),
+        'bridge_token' => env('LOCAL_AGY_BRIDGE_TOKEN'),
+        'model' => env('LOCAL_AGY_MODEL', 'local-agy/gemini-3.5-flash-high'),
     ],
 
     'local_claude' => [
