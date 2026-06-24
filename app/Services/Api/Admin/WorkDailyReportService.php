@@ -388,8 +388,8 @@ class WorkDailyReportService
             return $this->callLocalCodex($prompt, $targetModel);
         }
 
-        if ($this->isLocalGeminiModel($targetModel)) {
-            return $this->callLocalGemini($prompt, $targetModel);
+        if ($this->isLocalAgyModel($targetModel)) {
+            return $this->callLocalAgy($prompt, $targetModel);
         }
 
         if ($this->isLocalClaudeModel($targetModel)) {
@@ -486,15 +486,15 @@ class WorkDailyReportService
         return $content;
     }
 
-    private function callLocalGemini(string $prompt, string $model): string
+    private function callLocalAgy(string $prompt, string $model): string
     {
-        $baseUrl = $this->resolveLocalGeminiBridgeUrl();
+        $baseUrl = $this->resolveLocalAgyBridgeUrl();
         if (!$baseUrl) {
-            throw new \RuntimeException('LOCAL_GEMINI_BRIDGE_URL 未配置');
+            throw new \RuntimeException('LOCAL_AGY_BRIDGE_URL 未配置');
         }
 
         $headers = [];
-        $token = config('services.local_gemini.bridge_token');
+        $token = config('services.local_agy.bridge_token');
         if (is_string($token) && trim($token) !== '') {
             $headers['Authorization'] = 'Bearer ' . trim($token);
         }
@@ -510,16 +510,16 @@ class WorkDailyReportService
                     ],
                 ]);
         } catch (\Illuminate\Http\Client\ConnectionException $e) {
-            throw new \RuntimeException($this->bridgeUnreachableMessage('Gemini'), 0, $e);
+            throw new \RuntimeException($this->bridgeUnreachableMessage('Agy'), 0, $e);
         }
 
         if (!$response->ok()) {
-            throw new \RuntimeException('Local Gemini summary failed: ' . $response->status() . ' ' . $this->extractResponseError($response->body()));
+            throw new \RuntimeException('Local Agy summary failed: ' . $response->status() . ' ' . $this->extractResponseError($response->body()));
         }
 
         $content = $response->json('choices.0.message.content');
         if (!is_string($content) || trim($content) === '') {
-            throw new \RuntimeException('Local Gemini summary returned empty content');
+            throw new \RuntimeException('Local Agy summary returned empty content');
         }
 
         return $content;
@@ -618,9 +618,9 @@ class WorkDailyReportService
             : null;
     }
 
-    private function resolveLocalGeminiBridgeUrl(): ?string
+    private function resolveLocalAgyBridgeUrl(): ?string
     {
-        $baseUrl = config('services.local_gemini.bridge_url');
+        $baseUrl = config('services.local_agy.bridge_url');
 
         return is_string($baseUrl) && trim($baseUrl) !== ''
             ? rtrim($baseUrl, '/')
@@ -641,9 +641,9 @@ class WorkDailyReportService
         return str_starts_with($model, 'local-codex/');
     }
 
-    private function isLocalGeminiModel(string $model): bool
+    private function isLocalAgyModel(string $model): bool
     {
-        return str_starts_with($model, 'local-gemini/');
+        return str_starts_with($model, 'local-agy/');
     }
 
     private function isLocalClaudeModel(string $model): bool
