@@ -380,6 +380,8 @@ Route::name('api')->group(function () {
         // 牛马文档列表
         Route::get('work-doc/index', [WorkDocController::class, 'index'])->name('work-doc.index')
             ->middleware('filter.process:' . WorkDoc::class);
+        // 牛马文档导出带样式 HTML
+        Route::get('work-doc/{workDoc}/export', [WorkDocController::class, 'export'])->name('work-doc.export');
         // 牛马文档详情
         Route::get('work-doc/{workDoc}', [WorkDocController::class, 'info'])->name('work-doc.info');
         // 添加牛马文档
