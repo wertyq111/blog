@@ -38,7 +38,7 @@ beforeEach(function () {
         $table->unsignedInteger('deleted_at')->default(0);
     });
 
-    $this->service = new WorkDailyReportService();
+    $this->service = app(WorkDailyReportService::class);
 });
 
 function makeExport(array $attributes): WorkDailyReportExport
