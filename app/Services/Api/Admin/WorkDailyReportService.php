@@ -10,10 +10,14 @@ use Carbon\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Str;
 
 class WorkDailyReportService
 {
+    public function __construct(
+        private readonly StyledHtmlExportService $styledHtmlExportService
+    ) {
+    }
+
     public function createExport(int $userId, string $type, array $payload, ?string $model): WorkDailyReportExport
     {
         [$start, $end] = $this->resolveRange($type, $payload);
@@ -86,13 +90,9 @@ class WorkDailyReportService
 
     public function renderHtml(WorkDailyReportExport $export): string
     {
-        $body = Str::markdown((string)$export->content, [
-            'html_input' => 'strip',
-            'allow_unsafe_links' => false,
-        ]);
         $title = preg_replace('/\.md$/u', '', (string)$export->file_name) ?: '工作报表';
 
-        return view('exports.work-daily-report', ['title' => $title, 'body' => $body])->render();
+        return $this->styledHtmlExportService->render($title, (string)$export->content);
     }
 
     public function resolveRange(string $type, array $payload): array
