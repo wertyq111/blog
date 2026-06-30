@@ -56,7 +56,7 @@ test('renderHtml 把 GFM Markdown 渲染成自带阅读样式的 HTML 文档', f
         . "| 指标 | 数值 |\n| --- | --- |\n| 记录条数 | 130 条 |\n\n"
         . "## 🗺️ 下一阶段计划\n\n- [ ] 继续迁移 `ECharts`\n";
 
-    $html = (new WorkDailyReportService())->renderHtml(htmlRenderMakeExport($markdown));
+    $html = app(WorkDailyReportService::class)->renderHtml(htmlRenderMakeExport($markdown));
 
     expect($html)
         ->toContain('<title>工作年报_2026</title>')
@@ -70,7 +70,7 @@ test('renderHtml 把 GFM Markdown 渲染成自带阅读样式的 HTML 文档', f
 
 // 报表正文来自外部模型生成，原始 HTML 一律剥离，防止下载的报表文件被注入脚本。
 test('renderHtml 剥离 Markdown 里的原始 HTML', function () {
-    $html = (new WorkDailyReportService())->renderHtml(
+    $html = app(WorkDailyReportService::class)->renderHtml(
         htmlRenderMakeExport("# 标题\n\n<script>alert(1)</script>正文\n")
     );
 
@@ -81,7 +81,7 @@ test('renderHtml 剥离 Markdown 里的原始 HTML', function () {
 // 这样再次预览/下载/打印拿到的都是编辑后的版本。
 test('updateExportContent 持久化编辑后的 Markdown 并影响后续渲染', function () {
     htmlRenderBootSqlite();
-    $service = new WorkDailyReportService();
+    $service = app(WorkDailyReportService::class);
 
     $export = new WorkDailyReportExport();
     $export->fill([
