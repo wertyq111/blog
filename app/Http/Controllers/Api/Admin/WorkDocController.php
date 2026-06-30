@@ -5,10 +5,16 @@ namespace App\Http\Controllers\Api\Admin;
 use App\Http\Controllers\Api\Controller;
 use App\Http\Requests\Api\Admin\WorkDocRequest;
 use App\Models\Admin\WorkDoc;
+use App\Services\Api\Admin\StyledHtmlExportService;
 use Spatie\QueryBuilder\QueryBuilder;
 
 class WorkDocController extends Controller
 {
+    public function __construct(
+        private readonly StyledHtmlExportService $styledHtmlExportService
+    ) {
+    }
+
     /**
      * 牛马文档列表 - 分页
      *
@@ -111,5 +117,22 @@ class WorkDocController extends Controller
         $workDoc->delete();
 
         return response()->json([]);
+    }
+
+    /**
+     * 导出文档为带样式 HTML
+     *
+     * @param WorkDoc $workDoc
+     * @return \Illuminate\Http\Response
+     * @author zhouxufeng <zxf@netsun.com>
+     * @date 2026/6/29
+     */
+    public function export(WorkDoc $workDoc)
+    {
+        $html = $this->styledHtmlExportService->render((string)$workDoc->title, (string)$workDoc->content);
+
+        return response($html, 200, [
+            'Content-Type' => 'text/html; charset=utf-8',
+        ]);
     }
 }
