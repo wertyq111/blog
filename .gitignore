@@ -4,7 +4,6 @@
 /public/hot
 /public/storage
 public/uploads
-setup.sh
 /storage/*.key
 /vendor
 .env
