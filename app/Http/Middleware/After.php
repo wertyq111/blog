@@ -23,10 +23,20 @@ class After
         // 执行动作
         if ($response instanceof JsonResponse) {
             $oriData = $response->getData();
+            $isSuccess = in_array($response->getStatusCode(), [200, 201]);
+            $errorMessage = $oriData->message ?? '操作失败';
+
+            if (! $isSuccess && isset($oriData->errors)) {
+                $errors = (array) $oriData->errors;
+                $firstMessages = reset($errors);
+                if (is_array($firstMessages) && isset($firstMessages[0])) {
+                    $errorMessage = $firstMessages[0];
+                }
+            }
 
             $message = [
-                'code' => in_array($response->getStatusCode(), [200, 201]) ? 0 : $response->getStatusCode(),
-                'msg' => in_array($response->getStatusCode(), [200, 201]) ? '操作成功' : '操作失败',
+                'code' => $isSuccess ? 0 : $response->getStatusCode(),
+                'msg' => $isSuccess ? '操作成功' : $errorMessage,
             ];
 
             $data['data'] = $oriData->data ?? $oriData ?? [];
