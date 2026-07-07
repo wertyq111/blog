@@ -6,15 +6,16 @@
 
 | 项目 | 当前情况 |
 | --- | --- |
-| PHP | `^8.1` |
+| PHP | `^8.2` |
 | Laravel | `^10.10` |
 | 运行方式 | Laravel Sail，入口是 `docker-compose.yml` |
 | 应用服务名 | `blog` |
 | 数据库 | MySQL 8.0 |
 | 缓存 | Redis Alpine |
 | 邮件调试 | Mailpit |
+| 图像处理 | ImageMagick（头像上传裁剪用，由 `runtimes/Dockerfile` 安装，`sail build` 时生效）|
 | 登录认证 | `php-open-source-saver/jwt-auth` |
-| 测试 | PHPUnit 10，入口是 `php artisan test` |
+| 测试 | Pest 2（基于 PHPUnit 10），入口是 `./vendor/bin/sail pest` |
 | 资源构建 | Vite 4，仅用于 Laravel `resources/` 资源 |
 
 ## 目录结构
@@ -118,7 +119,7 @@ MAIL_PORT=${FORWARD_MAILPIT_PORT}
 docker run --rm \
   -v "$(pwd)":/opt \
   -w /opt \
-  laravelsail/php81-composer:latest \
+  laravelsail/php82-composer:latest \
   composer install --ignore-platform-reqs
 ```
 
@@ -247,10 +248,11 @@ npm run build
 
 ## 测试
 
-后端测试入口：
+测试统一用 **Pest** 格式，一律在（远端）Sail 容器里跑：
 
 ```bash
-./vendor/bin/sail artisan test
+./vendor/bin/sail pest            # 全量
+./vendor/bin/sail pest tests/Feature/Api/User/AvatarUploadTest.php   # 单文件
 ```
 
 当前测试目录：
@@ -258,4 +260,4 @@ npm run build
 | 路径 | 内容 |
 | --- | --- |
 | `tests/Unit` | Filter、MenuService、迁移辅助逻辑等单元测试 |
-| `tests/Feature` | HTTP 功能测试 |
+| `tests/Feature` | HTTP 功能测试（Pest 格式）|
