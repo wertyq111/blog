@@ -36,6 +36,10 @@ jobs:
           extensions: mbstring, curl, simplexml, pdo_mysql, sqlite3, pdo_sqlite, bcmath, gd, exif, zip
           coverage: none
 
+      - name: Install ImageMagick
+        # 头像上传裁剪用 convert CLI 处理图片，与 runtimes/Dockerfile 一致
+        run: sudo apt-get update && sudo apt-get install -y imagemagick
+
       - name: Prepare environment
         run: |
           cp .env.example .env
