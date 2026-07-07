@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\User\UsersController;
 use App\Http\Controllers\Api\User\MembersController;
 use App\Http\Controllers\Api\User\MemberLevelController;
 use App\Http\Controllers\Api\User\VerificationCodesController;
+use App\Http\Controllers\Api\User\AvatarController;
 use App\Http\Controllers\Api\AuthorizationsController;
 use App\Http\Controllers\Api\MiniProgram\WallpaperController;
 use App\Http\Controllers\Api\MiniProgram\WallpaperClassifyController;
@@ -136,6 +137,8 @@ Route::name('api')->group(function () {
         Route::get('users/getUserInfo', [UsersController::class, 'getUserInfo'])->name('users.getUserInfo');
         // 更新当前用户资料
         Route::post('index/updateUserInfo', [UsersController::class, 'updateUserInfo'])->name('users.updateUserInfo');
+        // 上传当前用户头像
+        Route::post('user/avatar', [AvatarController::class, 'add'])->name('user.avatar.add');
         // 用户列表
         Route::get('users/list', [UsersController::class, 'index'])->name('users.index');
         // 验证用户

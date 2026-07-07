@@ -7,6 +7,8 @@ use App\Services\Api\QiniuService;
 
 class Controller extends BaseController
 {
+    protected QiniuService $qiniuService;
+
     public function __construct()
     {
         $this->qiniuService = new QiniuService();
