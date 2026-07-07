@@ -9,6 +9,7 @@ use App\Models\User\User;
 use App\Http\Controllers\Api\Controller;
 use App\Http\Resources\User\UserResource;
 use App\Http\Requests\Api\User\UserRequest;
+use App\Services\Api\User\AvatarUrlService;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -18,6 +19,19 @@ use Spatie\QueryBuilder\QueryBuilder;
 
 class UsersController extends Controller
 {
+    /**
+     * 初始化用户控制器。
+     *
+     * @param AvatarUrlService $avatarUrlService
+     * @return void
+     * @author zhouxufeng <zxf@netsun.com>
+     *
+     * @date 2026/7/7
+     */
+    public function __construct(private readonly AvatarUrlService $avatarUrlService)
+    {
+    }
+
     /**
      * 获取用户列表
      *
@@ -245,16 +259,14 @@ class UsersController extends Controller
      *
      * @return User|null
      * @author zhouxufeng <zxf@netsun.com>
-     * @date 2026/3/30 09:25
+     * @date 2026/7/7
      */
     protected function loadCurrentUserProfile()
     {
         $user = auth()->user();
         $user = QueryBuilder::for(User::class)->allowedIncludes('member')->with('roles')->where(['id' => $user->id])->first();
         if ($user && $user->member) {
-            $user->member->avatar = $user->member->avatar
-                ? $this->qiniuService->getPrivateUrl($user->member->avatar)
-                : "";
+            $user->member->avatar = $this->avatarUrlService->make($user->member->avatar);
         }
 
         return $user;
