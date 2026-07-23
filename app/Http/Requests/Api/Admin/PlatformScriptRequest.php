@@ -1,0 +1,50 @@
+<?php
+
+namespace App\Http\Requests\Api\Admin;
+
+use App\Http\Requests\Api\FormRequest;
+
+class PlatformScriptRequest extends FormRequest
+{
+    /**
+     * 获取平台脚本接口校验规则。
+     *
+     * @return array
+     * @author zhouxufeng <zxf@netsun.com>
+     * @date 2026/7/23
+     */
+    public function rules(): array
+    {
+        $method = $this->route()->getActionMethod();
+
+        return match ($method) {
+            'index' => array_merge($this->paginationRules(), [
+                'script_key' => ['nullable', 'string', 'max:64'],
+                'filter' => ['nullable', 'array'],
+                'filter.script_key' => ['nullable', 'string', 'max:64'],
+                'filter.ordr_no' => ['nullable', 'string', 'max:40'],
+                'filter.appl_id' => ['nullable', 'string', 'max:64'],
+            ]),
+            'preview', 'run' => [
+                'script_key' => ['required', 'string', 'max:64'],
+                'text' => ['required', 'string'],
+            ],
+            default => [],
+        };
+    }
+
+    /**
+     * 获取平台脚本字段别名。
+     *
+     * @return array
+     * @author zhouxufeng <zxf@netsun.com>
+     * @date 2026/7/23
+     */
+    public function attributes(): array
+    {
+        return array_merge($this->paginationAttributes(), [
+            'script_key' => '脚本标识',
+            'text' => '推送文本',
+        ]);
+    }
+}

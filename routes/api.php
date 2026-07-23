@@ -20,6 +20,7 @@ use App\Http\Controllers\Api\MiniProgram\HouseController;
 use App\Http\Controllers\Api\MiniProgram\ImageController;
 use App\Http\Controllers\Api\Admin\ServerPathController;
 use App\Http\Controllers\Api\Admin\InitModelController;
+use App\Http\Controllers\Api\Admin\PlatformScriptController;
 use App\Http\Controllers\Api\Admin\WorkDailyLogController;
 use App\Http\Controllers\Api\Admin\WorkDailyImageController;
 use App\Http\Controllers\Api\Admin\WorkDailyTagController;
@@ -56,6 +57,7 @@ use App\Models\MiniProgram\PhotoCategory;
 use App\Models\MiniProgram\Material;
 use App\Models\MiniProgram\House;
 use App\Models\Admin\ServerPath;
+use App\Models\Admin\PlatformScriptRun;
 use App\Models\Admin\InitModel;
 use App\Models\Admin\WorkDailyLog;
 use App\Models\Admin\WorkPlatform;
@@ -300,6 +302,16 @@ Route::name('api')->group(function () {
         Route::delete('init-model/{initModel}', [InitModelController::class, 'delete'])->name('init-model.delete');
         // 模型初始化转换
         Route::post('init-model/convert/{initModel}', [InitModelController::class, 'convert'])->name('init-model.convert');
+
+        // 平台脚本执行记录列表
+        Route::get('platform-script/index', [PlatformScriptController::class, 'index'])->name('platform-script.index')
+            ->middleware('filter.process:' . PlatformScriptRun::class);
+        // 平台脚本解析预览（不发送）
+        Route::post('platform-script/preview', [PlatformScriptController::class, 'preview'])->name('platform-script.preview');
+        // 平台脚本执行推送
+        Route::post('platform-script/run', [PlatformScriptController::class, 'run'])->name('platform-script.run');
+        // 平台脚本执行记录详情
+        Route::get('platform-script/{platformScriptRun}', [PlatformScriptController::class, 'info'])->name('platform-script.info');
 
         // 工作台仪表盘统计
         Route::get('dashboard/stats', [DashboardController::class, 'stats'])->name('dashboard.stats');
