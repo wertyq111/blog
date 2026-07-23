@@ -258,6 +258,7 @@ class MenuSeeder extends Seeder
                 'sort' => 45,
                 'children' => [
                     $this->module('图片处理', '/design/image-process', 'el-icon-picture-outline-round', 10, 'design:imageProcess:view', '图片处理'),
+                    $this->module('商品图片提取', '/design/product-image-extractor', 'el-icon-download', 20, 'design:productImageExtractor:view', '商品图片提取'),
                 ],
             ],
             [
