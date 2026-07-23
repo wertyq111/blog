@@ -31,6 +31,7 @@ use App\Http\Controllers\Api\Admin\TodoItemController;
 use App\Http\Controllers\Api\Admin\PomoTaskController;
 use App\Http\Controllers\Api\Admin\PomoSettingController;
 use App\Http\Controllers\Api\Admin\PomoStatsController;
+use App\Http\Controllers\Api\Admin\ProductImageExtractorController;
 use App\Models\Admin\PomoTask;
 use App\Http\Controllers\Api\Admin\DashboardController;
 use App\Http\Controllers\Api\Web\ArticlesController;
@@ -312,6 +313,18 @@ Route::name('api')->group(function () {
         Route::post('platform-script/run', [PlatformScriptController::class, 'run'])->name('platform-script.run');
         // 平台脚本执行记录详情
         Route::get('platform-script/{platformScriptRun}', [PlatformScriptController::class, 'info'])->name('platform-script.info');
+
+        // 支持的商品图片平台
+        Route::get('design/product-image-extractor/platforms', [ProductImageExtractorController::class, 'platforms'])
+            ->name('design.product-image-extractor.platforms');
+        // 提取商品图片
+        Route::post('design/product-image-extractor/extract', [ProductImageExtractorController::class, 'extract'])
+            ->name('design.product-image-extractor.extract')
+            ->middleware('throttle:10,1');
+        // 下载商品图片压缩包
+        Route::post('design/product-image-extractor/download', [ProductImageExtractorController::class, 'download'])
+            ->name('design.product-image-extractor.download')
+            ->middleware('throttle:10,1');
 
         // 工作台仪表盘统计
         Route::get('dashboard/stats', [DashboardController::class, 'stats'])->name('dashboard.stats');

@@ -10,6 +10,8 @@ use App\Observers\Admin\WorkDailyLogObserver;
 use App\Observers\Admin\WorkDocObserver;
 use App\Observers\UserObserver;
 use App\Observers\Web\CommentObserver;
+use App\Services\Api\Admin\ProductImage\Contracts\HostResolver;
+use App\Services\Api\Admin\ProductImage\SystemHostResolver;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\ServiceProvider;
 
@@ -20,7 +22,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->app->bind(HostResolver::class, SystemHostResolver::class);
     }
 
     /**
