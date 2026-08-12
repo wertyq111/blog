@@ -8,6 +8,15 @@ use Illuminate\Support\Str;
 
 class WorkDailyImageController extends Controller
 {
+    /**
+     * 上传 Markdown 正文图片，返回可公开访问的绝对地址。
+     *
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     * @author zhouxufeng <zxf@netsun.com>
+     *
+     * @date 2026/8/12
+     */
     public function store(Request $request)
     {
         $request->validate([
@@ -43,8 +52,15 @@ class WorkDailyImageController extends Controller
 
         $path = $relativeDir . '/' . $fileName;
 
+        // 不能用 url()：前端 dev server 代理会把 Host 改写成容器内地址（host.docker.internal），
+        // 生成的图片地址浏览器打不开。统一按 APP_URL 拼，和头像地址口径一致。
+        $baseUrl = rtrim((string) config('app.url'), '/');
+        if ($baseUrl === '') {
+            throw new \RuntimeException('APP_URL 未配置');
+        }
+
         return response()->json(message(MESSAGE_OK, true, [
-            'url' => url($path),
+            'url' => $baseUrl . $path,
             'path' => $path,
         ]));
     }
