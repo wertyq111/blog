@@ -1,57 +1,73 @@
 <?php
 
-namespace Tests\Feature\Api\Admin;
-
 use App\Models\User\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
-use Tests\TestCase;
 
-class WorkDailyImageUploadTest extends TestCase
-{
-    use RefreshDatabase;
+uses(Tests\TestCase::class, RefreshDatabase::class);
 
-    private array $uploadedPaths = [];
-
-    protected function tearDown(): void
-    {
-        foreach ($this->uploadedPaths as $path) {
-            $absolutePath = public_path($path);
-            if (is_file($absolutePath)) {
-                unlink($absolutePath);
-            }
+afterEach(function () {
+    foreach ($GLOBALS['workDailyImageUploadedPaths'] ?? [] as $path) {
+        $absolutePath = public_path($path);
+        if (is_file($absolutePath)) {
+            unlink($absolutePath);
         }
-
-        parent::tearDown();
     }
 
-    public function test_work_daily_image_can_be_uploaded_to_public_work_daily_directory(): void
-    {
-        $user = User::query()->create([
-            'username' => 'work_daily_image_user',
-            'email' => 'work-daily-image@example.com',
-            'phone' => '13800000000',
-            'password' => bcrypt('password'),
-            'status' => 1,
-        ]);
+    $GLOBALS['workDailyImageUploadedPaths'] = [];
+});
 
-        $token = auth('api')->login($user);
+function workDailyImageLoginToken(): string
+{
+    $user = User::query()->create([
+        'username' => 'work_daily_image_user',
+        'email' => 'work-daily-image@example.com',
+        'phone' => '13800000000',
+        'password' => bcrypt('password'),
+        'status' => 1,
+    ]);
 
-        $response = $this
-            ->withHeader('Authorization', "Bearer {$token}")
-            ->post('/api/work-daily/image', [
-                'file' => UploadedFile::fake()->create('daily.png', 10, 'image/png'),
-            ]);
-
-        $path = $response->json('data.path');
-        $this->uploadedPaths[] = $path;
-
-        $response
-            ->assertOk()
-            ->assertJsonPath('code', 0);
-
-        $this->assertStringStartsWith('/uploads/work-daily/' . date('Ymd') . '/', $path);
-        $this->assertStringContainsString('/uploads/work-daily/' . date('Ymd') . '/', $response->json('data.url'));
-        $this->assertFileExists(public_path($path));
-    }
+    return auth('api')->login($user);
 }
+
+function workDailyImageUpload(string $token, array $headers = [])
+{
+    return test()
+        ->withHeader('Authorization', "Bearer {$token}")
+        ->withHeaders($headers)
+        ->post('/api/work-daily/image', [
+            'file' => UploadedFile::fake()->create('daily.png', 10, 'image/png'),
+        ]);
+}
+
+it('把工作日常图片上传到 public/uploads/work-daily 按日期分目录', function () {
+    $response = workDailyImageUpload(workDailyImageLoginToken());
+
+    $path = $response->json('data.path');
+    $GLOBALS['workDailyImageUploadedPaths'][] = $path;
+
+    $response
+        ->assertOk()
+        ->assertJsonPath('code', 0);
+
+    expect($path)->toStartWith('/uploads/work-daily/' . date('Ymd') . '/');
+    expect($response->json('data.url'))->toContain('/uploads/work-daily/' . date('Ymd') . '/');
+    expect(public_path($path))->toBeFile();
+});
+
+// 前端 dev server 代理（changeOrigin）会把请求 Host 改写成容器内地址，
+// 图片地址若跟着请求 Host 走，浏览器就打不开——必须始终按 APP_URL 生成。
+it('图片地址按 APP_URL 生成，不受请求 Host 影响', function () {
+    config(['app.url' => 'http://10.10.9.184:3925']);
+
+    $response = workDailyImageUpload(workDailyImageLoginToken(), [
+        'Host' => 'host.docker.internal:3925',
+    ]);
+
+    $path = $response->json('data.path');
+    $GLOBALS['workDailyImageUploadedPaths'][] = $path;
+
+    $response->assertOk();
+
+    expect($response->json('data.url'))->toBe('http://10.10.9.184:3925' . $path);
+});
