@@ -385,7 +385,7 @@ class WorkDailyReportService
         $targetModel = $model ?: env('OPENCLAW_MODEL', 'github-copilot/gpt-5.2-codex');
 
         if ($this->isLocalCodexModel($targetModel)) {
-            return $this->callLocalCodex($prompt, $targetModel);
+            return $this->callLocalCodex($this->applyHumanWritingSkill($prompt), $targetModel);
         }
 
         if ($this->isLocalAgyModel($targetModel)) {
@@ -397,6 +397,24 @@ class WorkDailyReportService
         }
 
         return $this->callOpenClaw($prompt, $targetModel);
+    }
+
+    /**
+     * 为本机 Codex 报表追加活人感写作 skill 指令。
+     *
+     * @param string $prompt
+     * @return string
+     * @author Codex
+     * @date 2026-08-17
+     */
+    private function applyHumanWritingSkill(string $prompt): string
+    {
+        return "使用 \$human-writing 对报表成稿进行中文创作与改稿。\n" .
+            "work-daily-report skill 负责报表结构、Markdown 格式、统计口径和事实边界；" .
+            "human-writing skill 只负责自然中文和成稿复核。\n" .
+            "原始工作记录是唯一事实来源。禁止检索、追问或补造材料；资料不足时按报表 skill 的精简规则输出。\n" .
+            "两套规则冲突时，以 work-daily-report skill 为准。不要解释过程，只输出最终 Markdown。\n\n" .
+            $prompt;
     }
 
     private function callOpenClaw(string $prompt, ?string $model = null): string
