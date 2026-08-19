@@ -393,14 +393,14 @@ class WorkDailyReportService
         }
 
         if ($this->isLocalClaudeModel($targetModel)) {
-            return $this->callLocalClaude($prompt, $targetModel);
+            return $this->callLocalClaude($this->applyHumanWritingSkill($prompt), $targetModel);
         }
 
         return $this->callOpenClaw($prompt, $targetModel);
     }
 
     /**
-     * 为本机 Codex 报表追加活人感写作 skill 指令。
+     * 为本机 Codex / Claude 报表追加活人感写作 skill 指令。
      *
      * @param string $prompt
      * @return string
