@@ -389,7 +389,7 @@ class WorkDailyReportService
         }
 
         if ($this->isLocalAgyModel($targetModel)) {
-            return $this->callLocalAgy($prompt, $targetModel);
+            return $this->callLocalAgy($this->applyHumanWritingSkill($prompt), $targetModel);
         }
 
         if ($this->isLocalClaudeModel($targetModel)) {
@@ -400,7 +400,7 @@ class WorkDailyReportService
     }
 
     /**
-     * 为本机 Codex / Claude 报表追加活人感写作 skill 指令。
+     * 为本机 Codex / Claude / Gemini 报表追加活人感写作 skill 指令。
      *
      * @param string $prompt
      * @return string
