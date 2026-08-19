@@ -21,6 +21,7 @@ it('报表模型列表提供三个本机 CLI 各自的可选模型', function ()
         'local-codex/gpt-5.5',
         'local-codex/gpt-5.6-sol',
         'local-codex/gpt-5.6-terra',
+        'local-agy/gemini-3.1-pro-high',
         'local-agy/gemini-3.5-flash-high',
         'local-agy/gemini-3.6-flash-high',
         'local-agy/gemini-3.7-flash-high',
