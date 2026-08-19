@@ -111,7 +111,7 @@ MAIL_PORT=${FORWARD_MAILPIT_PORT}
 | 本机 CLI 桥（Codex） | `LOCAL_CODEX_BRIDGE_URL`、`LOCAL_CODEX_BRIDGE_TOKEN`、`LOCAL_CODEX_MODEL` |
 | 本机 CLI 桥（Gemini） | `LOCAL_GEMINI_BRIDGE_URL`、`LOCAL_GEMINI_BRIDGE_TOKEN`、`LOCAL_GEMINI_MODEL` |
 
-工作日报选择 Codex 导出时会调用 `human-writing` skill。运行本机 Codex bridge 的用户必须把该 skill 完整安装到 `$CODEX_HOME/skills/human-writing`（默认 `~/.codex/skills/human-writing`）。
+工作日报选择 Codex、Claude、Gemini (Agy) 导出时会调用 `human-writing` skill。运行本机 CLI bridge 的用户必须把该 skill 完整安装到对应 CLI 平台的 skills 目录（如 `~/.codex/skills/human-writing`、`~/.claude/skills/human-writing`、`~/.gemini/skills/human-writing`）。
 
 ## 安装依赖
 
