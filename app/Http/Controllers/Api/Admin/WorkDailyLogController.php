@@ -19,6 +19,27 @@ use Spatie\QueryBuilder\QueryBuilder;
 
 class WorkDailyLogController extends Controller
 {
+    /** 本机 Codex CLI 可选模型 */
+    private const LOCAL_CODEX_MODELS = [
+        'local-codex/gpt-5.5',
+        'local-codex/gpt-5.6-sol',
+        'local-codex/gpt-5.6-terra',
+    ];
+
+    /** 本机 Gemini(agy) CLI 可选模型 */
+    private const LOCAL_AGY_MODELS = [
+        'local-agy/gemini-3.5-flash-high',
+        'local-agy/gemini-3.6-flash-high',
+        'local-agy/gemini-3.7-flash-high',
+    ];
+
+    /** 本机 Claude CLI 可选模型 */
+    private const LOCAL_CLAUDE_MODELS = [
+        'local-claude/claude-opus-4-6',
+        'local-claude/claude-opus-4-8',
+        'local-claude/claude-opus-5',
+    ];
+
     /**
      * 初始化工作日常服务。
      *
@@ -1257,35 +1278,17 @@ class WorkDailyLogController extends Controller
 
     private function withLocalCodexModel(array $models): array
     {
-        $localModel = config('services.local_codex.model', 'local-codex/codex-cli');
-        if (!is_string($localModel) || trim($localModel) === '') {
-            $localModel = 'local-codex/codex-cli';
-        }
-        $models[] = trim($localModel);
-
-        return array_values(array_unique(array_filter($models)));
+        return array_values(array_unique(array_filter(array_merge($models, self::LOCAL_CODEX_MODELS))));
     }
 
     private function withLocalAgyModel(array $models): array
     {
-        $localModel = config('services.local_agy.model', 'local-agy/gemini-3.5-flash-high');
-        if (!is_string($localModel) || trim($localModel) === '') {
-            $localModel = 'local-agy/gemini-3.5-flash-high';
-        }
-        $models[] = trim($localModel);
-
-        return array_values(array_unique(array_filter($models)));
+        return array_values(array_unique(array_filter(array_merge($models, self::LOCAL_AGY_MODELS))));
     }
 
     private function withLocalClaudeModel(array $models): array
     {
-        $localModel = config('services.local_claude.model', 'local-claude/claude-cli');
-        if (!is_string($localModel) || trim($localModel) === '') {
-            $localModel = 'local-claude/claude-cli';
-        }
-        $models[] = trim($localModel);
-
-        return array_values(array_unique(array_filter($models)));
+        return array_values(array_unique(array_filter(array_merge($models, self::LOCAL_CLAUDE_MODELS))));
     }
 
     /**
