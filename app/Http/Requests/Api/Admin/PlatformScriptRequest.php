@@ -25,9 +25,16 @@ class PlatformScriptRequest extends FormRequest
                 'filter.ordr_no' => ['nullable', 'string', 'max:40'],
                 'filter.appl_id' => ['nullable', 'string', 'max:64'],
             ]),
-            'preview', 'run' => [
+            'preview' => [
                 'script_key' => ['required', 'string', 'max:64'],
-                'text' => ['required', 'string'],
+                'text' => ['nullable', 'string'],
+                'login' => ['nullable', 'string', 'max:64'],
+            ],
+            'run' => [
+                'script_key' => ['required', 'string', 'max:64'],
+                'text' => ['nullable', 'string'],
+                'login' => ['nullable', 'string', 'max:64'],
+                'mobile' => ['nullable', 'string', 'max:20'],
             ],
             default => [],
         };
@@ -45,6 +52,9 @@ class PlatformScriptRequest extends FormRequest
         return array_merge($this->paginationAttributes(), [
             'script_key' => '脚本标识',
             'text' => '推送文本',
+            'login' => '账号 (login)',
+            'mobile' => '手机号码 (mobile)',
         ]);
     }
+
 }
