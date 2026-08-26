@@ -202,6 +202,18 @@ it('payload 以 hex 编码且能被还原成请求数据', function () {
         ->and(json_decode(hex2bin($hex), true))->toBe($requestData);
 });
 
+it('ChemNet 脚本流水号自增正确', function () {
+    $script = new \App\Services\Api\Admin\PlatformScript\Scripts\ChemnetSecretCodeScript([
+        'ordr_no_prefix' => 'CHEM',
+        'ordr_no_digits' => 10,
+        'ordr_no_seed' => 'CHEM0000000000',
+    ]);
+
+    expect($script->nextOrdrNo(null))->toBe('CHEM0000000001')
+        ->and($script->nextOrdrNo('CHEM0000000008'))->toBe('CHEM0000000009');
+});
+
+
 /**
  * sinoloans 放款测试样例粘贴文本。
  *

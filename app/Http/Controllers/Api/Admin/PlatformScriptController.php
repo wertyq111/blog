@@ -47,38 +47,39 @@ class PlatformScriptController extends Controller
     }
 
     /**
-     * 解析预览：返回字段与将要使用的 ordrNo，不发送。
+     * 解析预览 / 查询：返回字段与将要使用的 ordrNo 或查询结果，不执行修改。
      *
      * @param PlatformScriptRequest $request
      * @return JsonResponse
      * @author zhouxufeng <zxf@netsun.com>
-     * @date 2026/7/23
+     * @date 2026/8/26
      */
     public function preview(PlatformScriptRequest $request): JsonResponse
     {
         return response()->json($this->platformScriptService->preview(
             $request->validated('script_key'),
-            $request->validated('text'),
+            $request->validated(),
         ));
     }
 
     /**
-     * 执行推送：解析、自增 ordrNo、SSH 远端执行并落库。
+     * 执行操作：解析/执行、自增 ordrNo、远端执行并落库。
      *
      * @param PlatformScriptRequest $request
      * @return BaseResource
      * @author zhouxufeng <zxf@netsun.com>
-     * @date 2026/7/23
+     * @date 2026/8/26
      */
     public function run(PlatformScriptRequest $request)
     {
         $run = $this->platformScriptService->run(
             $request->validated('script_key'),
-            $request->validated('text'),
+            $request->validated(),
         );
 
         return $this->resource($run);
     }
+
 
     /**
      * 执行记录详情
