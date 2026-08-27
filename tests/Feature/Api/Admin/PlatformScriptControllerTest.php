@@ -252,10 +252,35 @@ it('bankofsun 脚本解析文本并预览匹配结果', function () {
         ->assertJsonPath('data.fields.company', '起起落落测试公司八')
         ->assertJsonPath('data.fields.social_credit_code', '9144080021832648A3')
         ->assertJsonPath('data.fields.legal', '王五')
-        ->assertJsonPath('data.fields.buyer_company_type', '贸易型企业')
+        ->assertJsonPath('data.fields.buyer_company_type', 'M')
         ->assertJsonPath('data.matched', true)
         ->assertJsonPath('data.company_data.cid', 10001680)
         ->assertJsonPath('data.ordr_no', 'BOSC0000000001');
+});
+
+it('bankofsun 脚本正确解析生产型企业、法人客户号与带万元的交易量', function () {
+    $script = new \App\Services\Api\Admin\PlatformScript\Scripts\BankofsunComm2CreditScript([]);
+    $text = <<<TEXT
+对公客户号:0115684030511238
+企业名称:会当临绝顶测试公司二六
+统一社会信用代码:91440800249042353U
+法人客户号:0115652386057386
+法人名称:陈宁
+法人身份证号:540102198105309697
+企业类型：生产型企业
+近两年与核心企业平均交易量：4000万元
+TEXT;
+
+    $fields = $script->parse($text);
+
+    expect($fields['company'])->toBe('会当临绝顶测试公司二六')
+        ->and($fields['social_credit_code'])->toBe('91440800249042353U')
+        ->and($fields['legal'])->toBe('陈宁')
+        ->and($fields['ecif_cst_no'])->toBe('0115652386057386')
+        ->and($fields['id_card'])->toBe('540102198105309697')
+        ->and($fields['buyer_company_type'])->toBe('S')
+        ->and($fields['trade_amount'])->toBe(4000.0)
+        ->and($fields['loan_cardno'])->toBe('0115684030511238');
 });
 
 it('bankofsun 脚本一键执行流转成功并正确落库', function () {
