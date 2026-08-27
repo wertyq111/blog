@@ -22,14 +22,14 @@ return [
         ],
         ChemnetSecretCodeScript::KEY => [
             'name' => 'ChemNet 验证码手机号修改 (hub_chinachemnet.secret_code)',
-            'url' => env('CHEMNET_PMA_URL', 'http://db.hi2000.com/chemnet/'),
-            'http_basic_username' => env('CHEMNET_BASIC_USERNAME', 'chemnet'),
+            'url' => env('CHEMNET_PMA_URL'),
+            'http_basic_username' => env('CHEMNET_BASIC_USERNAME'),
             'http_basic_password' => env('CHEMNET_BASIC_PASSWORD'),
-            'pma_username' => env('CHEMNET_PMA_USERNAME', 'hub'),
+            'pma_username' => env('CHEMNET_PMA_USERNAME'),
             'pma_password' => env('CHEMNET_PMA_PASSWORD'),
             'server' => env('CHEMNET_PMA_SERVER', '1'),
-            'database' => env('CHEMNET_PMA_DATABASE', 'hub_chinachemnet'),
-            'table' => env('CHEMNET_PMA_TABLE', 'secret_code'),
+            'database' => env('CHEMNET_PMA_DATABASE'),
+            'table' => env('CHEMNET_PMA_TABLE'),
             'ordr_no_prefix' => 'CHEM',
             'ordr_no_digits' => 10,
             'ordr_no_seed' => 'CHEM0000000000',
@@ -39,9 +39,9 @@ return [
     // SSH 连接配置。密码等敏感信息只走 .env，不写默认值，缺失时由 SshRunner 直接报错。
     'connections' => [
         'sinoloans' => [
-            'host' => env('SINOLOANS_SSH_HOST', 'www2.dev.sinoloans.cn'),
+            'host' => env('SINOLOANS_SSH_HOST'),
             'port' => (int) env('SINOLOANS_SSH_PORT', 22),
-            'username' => env('SINOLOANS_SSH_USERNAME', 'sinoloans'),
+            'username' => env('SINOLOANS_SSH_USERNAME'),
             'password' => env('SINOLOANS_SSH_PASSWORD'),
             'timeout' => (int) env('SINOLOANS_SSH_TIMEOUT', 120),
         ],
