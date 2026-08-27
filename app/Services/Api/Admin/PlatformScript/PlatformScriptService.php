@@ -3,6 +3,7 @@
 namespace App\Services\Api\Admin\PlatformScript;
 
 use App\Models\Admin\PlatformScriptRun;
+use App\Services\Api\Admin\PlatformScript\Scripts\BankofsunComm2CreditScript;
 use App\Services\Api\Admin\PlatformScript\Scripts\ChemnetSecretCodeScript;
 use App\Services\Api\Admin\PlatformScript\Scripts\SinoloansComm3LoanScript;
 use App\Services\Api\Admin\PlatformScript\Support\SshRunner;
@@ -63,6 +64,21 @@ class PlatformScriptService
             ];
         }
 
+        if ($script instanceof BankofsunComm2CreditScript) {
+            $text = (string) ($params['text'] ?? '');
+            $fields = $this->parseBankofsunOrFail($script, $text);
+            $previewMatch = $script->previewMatch($fields);
+
+            return [
+                'script_key' => $scriptKey,
+                'fields' => $fields,
+                'matched' => $previewMatch['matched'],
+                'match_message' => $previewMatch['match_message'],
+                'company_data' => $previewMatch['company_data'],
+                'ordr_no' => $ordrNo,
+            ];
+        }
+
         throw ValidationException::withMessages(['script_key' => '未知脚本：' . $scriptKey]);
     }
 
@@ -89,6 +105,10 @@ class PlatformScriptService
             $mobile = trim((string) ($params['mobile'] ?? ''));
 
             return $this->runChemnetScript($script, $scriptKey, $ordrNo, $login, $mobile);
+        }
+
+        if ($script instanceof BankofsunComm2CreditScript) {
+            return $this->runBankofsunScript($script, $scriptKey, $ordrNo, (string) ($params['text'] ?? ''));
         }
 
         throw ValidationException::withMessages(['script_key' => '未知脚本：' . $scriptKey]);
@@ -193,14 +213,63 @@ class PlatformScriptService
     }
 
     /**
+     * 执行 bankofsun 交行企业贷 2.0 自动化流转脚本。
+     *
+     * @param BankofsunComm2CreditScript $script
+     * @param string $scriptKey
+     * @param string $ordrNo
+     * @param string $text
+     * @return PlatformScriptRun
+     * @author zhouxufeng <zxf@netsun.com>
+     * @date 2026/8/27
+     */
+    private function runBankofsunScript(
+        BankofsunComm2CreditScript $script,
+        string $scriptKey,
+        string $ordrNo,
+        string $text
+    ): PlatformScriptRun {
+        $fields = $this->parseBankofsunOrFail($script, $text);
+        $payload = $script->buildRequestData($fields);
+        $requestJson = json_encode($payload, JSON_UNESCAPED_UNICODE);
+
+        $run = new PlatformScriptRun();
+        $run->fill([
+            'script_key' => $scriptKey,
+            'ordr_no' => $ordrNo,
+            'appl_id' => (string) ($fields['company'] ?? ''),
+            'cust_bank_acct_no' => (string) ($fields['social_credit_code'] ?? ''),
+            'cntpr_nme' => (string) ($fields['legal'] ?? ''),
+            'cust_pay_amt' => (string) ($fields['trade_amount'] ?? ''),
+            'cntrct_no' => (string) ($fields['loan_cardno'] ?? ''),
+            'raw_text' => $text,
+            'request_data' => $requestJson,
+        ]);
+
+        try {
+            $result = $script->executeAutoFlow($payload);
+            $run->output = json_encode($result, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+            $run->status = 'success';
+        } catch (\Throwable $e) {
+            $run->output = '';
+            $run->status = 'failed';
+            $run->error = $e->getMessage();
+        }
+
+        $run->edit();
+
+        return $run;
+    }
+
+    /**
      * 按脚本标识解析脚本处理器。
      *
      * @param string $scriptKey
-     * @return SinoloansComm3LoanScript|ChemnetSecretCodeScript
+     * @return SinoloansComm3LoanScript|ChemnetSecretCodeScript|BankofsunComm2CreditScript
      * @author zhouxufeng <zxf@netsun.com>
-     * @date 2026/8/26
+     * @date 2026/8/27
      */
-    private function resolveScript(string $scriptKey): SinoloansComm3LoanScript|ChemnetSecretCodeScript
+    private function resolveScript(string $scriptKey): SinoloansComm3LoanScript|ChemnetSecretCodeScript|BankofsunComm2CreditScript
     {
         $config = config('platform-script.scripts.' . $scriptKey);
 
@@ -211,8 +280,27 @@ class PlatformScriptService
         return match ($scriptKey) {
             SinoloansComm3LoanScript::KEY => new SinoloansComm3LoanScript($config),
             ChemnetSecretCodeScript::KEY => new ChemnetSecretCodeScript($config),
+            BankofsunComm2CreditScript::KEY => new BankofsunComm2CreditScript($config),
             default => throw ValidationException::withMessages(['script_key' => '未知脚本：' . $scriptKey]),
         };
+    }
+
+    /**
+     * 解析 bankofsun 粘贴文本，失败时转成 422 校验异常。
+     *
+     * @param BankofsunComm2CreditScript $script
+     * @param string $text
+     * @return array<string, mixed>
+     * @author zhouxufeng <zxf@netsun.com>
+     * @date 2026/8/27
+     */
+    private function parseBankofsunOrFail(BankofsunComm2CreditScript $script, string $text): array
+    {
+        try {
+            return $script->parse($text);
+        } catch (\InvalidArgumentException $e) {
+            throw ValidationException::withMessages(['text' => $e->getMessage()]);
+        }
     }
 
     /**

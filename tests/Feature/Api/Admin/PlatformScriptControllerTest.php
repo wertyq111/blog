@@ -213,6 +213,89 @@ it('ChemNet 脚本流水号自增正确', function () {
         ->and($script->nextOrdrNo('CHEM0000000008'))->toBe('CHEM0000000009');
 });
 
+it('bankofsun 脚本流水号自增正确', function () {
+    $script = new \App\Services\Api\Admin\PlatformScript\Scripts\BankofsunComm2CreditScript([
+        'ordr_no_prefix' => 'BOSC',
+        'ordr_no_digits' => 10,
+        'ordr_no_seed' => 'BOSC0000000000',
+    ]);
+
+    expect($script->nextOrdrNo(null))->toBe('BOSC0000000001')
+        ->and($script->nextOrdrNo('BOSC0000000005'))->toBe('BOSC0000000006');
+});
+
+it('bankofsun 脚本解析文本并预览匹配结果', function () {
+    $token = platformScriptLoginAsAdmin();
+
+    \Illuminate\Support\Facades\Http::fake([
+        'http://api.dev.bankofsun.cn/bankofsun/comm2_auto_flow.php' => \Illuminate\Support\Facades\Http::response([
+            'status' => 'success',
+            'matched' => true,
+            'message' => '成功匹配到企业档案',
+            'data' => [
+                'cid' => 10001680,
+                'company' => '起起落落测试公司八',
+                'social_credit_code' => '9144080021832648A3',
+            ],
+        ], 200),
+    ]);
+
+    $response = $this
+        ->withHeader('Authorization', "Bearer {$token}")
+        ->postJson('/api/platform-script/preview', [
+            'script_key' => \App\Services\Api\Admin\PlatformScript\Scripts\BankofsunComm2CreditScript::KEY,
+            'text' => platformScriptBankofsunSampleText(),
+        ]);
+
+    $response
+        ->assertOk()
+        ->assertJsonPath('data.fields.company', '起起落落测试公司八')
+        ->assertJsonPath('data.fields.social_credit_code', '9144080021832648A3')
+        ->assertJsonPath('data.fields.legal', '王五')
+        ->assertJsonPath('data.fields.buyer_company_type', '贸易型企业')
+        ->assertJsonPath('data.matched', true)
+        ->assertJsonPath('data.company_data.cid', 10001680)
+        ->assertJsonPath('data.ordr_no', 'BOSC0000000001');
+});
+
+it('bankofsun 脚本一键执行流转成功并正确落库', function () {
+    $token = platformScriptLoginAsAdmin();
+
+    \Illuminate\Support\Facades\Http::fake([
+        'http://api.dev.bankofsun.cn/bankofsun/comm2_auto_flow.php' => \Illuminate\Support\Facades\Http::response([
+            'status' => 'success',
+            'message' => '已成功自动执行阶段一至阶段三流程',
+            'data' => [
+                'cid' => 10001680,
+                'aid' => '1465',
+                'comm2_apply_id' => '47',
+                'company' => '起起落落测试公司八',
+                'social_credit_code' => '9144080021832648A3',
+                'guarantee_status_desc' => '已同意担保 (阶段三达成)',
+                'company_apply_state_desc' => '递交银行 (阶段二达成)',
+            ],
+        ], 200),
+    ]);
+
+    $response = $this
+        ->withHeader('Authorization', "Bearer {$token}")
+        ->postJson('/api/platform-script/run', [
+            'script_key' => \App\Services\Api\Admin\PlatformScript\Scripts\BankofsunComm2CreditScript::KEY,
+            'text' => platformScriptBankofsunSampleText(),
+        ]);
+
+    $response
+        ->assertOk()
+        ->assertJsonPath('data.status', 'success')
+        ->assertJsonPath('data.ordrNo', 'BOSC0000000001')
+        ->assertJsonPath('data.applId', '起起落落测试公司八')
+        ->assertJsonPath('data.custBankAcctNo', '9144080021832648A3');
+
+    $run = PlatformScriptRun::query()->where('ordr_no', 'BOSC0000000001')->firstOrFail();
+    expect($run->status)->toBe('success')
+        ->and($run->output)->toContain('已同意担保 (阶段三达成)');
+});
+
 
 /**
  * sinoloans 放款测试样例粘贴文本。
@@ -295,3 +378,26 @@ function platformScriptCreateRun(array $attributes = []): PlatformScriptRun
         'deleted_at' => 0,
     ], $attributes));
 }
+
+/**
+ * bankofsun 交行企业贷 2.0 样例粘贴文本。
+ *
+ * @return string
+ * @author zhouxufeng <zxf@netsun.com>
+ * @date 2026/8/27
+ */
+function platformScriptBankofsunSampleText(): string
+{
+    return <<<TEXT
+企业名称: 起起落落测试公司八
+统一社会信用代码: 9144080021832648A3
+法人姓名: 王五
+法人身份证号: 350623198711261343
+手机号: 13800000000
+企业类型: 贸易型企业
+近两年平均交易量: 5000
+对公客户号: 0115687030449558
+申请额度: 60000000
+TEXT;
+}
+

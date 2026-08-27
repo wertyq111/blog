@@ -1,5 +1,6 @@
 <?php
 
+use App\Services\Api\Admin\PlatformScript\Scripts\BankofsunComm2CreditScript;
 use App\Services\Api\Admin\PlatformScript\Scripts\ChemnetSecretCodeScript;
 use App\Services\Api\Admin\PlatformScript\Scripts\SinoloansComm3LoanScript;
 
@@ -33,6 +34,14 @@ return [
             'ordr_no_prefix' => 'CHEM',
             'ordr_no_digits' => 10,
             'ordr_no_seed' => 'CHEM0000000000',
+        ],
+        BankofsunComm2CreditScript::KEY => [
+            'name' => 'bankofsun 交行企业贷2.0授信测试数据生成',
+            'api_url' => env('BANKOFSUN_COMM2_API_URL', 'http://api.dev.bankofsun.cn/bankofsun/comm2_auto_flow.php'),
+            'ordr_no_prefix' => 'BOSC',
+            'ordr_no_digits' => 10,
+            'ordr_no_seed' => 'BOSC0000000000',
+            'timeout' => (int) env('BANKOFSUN_COMM2_TIMEOUT', 30),
         ],
     ],
 
