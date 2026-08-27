@@ -283,6 +283,38 @@ TEXT;
         ->and($fields['loan_cardno'])->toBe('0115684030511238');
 });
 
+it('bankofsun 已建档企业未传字段时自动继承已有档案原值，不覆盖不清空', function () {
+    $script = new \App\Services\Api\Admin\PlatformScript\Scripts\BankofsunComm2CreditScript([]);
+    $text = <<<TEXT
+企业名称:会当临绝顶测试公司二六
+统一社会信用代码:91440800249042353U
+TEXT;
+
+    $rawFields = $script->parse($text);
+    $existingCompanyData = [
+        'cid' => 10001681,
+        'company' => '会当临绝顶测试公司二六',
+        'social_credit_code' => '91440800249042353U',
+        'legal' => '陈宁',
+        'id_card' => '540102198105309697',
+        'mobile' => '13800000000',
+        'buyerCompanyType' => 'S',
+        'aveInterAmt' => '4000',
+        'ECIFCstNo' => '0115652386057386',
+    ];
+
+    $merged = $script->mergeWithCompanyData($rawFields, $existingCompanyData);
+
+    expect($merged['company'])->toBe('会当临绝顶测试公司二六')
+        ->and($merged['social_credit_code'])->toBe('91440800249042353U')
+        ->and($merged['legal'])->toBe('陈宁')
+        ->and($merged['id_card'])->toBe('540102198105309697')
+        ->and($merged['mobile'])->toBe('13800000000')
+        ->and($merged['buyer_company_type'])->toBe('S')
+        ->and($merged['trade_amount'])->toBe(4000.0)
+        ->and($merged['ecif_cst_no'])->toBe('0115652386057386');
+});
+
 it('bankofsun 脚本一键执行流转成功并正确落库', function () {
     $token = platformScriptLoginAsAdmin();
 

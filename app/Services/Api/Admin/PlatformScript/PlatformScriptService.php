@@ -66,12 +66,14 @@ class PlatformScriptService
 
         if ($script instanceof BankofsunComm2CreditScript) {
             $text = (string) ($params['text'] ?? '');
-            $fields = $this->parseBankofsunOrFail($script, $text);
-            $previewMatch = $script->previewMatch($fields);
+            $rawFields = $this->parseBankofsunOrFail($script, $text);
+            $previewMatch = $script->previewMatch($rawFields);
+            $mergedFields = $script->mergeWithCompanyData($rawFields, $previewMatch['company_data']);
 
             return [
                 'script_key' => $scriptKey,
-                'fields' => $fields,
+                'fields' => $mergedFields,
+                'explicit_keys' => array_keys($rawFields),
                 'matched' => $previewMatch['matched'],
                 'match_message' => $previewMatch['match_message'],
                 'company_data' => $previewMatch['company_data'],
@@ -229,7 +231,9 @@ class PlatformScriptService
         string $ordrNo,
         string $text
     ): PlatformScriptRun {
-        $fields = $this->parseBankofsunOrFail($script, $text);
+        $rawFields = $this->parseBankofsunOrFail($script, $text);
+        $previewMatch = $script->previewMatch($rawFields);
+        $fields = $script->mergeWithCompanyData($rawFields, $previewMatch['company_data']);
         $payload = $script->buildRequestData($fields);
         $requestJson = json_encode($payload, JSON_UNESCAPED_UNICODE);
 

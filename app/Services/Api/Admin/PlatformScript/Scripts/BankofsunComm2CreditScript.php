@@ -116,17 +116,70 @@ class BankofsunComm2CreditScript
             throw new \InvalidArgumentException('缺少必须字段：统一社会信用代码');
         }
 
-        // 默认值填充与单位清洗
-        $fields['legal'] = $fields['legal'] ?? '';
-        $fields['id_card'] = $fields['id_card'] ?? '';
-        $fields['mobile'] = $fields['mobile'] ?? '';
-        $fields['buyer_company_type'] = $this->normalizeBuyerCompanyType($fields['buyer_company_type'] ?? '贸易型企业');
-        $fields['trade_amount'] = $this->parseTradeAmount($fields['trade_amount'] ?? null);
-        $fields['loan_cardno'] = $fields['loan_cardno'] ?? '';
-        $fields['amount'] = $this->parseAmount($fields['amount'] ?? null);
-        $fields['ecif_cst_no'] = $fields['ecif_cst_no'] ?? '';
+        // 对用户显式填写的字段进行清洗转换
+        if (isset($fields['buyer_company_type'])) {
+            $fields['buyer_company_type'] = $this->normalizeBuyerCompanyType($fields['buyer_company_type']);
+        }
+        if (isset($fields['trade_amount'])) {
+            $fields['trade_amount'] = $this->parseTradeAmount($fields['trade_amount']);
+        }
+        if (isset($fields['amount'])) {
+            $fields['amount'] = $this->parseAmount($fields['amount']);
+        }
 
         return $fields;
+    }
+
+    /**
+     * 将用户显式填写的字段与查询到的企业建档数据进行合并。
+     *
+     * 如果企业已建档：未在输入文本中指定的字段自动继承已建档的原值，绝不覆盖/清空原有资料。
+     * 如果企业未建档：未填字段使用新企业默认值。
+     *
+     * @param array<string, mixed> $explicitFields 用户显式填写的字段
+     * @param array|null $companyData 查询到的企业档案数据
+     * @return array<string, mixed>
+     * @author zhouxufeng <zxf@netsun.com>
+     * @date 2026/8/27
+     */
+    public function mergeWithCompanyData(array $explicitFields, ?array $companyData): array
+    {
+        $hasCompany = !empty($companyData) && !empty($companyData['cid']);
+
+        if ($hasCompany) {
+            $existingBuyerType = isset($companyData['buyerCompanyType']) && $companyData['buyerCompanyType'] !== ''
+                ? (strtoupper((string) $companyData['buyerCompanyType']) === 'S' ? 'S' : 'M')
+                : 'M';
+            $existingTradeAmount = isset($companyData['aveInterAmt']) && $companyData['aveInterAmt'] !== ''
+                ? (float) $companyData['aveInterAmt']
+                : 5000.0;
+
+            return [
+                'company'            => $explicitFields['company'] ?? ($companyData['company'] ?? ''),
+                'social_credit_code' => $explicitFields['social_credit_code'] ?? ($companyData['social_credit_code'] ?? ''),
+                'legal'              => array_key_exists('legal', $explicitFields) ? (string) $explicitFields['legal'] : ($companyData['legal'] ?? ''),
+                'id_card'            => array_key_exists('id_card', $explicitFields) ? (string) $explicitFields['id_card'] : ($companyData['id_card'] ?? ''),
+                'mobile'             => array_key_exists('mobile', $explicitFields) ? (string) $explicitFields['mobile'] : ($companyData['mobile'] ?? ''),
+                'buyer_company_type' => $explicitFields['buyer_company_type'] ?? $existingBuyerType,
+                'trade_amount'       => $explicitFields['trade_amount'] ?? $existingTradeAmount,
+                'loan_cardno'        => $explicitFields['loan_cardno'] ?? '',
+                'amount'             => $explicitFields['amount'] ?? 60000000,
+                'ecif_cst_no'        => array_key_exists('ecif_cst_no', $explicitFields) ? (string) $explicitFields['ecif_cst_no'] : ($companyData['ECIFCstNo'] ?? ''),
+            ];
+        }
+
+        return [
+            'company'            => $explicitFields['company'] ?? '',
+            'social_credit_code' => $explicitFields['social_credit_code'] ?? '',
+            'legal'              => $explicitFields['legal'] ?? '',
+            'id_card'            => $explicitFields['id_card'] ?? '',
+            'mobile'             => $explicitFields['mobile'] ?? '',
+            'buyer_company_type' => $explicitFields['buyer_company_type'] ?? 'M',
+            'trade_amount'       => $explicitFields['trade_amount'] ?? 5000.0,
+            'loan_cardno'        => $explicitFields['loan_cardno'] ?? '',
+            'amount'             => $explicitFields['amount'] ?? 60000000,
+            'ecif_cst_no'        => $explicitFields['ecif_cst_no'] ?? '',
+        ];
     }
 
     /**
