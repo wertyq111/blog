@@ -110,7 +110,8 @@ class PlatformScriptService
         }
 
         if ($script instanceof BankofsunComm2CreditScript) {
-            return $this->runBankofsunScript($script, $scriptKey, $ordrNo, (string) ($params['text'] ?? ''));
+            $clearApplyNo = (bool) ($params['clear_apply_no'] ?? false);
+            return $this->runBankofsunScript($script, $scriptKey, $ordrNo, (string) ($params['text'] ?? ''), $clearApplyNo);
         }
 
         throw ValidationException::withMessages(['script_key' => '未知脚本：' . $scriptKey]);
@@ -221,6 +222,7 @@ class PlatformScriptService
      * @param string $scriptKey
      * @param string $ordrNo
      * @param string $text
+     * @param bool $clearApplyNo
      * @return PlatformScriptRun
      * @author zhouxufeng <zxf@netsun.com>
      * @date 2026/8/27
@@ -229,12 +231,13 @@ class PlatformScriptService
         BankofsunComm2CreditScript $script,
         string $scriptKey,
         string $ordrNo,
-        string $text
+        string $text,
+        bool $clearApplyNo = false
     ): PlatformScriptRun {
         $rawFields = $this->parseBankofsunOrFail($script, $text);
         $previewMatch = $script->previewMatch($rawFields);
         $fields = $script->mergeWithCompanyData($rawFields, $previewMatch['company_data']);
-        $payload = $script->buildRequestData($fields);
+        $payload = $script->buildRequestData($fields, $clearApplyNo);
         $requestJson = json_encode($payload, JSON_UNESCAPED_UNICODE);
 
         $run = new PlatformScriptRun();

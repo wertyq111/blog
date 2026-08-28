@@ -353,6 +353,61 @@ it('bankofsun 脚本一键执行流转成功并正确落库', function () {
         ->and($run->output)->toContain('已同意担保 (阶段三达成)');
 });
 
+it('bankofsun 脚本支持传递 clear_apply_no 并在 payload 中声明清空', function () {
+    $token = platformScriptLoginAsAdmin();
+
+    \Illuminate\Support\Facades\Http::fake([
+        'http://api.dev.bankofsun.cn/bankofsun/comm2_auto_flow.php' => function (\Illuminate\Http\Client\Request $request) {
+            $data = $request->data();
+            if (($data['action'] ?? '') === 'match_company') {
+                return \Illuminate\Support\Facades\Http::response([
+                    'status' => 'success',
+                    'matched' => true,
+                    'message' => '成功匹配到企业档案',
+                    'data' => [
+                        'cid' => 10001681,
+                        'company' => '起起落落测试公司八',
+                        'social_credit_code' => '9144080021832648A3',
+                        'has_apply_no' => true,
+                        'apply_no' => 'MCPZJSYBFR5273409791677636608',
+                    ],
+                ], 200);
+            }
+
+            expect($data['clear_apply_no'] ?? false)->toBeTrue();
+
+            return \Illuminate\Support\Facades\Http::response([
+                'status' => 'success',
+                'message' => '已成功自动执行阶段一至阶段三流程',
+                'data' => [
+                    'cid' => 10001681,
+                    'aid' => '1466',
+                    'comm2_apply_id' => '48',
+                    'cleared_apply_no' => true,
+                    'apply_no' => null,
+                    'guarantee_status_desc' => '已同意担保 (阶段三达成)',
+                    'company_apply_state_desc' => '递交银行 (阶段二达成)',
+                ],
+            ], 200);
+        },
+    ]);
+
+    $response = $this
+        ->withHeader('Authorization', "Bearer {$token}")
+        ->postJson('/api/platform-script/run', [
+            'script_key' => \App\Services\Api\Admin\PlatformScript\Scripts\BankofsunComm2CreditScript::KEY,
+            'text' => platformScriptBankofsunSampleText(),
+            'clear_apply_no' => true,
+        ]);
+
+    $response
+        ->assertOk()
+        ->assertJsonPath('data.status', 'success');
+
+    $run = PlatformScriptRun::query()->where('ordr_no', 'BOSC0000000001')->firstOrFail();
+    expect(json_decode($run->request_data, true)['clear_apply_no'])->toBeTrue();
+});
+
 
 /**
  * sinoloans 放款测试样例粘贴文本。

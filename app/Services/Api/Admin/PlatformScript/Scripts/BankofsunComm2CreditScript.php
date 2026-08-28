@@ -297,11 +297,12 @@ class BankofsunComm2CreditScript
      * 组装远端自动化流转请求 payload。
      *
      * @param array<string, mixed> $fields
+     * @param bool $clearApplyNo 是否清空历史申请单号 apply_no
      * @return array
      * @author zhouxufeng <zxf@netsun.com>
      * @date 2026/8/27
      */
-    public function buildRequestData(array $fields): array
+    public function buildRequestData(array $fields, bool $clearApplyNo = false): array
     {
         $payload = [
             'action' => 'auto_all',
@@ -313,6 +314,10 @@ class BankofsunComm2CreditScript
             'buyer_company_type' => $fields['buyer_company_type'] ?? '贸易型企业',
             'trade_amount' => $fields['trade_amount'] ?? 5000,
         ];
+
+        if ($clearApplyNo) {
+            $payload['clear_apply_no'] = true;
+        }
 
         if (!empty($fields['loan_cardno'])) {
             $payload['loan_cardno'] = $fields['loan_cardno'];

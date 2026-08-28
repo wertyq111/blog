@@ -35,6 +35,7 @@ class PlatformScriptRequest extends FormRequest
                 'text' => ['nullable', 'string'],
                 'login' => ['nullable', 'string', 'max:64'],
                 'mobile' => ['nullable', 'string', 'max:20'],
+                'clear_apply_no' => ['nullable', 'boolean'],
             ],
             default => [],
         };
@@ -54,6 +55,7 @@ class PlatformScriptRequest extends FormRequest
             'text' => '推送文本',
             'login' => '账号 (login)',
             'mobile' => '手机号码 (mobile)',
+            'clear_apply_no' => '清空历史申请单号',
         ]);
     }
 
