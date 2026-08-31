@@ -46,6 +46,8 @@ class PlatformScriptController extends Controller
             ->orderByDesc('last_id')
             ->paginate($request->perPage());
 
+        // 此处刻意不对 runs 再次套用 $allowedFilters：按 appl_id 等条件检索命中某个流水号后，
+        // 需要完整拉取该流水号下的所有历史操作记录（如阶段一至三流转与确认担保），以保证流水追踪链路完整。
         $runs = PlatformScriptRun::query()
             ->whereIn('ordr_no', collect($ordrNoPage->items())->pluck('ordr_no')->all())
             ->orderByDesc('id')
