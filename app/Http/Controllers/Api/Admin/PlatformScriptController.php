@@ -80,6 +80,40 @@ class PlatformScriptController extends Controller
         return $this->resource($run);
     }
 
+    /**
+     * 查询授信进度：只读同步交行侧状态，不执行推送。
+     *
+     * @param PlatformScriptRequest $request
+     * @return JsonResponse
+     * @author zhouxufeng <zxf@netsun.com>
+     * @date 2026/8/31
+     */
+    public function progress(PlatformScriptRequest $request): JsonResponse
+    {
+        return response()->json($this->platformScriptService->progress(
+            $request->validated('script_key'),
+            $request->validated(),
+        ));
+    }
+
+    /**
+     * 推送确认担保：向银行发送同意担保报文并落库存档。
+     *
+     * @param PlatformScriptRequest $request
+     * @return BaseResource
+     * @author zhouxufeng <zxf@netsun.com>
+     * @date 2026/8/31
+     */
+    public function confirmGuarantee(PlatformScriptRequest $request)
+    {
+        $run = $this->platformScriptService->confirmGuarantee(
+            $request->validated('script_key'),
+            $request->validated(),
+        );
+
+        return $this->resource($run);
+    }
+
 
     /**
      * 执行记录详情

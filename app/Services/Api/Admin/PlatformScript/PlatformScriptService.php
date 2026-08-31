@@ -118,6 +118,142 @@ class PlatformScriptService
     }
 
     /**
+     * 查询授信进度：解析信用代码、调远端进度接口，并附带可绑定的流水号候选。
+     *
+     * @param string $scriptKey 脚本标识
+     * @param array $params 请求参数
+     * @return array
+     * @author zhouxufeng <zxf@netsun.com>
+     * @date 2026/8/31
+     */
+    public function progress(string $scriptKey, array $params): array
+    {
+        $script = $this->resolveScript($scriptKey);
+
+        if (!$script instanceof BankofsunComm2CreditScript) {
+            throw ValidationException::withMessages(['script_key' => '该脚本不支持授信进度查询：' . $scriptKey]);
+        }
+
+        $socialCreditCode = $this->parseSocialCreditCodeOrFail($script, (string) ($params['text'] ?? ''));
+        $result = $script->queryCreditProgress($socialCreditCode);
+
+        return [
+            'script_key' => $scriptKey,
+            'social_credit_code' => $socialCreditCode,
+            'matched' => (bool) ($result['matched'] ?? false),
+            'message' => $result['message'] ?? '',
+            'progress' => $result['data'] ?? null,
+            'ordr_no_candidates' => $this->ordrNoCandidates($scriptKey, $socialCreditCode),
+            'next_ordr_no' => $script->nextOrdrNo($this->lastOrdrNo($scriptKey)),
+        ];
+    }
+
+    /**
+     * 推送确认担保并落库存档。
+     *
+     * @param string $scriptKey 脚本标识
+     * @param array $params 请求参数
+     * @return PlatformScriptRun
+     * @author zhouxufeng <zxf@netsun.com>
+     * @date 2026/8/31
+     */
+    public function confirmGuarantee(string $scriptKey, array $params): PlatformScriptRun
+    {
+        $script = $this->resolveScript($scriptKey);
+
+        if (!$script instanceof BankofsunComm2CreditScript) {
+            throw ValidationException::withMessages(['script_key' => '该脚本不支持确认担保推送：' . $scriptKey]);
+        }
+
+        $text = (string) ($params['text'] ?? '');
+        $socialCreditCode = $this->parseSocialCreditCodeOrFail($script, $text);
+        $skipAmountCheck = (bool) ($params['skip_amount_check'] ?? false);
+        $ordrNo = trim((string) ($params['ordr_no'] ?? '')) ?: $script->nextOrdrNo($this->lastOrdrNo($scriptKey));
+
+        $requestData = [
+            'action' => 'confirm_guarantee',
+            'social_credit_code' => $socialCreditCode,
+            'skip_amount_check' => $skipAmountCheck,
+        ];
+
+        $run = new PlatformScriptRun();
+        $run->fill([
+            'script_key' => $scriptKey,
+            'ordr_no' => $ordrNo,
+            'cust_bank_acct_no' => $socialCreditCode,
+            'raw_text' => $text,
+            'request_data' => json_encode($requestData, JSON_UNESCAPED_UNICODE),
+        ]);
+
+        try {
+            $result = $script->confirmGuarantee($socialCreditCode, $skipAmountCheck);
+            $run->appl_id = (string) ($result['data']['company'] ?? '');
+            $run->cntrct_no = (string) ($result['data']['contract_no'] ?? '');
+            $run->output = json_encode($result, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+            $run->status = 'success';
+        } catch (\Throwable $e) {
+            $run->output = '';
+            $run->status = 'failed';
+            $run->error = $e->getMessage();
+        }
+
+        $run->edit();
+
+        return $run;
+    }
+
+    /**
+     * 取该企业最近 5 条脚本执行流水，供前端选择绑定。
+     *
+     * @param string $scriptKey 脚本标识
+     * @param string $socialCreditCode 统一社会信用代码
+     * @return array
+     * @author zhouxufeng <zxf@netsun.com>
+     * @date 2026/8/31
+     */
+    private function ordrNoCandidates(string $scriptKey, string $socialCreditCode): array
+    {
+        return PlatformScriptRun::query()
+            ->where('script_key', $scriptKey)
+            ->where('cust_bank_acct_no', $socialCreditCode)
+            ->orderByDesc('id')
+            ->limit(5)
+            ->get(['id', 'ordr_no', 'status', 'request_data', 'created_at'])
+            ->map(function (PlatformScriptRun $run) {
+                $action = json_decode((string) $run->request_data, true)['action'] ?? 'auto_all';
+
+                return [
+                    'id' => $run->id,
+                    'ordr_no' => $run->ordr_no,
+                    'status' => $run->status,
+                    'action' => $action,
+                    'action_label' => $action === 'confirm_guarantee' ? '确认担保推送' : '阶段一至三流转',
+                    'created_at' => (string) $run->created_at,
+                ];
+            })
+            ->all();
+    }
+
+    /**
+     * 解析统一社会信用代码，失败时转成 422 校验异常。
+     *
+     * @param BankofsunComm2CreditScript $script
+     * @param string $text
+     * @return string
+     * @author zhouxufeng <zxf@netsun.com>
+     * @date 2026/8/31
+     */
+    private function parseSocialCreditCodeOrFail(BankofsunComm2CreditScript $script, string $text): string
+    {
+        try {
+            return $script->parseSocialCreditCode($text);
+        } catch (\InvalidArgumentException $e) {
+            throw ValidationException::withMessages(['text' => $e->getMessage()]);
+        }
+    }
+
+
+    /**
      * 执行 Sinoloans 脚本。
      *
      * @param SinoloansComm3LoanScript $script

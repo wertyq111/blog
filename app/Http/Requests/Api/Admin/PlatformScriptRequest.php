@@ -37,6 +37,16 @@ class PlatformScriptRequest extends FormRequest
                 'mobile' => ['nullable', 'string', 'max:20'],
                 'clear_apply_no' => ['nullable', 'boolean'],
             ],
+            'progress' => [
+                'script_key' => ['required', 'string', 'max:64'],
+                'text' => ['required', 'string'],
+            ],
+            'confirmGuarantee' => [
+                'script_key' => ['required', 'string', 'max:64'],
+                'text' => ['required', 'string'],
+                'ordr_no' => ['nullable', 'string', 'max:40'],
+                'skip_amount_check' => ['nullable', 'boolean'],
+            ],
             default => [],
         };
     }
@@ -56,6 +66,8 @@ class PlatformScriptRequest extends FormRequest
             'login' => '账号 (login)',
             'mobile' => '手机号码 (mobile)',
             'clear_apply_no' => '清空历史申请单号',
+            'ordr_no' => '关联流水号',
+            'skip_amount_check' => '忽略额度校验',
         ]);
     }
 

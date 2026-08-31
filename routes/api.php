@@ -311,6 +311,10 @@ Route::name('api')->group(function () {
         Route::post('platform-script/preview', [PlatformScriptController::class, 'preview'])->name('platform-script.preview');
         // 平台脚本执行推送
         Route::post('platform-script/run', [PlatformScriptController::class, 'run'])->name('platform-script.run');
+        // 平台脚本查询授信进度
+        Route::post('platform-script/progress', [PlatformScriptController::class, 'progress'])->name('platform-script.progress');
+        // 平台脚本推送确认担保
+        Route::post('platform-script/confirm-guarantee', [PlatformScriptController::class, 'confirmGuarantee'])->name('platform-script.confirmGuarantee');
         // 平台脚本执行记录详情
         Route::get('platform-script/{platformScriptRun}', [PlatformScriptController::class, 'info'])->name('platform-script.info');
 

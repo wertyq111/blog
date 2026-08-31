@@ -435,6 +435,152 @@ it('bankofsun 脚本取不到统一社会信用代码时抛出异常', function 
         ->toThrow(InvalidArgumentException::class);
 });
 
+it('bankofsun 授信进度查询返回进度快照与可选流水号', function () {
+    $token = platformScriptLoginAsAdmin();
+
+    platformScriptCreateRun([
+        'script_key' => \App\Services\Api\Admin\PlatformScript\Scripts\BankofsunComm2CreditScript::KEY,
+        'ordr_no' => 'BOSC0000000009',
+        'appl_id' => '起起落落测试公司八',
+        'cust_bank_acct_no' => '9144080021832648A3',
+        'request_data' => json_encode(['action' => 'auto_all']),
+    ]);
+
+    \Illuminate\Support\Facades\Http::fake([
+        'http://api.dev.bankofsun.cn/bankofsun/comm2_auto_flow.php' => \Illuminate\Support\Facades\Http::response([
+            'status' => 'success',
+            'matched' => true,
+            'message' => '已获取授信进度',
+            'data' => [
+                'cid' => 10001680,
+                'aid' => 1465,
+                'comm2_apply_id' => 47,
+                'company' => '起起落落测试公司八',
+                'social_credit_code' => '9144080021832648A3',
+                'apply_no' => 'MCPZJSYBFR5292302029966729216',
+                'guarantee_status' => 1,
+                'approved_status' => '01',
+                'signed_status' => '01',
+                'agreed_status' => '2',
+                'credit_line' => 10000000,
+                'amount' => 600000,
+                'amount_enough' => false,
+                'has_sign_result' => true,
+                'can_confirm' => true,
+                'block_reason' => '授信申请额度(600000)小于银行授信额度(10000000)',
+            ],
+        ], 200),
+    ]);
+
+    $response = $this
+        ->withHeader('Authorization', "Bearer {$token}")
+        ->postJson('/api/platform-script/progress', [
+            'script_key' => \App\Services\Api\Admin\PlatformScript\Scripts\BankofsunComm2CreditScript::KEY,
+            'text' => platformScriptBankofsunSampleText(),
+        ]);
+
+    $response
+        ->assertOk()
+        ->assertJsonPath('data.social_credit_code', '9144080021832648A3')
+        ->assertJsonPath('data.matched', true)
+        ->assertJsonPath('data.progress.can_confirm', true)
+        ->assertJsonPath('data.progress.amount_enough', false)
+        ->assertJsonPath('data.ordr_no_candidates.0.ordr_no', 'BOSC0000000009')
+        ->assertJsonPath('data.next_ordr_no', 'BOSC0000000010');
+});
+
+it('bankofsun 确认担保推送成功并复用指定流水号落库', function () {
+    $token = platformScriptLoginAsAdmin();
+
+    \Illuminate\Support\Facades\Http::fake([
+        'http://api.dev.bankofsun.cn/bankofsun/comm2_auto_flow.php' => \Illuminate\Support\Facades\Http::response([
+            'status' => 'success',
+            'message' => '确认担保推送成功',
+            'data' => [
+                'cid' => 10001680,
+                'aid' => 1465,
+                'comm2_apply_id' => 47,
+                'company' => '起起落落测试公司八',
+                'social_credit_code' => '9144080021832648A3',
+                'apply_no' => 'MCPZJSYBFR5292302029966729216',
+                'contract_no' => 'HT20260831001',
+                'skipped_amount_check' => true,
+                'agreed_status' => '0',
+            ],
+        ], 200),
+    ]);
+
+    $response = $this
+        ->withHeader('Authorization', "Bearer {$token}")
+        ->postJson('/api/platform-script/confirm-guarantee', [
+            'script_key' => \App\Services\Api\Admin\PlatformScript\Scripts\BankofsunComm2CreditScript::KEY,
+            'text' => '9144080021832648A3',
+            'ordr_no' => 'BOSC0000000009',
+            'skip_amount_check' => true,
+        ]);
+
+    $response
+        ->assertOk()
+        ->assertJsonPath('data.status', 'success')
+        ->assertJsonPath('data.ordrNo', 'BOSC0000000009');
+
+    $run = PlatformScriptRun::query()->where('ordr_no', 'BOSC0000000009')->firstOrFail();
+    expect(json_decode($run->request_data, true)['action'])->toBe('confirm_guarantee')
+        ->and($run->cust_bank_acct_no)->toBe('9144080021832648A3')
+        ->and($run->cntrct_no)->toBe('HT20260831001');
+});
+
+it('bankofsun 确认担保未指定流水号时新开自增流水号', function () {
+    $token = platformScriptLoginAsAdmin();
+
+    \Illuminate\Support\Facades\Http::fake([
+        'http://api.dev.bankofsun.cn/bankofsun/comm2_auto_flow.php' => \Illuminate\Support\Facades\Http::response([
+            'status' => 'success',
+            'message' => '确认担保推送成功',
+            'data' => [
+                'company' => '起起落落测试公司八',
+                'social_credit_code' => '9144080021832648A3',
+                'contract_no' => 'HT20260831002',
+                'agreed_status' => '0',
+            ],
+        ], 200),
+    ]);
+
+    $response = $this
+        ->withHeader('Authorization', "Bearer {$token}")
+        ->postJson('/api/platform-script/confirm-guarantee', [
+            'script_key' => \App\Services\Api\Admin\PlatformScript\Scripts\BankofsunComm2CreditScript::KEY,
+            'text' => '9144080021832648A3',
+        ]);
+
+    $response->assertOk()->assertJsonPath('data.ordrNo', 'BOSC0000000001');
+});
+
+it('bankofsun 确认担保远端拒绝时落成失败状态并带回中文原因', function () {
+    $token = platformScriptLoginAsAdmin();
+
+    \Illuminate\Support\Facades\Http::fake([
+        'http://api.dev.bankofsun.cn/bankofsun/comm2_auto_flow.php' => \Illuminate\Support\Facades\Http::response([
+            'status' => 'error',
+            'code' => '10022',
+            'message' => '尚未收到交行合同签署通知',
+        ], 200),
+    ]);
+
+    $response = $this
+        ->withHeader('Authorization', "Bearer {$token}")
+        ->postJson('/api/platform-script/confirm-guarantee', [
+            'script_key' => \App\Services\Api\Admin\PlatformScript\Scripts\BankofsunComm2CreditScript::KEY,
+            'text' => '9144080021832648A3',
+        ]);
+
+    $response->assertOk()->assertJsonPath('data.status', 'failed');
+
+    $run = PlatformScriptRun::query()->where('ordr_no', 'BOSC0000000001')->firstOrFail();
+    expect($run->error)->toContain('尚未收到交行合同签署通知');
+});
+
+
 
 
 /**
