@@ -408,6 +408,34 @@ it('bankofsun 脚本支持传递 clear_apply_no 并在 payload 中声明清空',
     expect(json_decode($run->request_data, true)['clear_apply_no'])->toBeTrue();
 });
 
+it('bankofsun 脚本能从整段企业文本中提取统一社会信用代码', function () {
+    $script = new \App\Services\Api\Admin\PlatformScript\Scripts\BankofsunComm2CreditScript(
+        config('platform-script.scripts.' . \App\Services\Api\Admin\PlatformScript\Scripts\BankofsunComm2CreditScript::KEY)
+    );
+
+    expect($script->parseSocialCreditCode(platformScriptBankofsunSampleText()))
+        ->toBe('9144080021832648A3');
+});
+
+it('bankofsun 脚本能从只粘贴信用代码的裸文本中提取统一社会信用代码', function () {
+    $script = new \App\Services\Api\Admin\PlatformScript\Scripts\BankofsunComm2CreditScript(
+        config('platform-script.scripts.' . \App\Services\Api\Admin\PlatformScript\Scripts\BankofsunComm2CreditScript::KEY)
+    );
+
+    expect($script->parseSocialCreditCode("  9144080021832645XT \n"))
+        ->toBe('9144080021832645XT');
+});
+
+it('bankofsun 脚本取不到统一社会信用代码时抛出异常', function () {
+    $script = new \App\Services\Api\Admin\PlatformScript\Scripts\BankofsunComm2CreditScript(
+        config('platform-script.scripts.' . \App\Services\Api\Admin\PlatformScript\Scripts\BankofsunComm2CreditScript::KEY)
+    );
+
+    expect(fn () => $script->parseSocialCreditCode('企业名称: 没有信用代码的公司'))
+        ->toThrow(InvalidArgumentException::class);
+});
+
+
 
 /**
  * sinoloans 放款测试样例粘贴文本。

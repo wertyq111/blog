@@ -131,6 +131,108 @@ class BankofsunComm2CreditScript
     }
 
     /**
+     * 宽松解析统一社会信用代码：支持整段企业文本，也支持只粘贴一个裸信用代码。
+     *
+     * @param string $text 粘贴文本
+     * @return string
+     * @author zhouxufeng <zxf@netsun.com>
+     * @date 2026/8/31
+     */
+    public function parseSocialCreditCode(string $text): string
+    {
+        foreach (preg_split('/\r\n|\r|\n/', $text) as $line) {
+            $parts = preg_split('/[:：]/u', $line, 2);
+            if (count($parts) < 2) {
+                continue;
+            }
+
+            $label = preg_replace('/\s+/u', '', $parts[0]);
+            $value = preg_replace('/^[\s,，]+|[\s,，]+$/u', '', $parts[1]);
+
+            if ($label === '' || $value === '') {
+                continue;
+            }
+
+            foreach (self::LABEL_MAP['social_credit_code'] as $alias) {
+                if (strcasecmp($label, $alias) === 0 || str_contains($label, $alias)) {
+                    return $value;
+                }
+            }
+        }
+
+        // 无标签时按 18 位统一社会信用代码字符集直接匹配
+        if (preg_match('/\b([0-9A-HJ-NPQRTUWXY]{18})\b/', $text, $matches)) {
+            return $matches[1];
+        }
+
+        throw new \InvalidArgumentException('未能从文本中解析出统一社会信用代码');
+    }
+
+    /**
+     * 调用远程接口查询该笔授信在交行侧的进度。
+     *
+     * @param string $socialCreditCode 统一社会信用代码
+     * @return array
+     * @author zhouxufeng <zxf@netsun.com>
+     * @date 2026/8/31
+     */
+    public function queryCreditProgress(string $socialCreditCode): array
+    {
+        return $this->postAutoFlow([
+            'action' => 'credit_progress',
+            'social_credit_code' => $socialCreditCode,
+        ]);
+    }
+
+    /**
+     * 调用远程接口推送确认担保（同意担保 Y）。
+     *
+     * @param string $socialCreditCode 统一社会信用代码
+     * @param bool $skipAmountCheck 是否忽略额度校验强制推送
+     * @return array
+     * @author zhouxufeng <zxf@netsun.com>
+     * @date 2026/8/31
+     */
+    public function confirmGuarantee(string $socialCreditCode, bool $skipAmountCheck): array
+    {
+        return $this->postAutoFlow([
+            'action' => 'confirm_guarantee',
+            'social_credit_code' => $socialCreditCode,
+            'skip_amount_check' => $skipAmountCheck,
+        ]);
+    }
+
+    /**
+     * 向 comm2_auto_flow 发送请求并校验业务状态。
+     *
+     * @param array $payload 请求体
+     * @return array
+     * @author zhouxufeng <zxf@netsun.com>
+     * @date 2026/8/31
+     */
+    private function postAutoFlow(array $payload): array
+    {
+        $response = Http::timeout($this->timeout())
+            ->asJson()
+            ->post($this->apiUrl(), $payload);
+
+        if (!$response->successful()) {
+            throw new \RuntimeException('远程接口返回 HTTP 异常：' . $response->status());
+        }
+
+        $json = $response->json();
+
+        if (($json['status'] ?? '') !== 'success') {
+            $errorMsg = $json['message'] ?? '未知错误';
+            $errorCode = $json['code'] ?? '';
+
+            throw new \RuntimeException("接口执行失败 [{$errorCode}]: {$errorMsg}");
+        }
+
+        return $json;
+    }
+
+    /**
      * 将用户显式填写的字段与查询到的企业建档数据进行合并。
      *
      * 如果企业已建档：未在输入文本中指定的字段自动继承已建档的原值，绝不覆盖/清空原有资料。
