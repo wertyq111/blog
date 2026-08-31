@@ -580,6 +580,37 @@ it('bankofsun 确认担保远端拒绝时落成失败状态并带回中文原因
     expect($run->error)->toContain('尚未收到交行合同签署通知');
 });
 
+it('执行记录按流水号分组分页且同一流水号不会被切开', function () {
+    $token = platformScriptLoginAsAdmin();
+
+    platformScriptCreateRun([
+        'script_key' => \App\Services\Api\Admin\PlatformScript\Scripts\BankofsunComm2CreditScript::KEY,
+        'ordr_no' => 'BOSC0000000001',
+        'request_data' => json_encode(['action' => 'auto_all']),
+    ]);
+    platformScriptCreateRun([
+        'script_key' => \App\Services\Api\Admin\PlatformScript\Scripts\BankofsunComm2CreditScript::KEY,
+        'ordr_no' => 'BOSC0000000002',
+        'request_data' => json_encode(['action' => 'auto_all']),
+    ]);
+    platformScriptCreateRun([
+        'script_key' => \App\Services\Api\Admin\PlatformScript\Scripts\BankofsunComm2CreditScript::KEY,
+        'ordr_no' => 'BOSC0000000001',
+        'request_data' => json_encode(['action' => 'confirm_guarantee']),
+    ]);
+
+    $response = $this
+        ->withHeader('Authorization', "Bearer {$token}")
+        ->getJson('/api/platform-script/index?page=1&per_page=1');
+
+    $response->assertOk()->assertJsonPath('count', 2);
+
+    $data = $response->json('data');
+    expect($data)->toHaveCount(2)
+        ->and(collect($data)->pluck('ordrNo')->unique()->values()->all())->toBe(['BOSC0000000001']);
+});
+
+
 
 
 

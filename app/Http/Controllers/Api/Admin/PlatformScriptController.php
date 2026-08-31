@@ -26,24 +26,34 @@ class PlatformScriptController extends Controller
     }
 
     /**
-     * 执行记录列表 - 分页
+     * 执行记录列表 - 按流水号分组分页
      *
      * @param PlatformScriptRequest $request
      * @param PlatformScriptRun $platformScriptRun
      * @return BaseResource
      * @author zhouxufeng <zxf@netsun.com>
-     * @date 2026/7/23
+     * @date 2026/8/31
      */
     public function index(PlatformScriptRequest $request, PlatformScriptRun $platformScriptRun)
     {
         $allowedFilters = $request->generateAllowedFilters($platformScriptRun->getRequestFilters());
 
-        $runs = QueryBuilder::for($platformScriptRun)
+        // 分页单位是流水号：先按流水号分组分页，保证同一流水号的多条记录不被切开
+        $ordrNoPage = QueryBuilder::for($platformScriptRun)
             ->allowedFilters($allowedFilters)
-            ->orderByDesc('id')
+            ->selectRaw('ordr_no, MAX(id) AS last_id')
+            ->groupBy('ordr_no')
+            ->orderByDesc('last_id')
             ->paginate($request->perPage());
 
-        return $this->resource($runs, ['time' => true, 'collection' => true]);
+        $runs = PlatformScriptRun::query()
+            ->whereIn('ordr_no', collect($ordrNoPage->items())->pluck('ordr_no')->all())
+            ->orderByDesc('id')
+            ->get();
+
+        $ordrNoPage->setCollection($runs);
+
+        return $this->resource($ordrNoPage, ['time' => true, 'collection' => true]);
     }
 
     /**
