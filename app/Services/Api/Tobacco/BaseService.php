@@ -10,6 +10,34 @@ use Illuminate\Support\Facades\DB;
 
 class BaseService extends ParentBaseService
 {
+    /**
+     * 档位模型
+     *
+     * @var TobaccoStage
+     */
+    protected TobaccoStage $stageModel;
+
+    /**
+     * 客户模型
+     *
+     * @var TobaccoCustomer
+     */
+    protected TobaccoCustomer $customerModel;
+
+    /**
+     * 供货档位数量模型
+     *
+     * @var TobaccoSupplyStageNumber
+     */
+    protected TobaccoSupplyStageNumber $numberModel;
+
+    /**
+     * 初始化烟草业务公用模型
+     *
+     * @return void
+     * @author zhouxufeng <zxf@netsun.com>
+     * @date 2026/9/1
+     */
     public function __construct()
     {
         $this->stageModel = new TobaccoStage();
