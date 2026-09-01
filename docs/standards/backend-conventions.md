@@ -73,23 +73,40 @@ app/Models/<域>/Xxx.php
 
 URL 用 **kebab-case 资源名**，路由名用 `资源名.动作`，动作名与 Controller 方法名一致。
 
-标准后台 CRUD 一律照抄这七行（以 `server-path` 为样板）：
+**同一个 Controller 有 3 条以上路由时，一律用 `Route::controller()` 分组**，不要平铺。样板（`server-path`）：
 
 ```php
-Route::get('server-path/index', [ServerPathController::class, 'index'])->name('server-path.index')
-    ->middleware('filter.process:' . ServerPath::class);
-Route::get('server-path/{serverPath}', [ServerPathController::class, 'info'])->name('server-path.info');
-Route::post('server-path/add', [ServerPathController::class, 'add'])->name('server-path.add');
-Route::post('server-path/delete', [ServerPathController::class, 'batchDelete'])->name('server-path.batch-delete');
-Route::post('server-path/{serverPath}', [ServerPathController::class, 'edit'])->name('server-path.edit');
-Route::delete('server-path/{serverPath}', [ServerPathController::class, 'delete'])->name('server-path.delete');
-Route::post('server-path/status/{serverPath}', [ServerPathController::class, 'status'])->name('server-path.status');
+Route::controller(ServerPathController::class)
+    ->prefix('server-path')
+    ->name('server-path.')
+    ->group(function () {
+        // 服务器路径列表
+        Route::get('index', 'index')->name('index')
+            ->middleware('filter.process:' . ServerPath::class);
+        // 添加服务器路径
+        Route::post('add', 'add')->name('add');
+        // 批量删除
+        Route::post('delete', 'batchDelete')->name('batch-delete');
+        // 状态切换
+        Route::post('status/{serverPath}', 'status')->name('status');
+
+        // {serverPath} 通配必须排在具体路径之后
+        Route::get('{serverPath}', 'info')->name('info');
+        Route::post('{serverPath}', 'edit')->name('edit');
+        Route::delete('{serverPath}', 'delete')->name('delete');
+    });
 ```
+
+分组写法消掉了每行重复的 `[XxxController::class, ...]` 和 name 前缀，更重要的是**把「通配路由排最后」这个约束变成了代码里的物理位置**，写的人一眼看见，不用记规范。
+
+少于 3 条路由的 Controller 保持平铺，分组反而更啰嗦。
 
 要点：
 
+- **`{model}` 占位符不能省**。项目大量依赖隐式模型绑定，且 `LabelRequest` / `MenuRequest` / `RoleRequest` / `UserRequest` 靠 `$this->route('label')` 取路由参数做唯一性校验，省掉占位符会同时废掉这两样。
 - **列表固定挂 `filter.process:<Model>::class` 中间件**，把前端筛选参数转成 `filter[...]`；Controller 里不要手写筛选解析。
-- **`{model}` 通配路由必须写在具体路径之后**。`server-path/add` 要排在 `server-path/{serverPath}` 前面，否则 `add` 会被当成模型 ID。
+- **`{model}` 通配路由必须写在具体路径之后**。`add` 要排在 `{serverPath}` 前面，否则 `add` 会被当成模型 ID。同方法下才会冲突，不同 HTTP 方法之间不受影响。
+- **改路由后用 `php artisan route:list --json` 比对改动前后的快照**（uri / name / action / middleware 四列），确认没有意外增删。注册顺序不在 `route:list` 的输出里，需要顺序验证时直接遍历 `app('router')->getRoutes()`。
 - **批量删除统一 `POST <资源>/delete` → `batchDelete`，路由名 `<资源>.batch-delete`**。不要再用 `batchDelete` 作为 URL 段。
 - 单条状态切换统一 `POST <资源>/status/{model}`。
 - 非 CRUD 的业务动作用 `POST/GET <资源>/<动作>[/{model}]`，动作名 kebab-case，路由名同名 kebab-case（如 `work-daily/report/export` → `work-daily.report-export`）。
