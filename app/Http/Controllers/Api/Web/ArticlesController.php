@@ -12,11 +12,17 @@ use Illuminate\Http\Request;
 
 class ArticlesController extends Controller
 {
-    public function __construct()
+    /**
+     * 初始化服务。
+     *
+     * @param ArticleService $service
+     * @return void
+     * @author zhouxufeng <zxf@netsun.com>
+     * @date 2026/9/1
+     */
+    public function __construct(private readonly ArticleService $service)
     {
         parent::__construct();
-
-        $this->service = new ArticleService();
     }
 
     /**

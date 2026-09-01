@@ -15,10 +15,17 @@ use Maatwebsite\Excel\Facades\Excel;
 
 class TobaccoSupplementController extends BaseController
 {
-    public function __construct()
+    /**
+     * 初始化服务。
+     *
+     * @param SupplementService $service
+     * @return void
+     * @author zhouxufeng <zxf@netsun.com>
+     * @date 2026/9/1
+     */
+    public function __construct(private readonly SupplementService $service)
     {
         parent::__construct();
-        $this->service = new SupplementService();
     }
 
 
