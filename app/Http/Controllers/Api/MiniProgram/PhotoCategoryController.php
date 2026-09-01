@@ -12,10 +12,17 @@ use App\Services\Api\MiniProgram\PhotoService;
 
 class PhotoCategoryController extends Controller
 {
-    public function __construct()
+    /**
+     * 初始化服务。
+     *
+     * @param PhotoService $service
+     * @return void
+     * @author zhouxufeng <zxf@netsun.com>
+     * @date 2026/9/1
+     */
+    public function __construct(private readonly PhotoService $service)
     {
         parent::__construct();
-        $this->service = new PhotoService();
     }
 
     /**

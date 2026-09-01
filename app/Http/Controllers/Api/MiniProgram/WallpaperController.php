@@ -11,10 +11,17 @@ use App\Services\Api\MiniProgram\WallpaperService;
 
 class WallpaperController extends Controller
 {
-    public function __construct()
+    /**
+     * 初始化服务。
+     *
+     * @param WallpaperService $service
+     * @return void
+     * @author zhouxufeng <zxf@netsun.com>
+     * @date 2026/9/1
+     */
+    public function __construct(private readonly WallpaperService $service)
     {
         parent::__construct();
-        $this->service = new WallpaperService();
     }
 
 

@@ -11,10 +11,17 @@ use App\Services\Api\MiniProgram\MaterialService;
 
 class MaterialController extends Controller
 {
-    public function __construct()
+    /**
+     * 初始化服务。
+     *
+     * @param MaterialService $service
+     * @return void
+     * @author zhouxufeng <zxf@netsun.com>
+     * @date 2026/9/1
+     */
+    public function __construct(private readonly MaterialService $service)
     {
         parent::__construct();
-        $this->service = new MaterialService();
     }
 
 
