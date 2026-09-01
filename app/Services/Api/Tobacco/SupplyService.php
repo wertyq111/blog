@@ -3,16 +3,9 @@
 namespace App\Services\Api\Tobacco;
 
 use App\Models\Tobacco\TobaccoSupply;
-use App\Models\Tobacco\TobaccoSupplyStageNumber;
 
 class SupplyService extends BaseService
 {
-    public function __construct()
-    {
-        parent::__construct();
-        $this->numberModel = new TobaccoSupplyStageNumber();
-    }
-
     /**
      * 添加
      *
