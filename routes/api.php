@@ -200,7 +200,8 @@ Route::name('api')->group(function () {
                 Route::get('list', 'list')->name('list');
                 // 添加会员等级
                 Route::post('add', 'add')->name('add');
-                Route::delete('batchDelete', 'batchDelete')->name('batchDelete');
+                // 批量删除
+                Route::post('delete', 'batchDelete')->name('batch-delete');
                 // 修改状态
                 Route::post('status/{memberLevel}', 'status')->name('status');
                 // 修改会员等级
@@ -225,7 +226,7 @@ Route::name('api')->group(function () {
                 // 添加角色
                 Route::post('add', 'add')->name('add');
                 // 批量删除角色
-                Route::post('batchDelete', 'batchDelete')->name('batchDelete');
+                Route::post('delete', 'batchDelete')->name('batch-delete');
                 // 角色权限更新
                 Route::post('permission/{role}', 'savePermissionList')->name('savePermissionList');
                 // 修改角色
@@ -607,10 +608,10 @@ Route::name('api')->group(function () {
                 Route::get('{photo}', 'info')->name('info');
                 // 添加相册
                 Route::post('add', 'add')->name('add');
+                // 批量删除
+                Route::post('delete', 'batchDelete')->name('batch-delete');
                 // 修改相册
                 Route::post('{photo}', 'edit')->name('edit');
-                // 批量删除
-                Route::delete('batch-delete', 'batchDelete')->name('batch-delete');
                 // 删除相册
                 Route::delete('{photo}', 'delete')->name('delete');
             });
@@ -675,10 +676,10 @@ Route::name('api')->group(function () {
                 Route::get('{material}', 'info')->name('info');
                 // 添加
                 Route::post('add', 'add')->name('add');
+                // 批量删除
+                Route::post('delete', 'batchDelete')->name('batch-delete');
                 // 修改
                 Route::post('{material}', 'edit')->name('edit');
-                // 批量删除
-                Route::delete('batch-delete', 'batchDelete')->name('batch-delete');
                 // 删除
                 Route::delete('{material}', 'delete')->name('delete');
             });
