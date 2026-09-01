@@ -86,13 +86,13 @@ class BaseController extends Controller
         defined('DB_NAME') or define('DB_NAME', DB::connection()->getDatabaseName());
 
         // 系统全称
-        define('SITE_NAME', env('SITE_NAME'));
+        defined('SITE_NAME') or define('SITE_NAME', env('SITE_NAME'));
 
         // 系统简称
-        define('NICK_NAME', env('NICK_NAME'));
+        defined('NICK_NAME') or define('NICK_NAME', env('NICK_NAME'));
 
         // 系统版本号
-        define('VERSION', env('VERSION'));
+        defined('VERSION') or define('VERSION', env('VERSION'));
     }
 
 }
