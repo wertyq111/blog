@@ -3,9 +3,6 @@
 namespace App\Models\Admin;
 
 use App\Models\BaseModel;
-use App\Models\MiniProgram\WallpaperClassify;
-use App\Models\MiniProgram\WallpaperDownload;
-use App\Models\MiniProgram\WallpaperScore;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class ServerPath extends BaseModel
