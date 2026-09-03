@@ -15,6 +15,14 @@ use Tests\TestCase;
 uses(TestCase::class);
 
 beforeEach(function () {
+    // chemnet 接口地址钉死在测试里：CI 走 `cp .env.example .env`，
+    // .env 里一旦有空值的 CHEMNET_SECRET_CODE_API_URL，env() 返回 '' 而非 config 默认值，
+    // 会让所有 ChemNet 用例在发请求前就抛「未配置接口地址」。测试不该依赖环境变量。
+    Config::set(
+        'platform-script.scripts.chemnet-secret-code.api_url',
+        'http://chemnet.test/chemnet/index.php'
+    );
+
     Config::set('database.default', 'sqlite');
     Config::set('database.connections.sqlite.database', ':memory:');
     DB::purge('sqlite');
