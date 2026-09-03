@@ -59,7 +59,6 @@ class PlatformScriptService
                 'login' => $login,
                 'found' => $queryResult['found'],
                 'record' => $queryResult['record'],
-                'list' => $queryResult['list'],
                 'ordr_no' => $ordrNo,
             ];
         }
