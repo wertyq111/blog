@@ -2,11 +2,13 @@
 
 use App\Models\Admin\PlatformScriptRun;
 use App\Models\User\User;
+use App\Services\Api\Admin\PlatformScript\Scripts\ChemnetSecretCodeScript;
 use App\Services\Api\Admin\PlatformScript\Scripts\SinoloansComm3LoanScript;
 use App\Services\Api\Admin\PlatformScript\Support\SshRunner;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 
@@ -211,6 +213,121 @@ it('ChemNet 脚本流水号自增正确', function () {
 
     expect($script->nextOrdrNo(null))->toBe('CHEM0000000001')
         ->and($script->nextOrdrNo('CHEM0000000008'))->toBe('CHEM0000000009');
+});
+
+it('ChemNet 查询走 get_bind_info 接口，返回手机号与绑定状态', function () {
+    $token = platformScriptLoginAsAdmin();
+
+    Http::fake(fn ($request) => Http::response(chemnetBindInfoBody('15012341304'), 200));
+
+    $response = $this
+        ->withHeader('Authorization', "Bearer {$token}")
+        ->postJson('/api/platform-script/preview', [
+            'script_key' => ChemnetSecretCodeScript::KEY,
+            'login' => 'zxfe123',
+        ]);
+
+    // 接口按白名单输出，不再有 code / post_ip
+    $response
+        ->assertOk()
+        ->assertJsonPath('data.found', true)
+        ->assertJsonPath('data.record.id', '120')
+        ->assertJsonPath('data.record.mobile', '15012341304')
+        ->assertJsonPath('data.record.status_text', '已绑定')
+        ->assertJsonMissingPath('data.record.code')
+        ->assertJsonMissingPath('data.record.post_ip');
+
+    Http::assertSent(fn ($request) => str_contains($request->url(), '_a=secret_code')
+        && str_contains($request->url(), 'f=get_bind_info')
+        && str_contains($request->url(), 'login=zxfe123'));
+});
+
+it('ChemNet 查无绑定记录时按 found=false 返回，不当成接口失败', function () {
+    $token = platformScriptLoginAsAdmin();
+
+    // 接口对查无记录返回 state=0 + exp=not_found，这是业务结果而非异常
+    Http::fake(fn ($request) => Http::response(['state' => 0, 'exp' => 'not_found'], 200));
+
+    $this
+        ->withHeader('Authorization', "Bearer {$token}")
+        ->postJson('/api/platform-script/preview', [
+            'script_key' => ChemnetSecretCodeScript::KEY,
+            'login' => 'no_such_login',
+        ])
+        ->assertOk()
+        ->assertJsonPath('data.found', false)
+        ->assertJsonPath('data.record', null);
+});
+
+it('ChemNet 修改手机号先查 id 再按 id 调 change_mobile', function () {
+    $token = platformScriptLoginAsAdmin();
+
+    // 接口只认记录 id，不认 login；漏掉这一步会改错人或直接报 invalid_id
+    Http::fake(function ($request) {
+        if (str_contains($request->url(), 'f=change_mobile')) {
+            return Http::response([
+                'state' => 1,
+                'exp' => 'changed',
+                'data' => [
+                    'id' => '120',
+                    'login' => 'zxfe123',
+                    'mobile_old' => '15012341304',
+                    'mobile_new' => '13800008000',
+                ],
+            ], 200);
+        }
+
+        return Http::response(chemnetBindInfoBody('13800008000'), 200);
+    });
+
+    $this
+        ->withHeader('Authorization', "Bearer {$token}")
+        ->postJson('/api/platform-script/run', [
+            'script_key' => ChemnetSecretCodeScript::KEY,
+            'login' => 'zxfe123',
+            'mobile' => '13800008000',
+        ])
+        ->assertOk()
+        ->assertJsonPath('data.status', 'success');
+
+    Http::assertSent(fn ($request) => str_contains($request->url(), 'f=change_mobile')
+        && $request['id'] === '120'
+        && $request['mobile'] === '13800008000');
+
+    $run = PlatformScriptRun::query()->where('ordr_no', 'CHEM0000000001')->firstOrFail();
+    $output = json_decode($run->output, true);
+
+    expect($run->status)->toBe('success')
+        ->and($output['record_id'])->toBe('120')
+        ->and($output['old_mobile'])->toBe('15012341304')
+        ->and($output['new_mobile'])->toBe('13800008000');
+});
+
+it('ChemNet 接口业务失败时落成 failed 并保留中文错误说明', function () {
+    $token = platformScriptLoginAsAdmin();
+
+    Http::fake(function ($request) {
+        if (str_contains($request->url(), 'f=change_mobile')) {
+            return Http::response(['state' => 0, 'exp' => 'failed'], 200);
+        }
+
+        return Http::response(chemnetBindInfoBody('15012341304'), 200);
+    });
+
+    $this
+        ->withHeader('Authorization', "Bearer {$token}")
+        ->postJson('/api/platform-script/run', [
+            'script_key' => ChemnetSecretCodeScript::KEY,
+            'login' => 'zxfe123',
+            'mobile' => '13800008000',
+        ])
+        ->assertOk()
+        ->assertJsonPath('data.status', 'failed');
+
+    $run = PlatformScriptRun::query()->where('ordr_no', 'CHEM0000000001')->firstOrFail();
+
+    expect($run->error)->toContain('failed')
+        ->and($run->error)->toContain('接口执行更新失败');
 });
 
 it('bankofsun 脚本流水号自增正确', function () {
@@ -718,3 +835,26 @@ function platformScriptBankofsunSampleText(): string
 TEXT;
 }
 
+/**
+ * 构造 chemnet get_bind_info 接口的成功响应体。
+ *
+ * @param string $mobile 绑定手机号
+ * @return array
+ * @author zhouxufeng <zxf@netsun.com>
+ * @date 2026/9/3
+ */
+function chemnetBindInfoBody(string $mobile): array
+{
+    return [
+        'state' => 1,
+        'exp' => 'ok',
+        'data' => [
+            'id' => '120',
+            'login' => 'zxfe123',
+            'mobile' => $mobile,
+            'status' => '1',
+            'status_text' => '已绑定',
+            'post_time' => '2017-10-17 13:57:30',
+        ],
+    ];
+}
