@@ -29,9 +29,8 @@ class WorkDailyLogController extends Controller
     /** 本机 Gemini(agy) CLI 可选模型 */
     private const LOCAL_AGY_MODELS = [
         'local-agy/gemini-3.1-pro-high',
-        'local-agy/gemini-3.5-flash-high',
-        'local-agy/gemini-3.6-flash-high',
         'local-agy/gemini-3.7-flash-high',
+        'local-agy/gemini-3.8-flash-high',
     ];
 
     /** 本机 Claude CLI 可选模型 */
