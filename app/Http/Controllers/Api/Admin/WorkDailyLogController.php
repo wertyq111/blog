@@ -24,6 +24,7 @@ class WorkDailyLogController extends Controller
         'local-codex/gpt-5.5',
         'local-codex/gpt-5.6-sol',
         'local-codex/gpt-5.6-terra',
+        'local-codex/gpt-6-astra',
     ];
 
     /** 本机 Gemini(agy) CLI 可选模型 */
