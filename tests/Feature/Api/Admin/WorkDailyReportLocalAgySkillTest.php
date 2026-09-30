@@ -14,7 +14,7 @@ function localAgySkillCallReportModel(
     $method = new ReflectionMethod($service, 'callReportModel');
     $method->setAccessible(true);
 
-    return $method->invoke($service, $prompt, $model, 'work-daily-report');
+    return $method->invoke($service, $prompt, $model, 'work-daily-report', 'month');
 }
 
 it('选择 Gemini (Agy) 导出报表时调用 human-writing skill', function () {

@@ -318,7 +318,7 @@ class WorkDailyReportService
                 : "上一期报表概览（previous_summary，仅用于趋势对比）：\n{$previousOverview}\n\n") .
             "原始记录（已按大类、平台分组）：\n{$source}";
 
-        return $this->normalizeSummaryMarkdown($title, $this->callReportModel($prompt, $model, 'work-daily-report'));
+        return $this->normalizeSummaryMarkdown($title, $this->callReportModel($prompt, $model, 'work-daily-report', $type));
     }
 
     private function buildGrowthMarkdown(string $title, array $personalGroups, string $type, ?string $model, ?string $previousOverview = null): string
@@ -343,7 +343,7 @@ class WorkDailyReportService
                 : "上一期成长记录概览（previous_summary，仅用于趋势对比）：\n{$previousOverview}\n\n") .
             "原始记录（个人大类，已按平台分组）：\n" . $this->formatRecordSource($personalGroups, '##');
 
-        return $this->normalizeSummaryMarkdown($title, $this->callReportModel($prompt, $model, 'personal-growth-report'));
+        return $this->normalizeSummaryMarkdown($title, $this->callReportModel($prompt, $model, 'personal-growth-report', $type));
     }
 
     public function findPreviousOverview(int $userId, string $type, string $kind, string $periodStart): ?string
@@ -466,20 +466,23 @@ class WorkDailyReportService
         return $platforms;
     }
 
-    private function callReportModel(string $prompt, ?string $model, string $skillName): string
+    private function callReportModel(string $prompt, ?string $model, string $skillName, string $type): string
     {
         $targetModel = $model ?: env('OPENCLAW_MODEL', 'github-copilot/gpt-5.2-codex');
+        // 超时逐层递减：任务 > 后端 HTTP > 桥里的 CLI，保证最内层先超时、报出真实原因
+        $httpTimeout = WorkDailyReportExport::timeoutFor($type) - 30;
+        $cliTimeout = $httpTimeout - 30;
 
         if ($this->isLocalCodexModel($targetModel)) {
-            return $this->callLocalCodex($this->applyHumanWritingSkill($prompt, $skillName), $targetModel);
+            return $this->callLocalCodex($this->applyHumanWritingSkill($prompt, $skillName), $targetModel, $httpTimeout, $cliTimeout);
         }
 
         if ($this->isLocalAgyModel($targetModel)) {
-            return $this->callLocalAgy($this->applyHumanWritingSkill($prompt, $skillName), $targetModel);
+            return $this->callLocalAgy($this->applyHumanWritingSkill($prompt, $skillName), $targetModel, $httpTimeout, $cliTimeout);
         }
 
         if ($this->isLocalClaudeModel($targetModel)) {
-            return $this->callLocalClaude($this->applyHumanWritingSkill($prompt, $skillName), $targetModel);
+            return $this->callLocalClaude($this->applyHumanWritingSkill($prompt, $skillName), $targetModel, $httpTimeout, $cliTimeout);
         }
 
         return $this->callOpenClaw($prompt, $targetModel);
@@ -556,7 +559,7 @@ class WorkDailyReportService
         return $content;
     }
 
-    private function callLocalCodex(string $prompt, string $model): string
+    private function callLocalCodex(string $prompt, string $model, int $httpTimeout, int $cliTimeout): string
     {
         $baseUrl = $this->resolveLocalCodexBridgeUrl();
         if (!$baseUrl) {
@@ -571,9 +574,10 @@ class WorkDailyReportService
 
         try {
             $response = Http::withHeaders($headers)
-                ->timeout(1770)
+                ->timeout($httpTimeout)
                 ->post($baseUrl . '/v1/chat/completions', [
                     'model' => $model,
+                    'timeout' => $cliTimeout,
                     'messages' => [
                         ['role' => 'system', 'content' => '你是一个擅长按平台归纳工作日志的助手，输出中文 Markdown。'],
                         ['role' => 'user', 'content' => $prompt],
@@ -595,7 +599,7 @@ class WorkDailyReportService
         return $content;
     }
 
-    private function callLocalAgy(string $prompt, string $model): string
+    private function callLocalAgy(string $prompt, string $model, int $httpTimeout, int $cliTimeout): string
     {
         $baseUrl = $this->resolveLocalAgyBridgeUrl();
         if (!$baseUrl) {
@@ -610,9 +614,10 @@ class WorkDailyReportService
 
         try {
             $response = Http::withHeaders($headers)
-                ->timeout(1770)
+                ->timeout($httpTimeout)
                 ->post($baseUrl . '/v1/chat/completions', [
                     'model' => $model,
+                    'timeout' => $cliTimeout,
                     'messages' => [
                         ['role' => 'system', 'content' => '你是一个擅长按平台归纳工作日志的助手，输出中文 Markdown。'],
                         ['role' => 'user', 'content' => $prompt],
@@ -634,7 +639,7 @@ class WorkDailyReportService
         return $content;
     }
 
-    private function callLocalClaude(string $prompt, string $model): string
+    private function callLocalClaude(string $prompt, string $model, int $httpTimeout, int $cliTimeout): string
     {
         $baseUrl = $this->resolveLocalClaudeBridgeUrl();
         if (!$baseUrl) {
@@ -649,9 +654,10 @@ class WorkDailyReportService
 
         try {
             $response = Http::withHeaders($headers)
-                ->timeout(1770)
+                ->timeout($httpTimeout)
                 ->post($baseUrl . '/v1/chat/completions', [
                     'model' => $model,
+                    'timeout' => $cliTimeout,
                     'messages' => [
                         ['role' => 'system', 'content' => '你是一个擅长按平台归纳工作日志的助手，输出中文 Markdown。'],
                         ['role' => 'user', 'content' => $prompt],
