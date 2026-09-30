@@ -11,11 +11,15 @@ class WorkDailyReportExport extends BaseModel
     public const STATUS_COMPLETED = 'completed';
     public const STATUS_FAILED = 'failed';
 
+    public const KIND_WORK = 'work';
+    public const KIND_GROWTH = 'growth';
+
     protected $table = 'work_daily_report_exports';
 
     protected $fillable = [
         'user_id',
         'type',
+        'kind',
         'period_start',
         'period_end',
         'model',

@@ -9,6 +9,16 @@ class WorkPlatform extends BaseModel
 {
     use HasFactory;
 
+    public const CATEGORY_WORK = 'work';
+    public const CATEGORY_STUDY = 'study';
+    public const CATEGORY_PERSONAL = 'personal';
+
+    public const CATEGORIES = [
+        self::CATEGORY_WORK,
+        self::CATEGORY_STUDY,
+        self::CATEGORY_PERSONAL,
+    ];
+
     /**
      * The attributes that are mass assignable.
      *
@@ -16,6 +26,7 @@ class WorkPlatform extends BaseModel
      */
     protected $fillable = [
         'name',
+        'category',
         'status',
         'sort',
         'user_id',
@@ -28,6 +39,7 @@ class WorkPlatform extends BaseModel
      */
     protected $requestFilters = [
         'name' => ['column' => 'name'],
+        'category' => ['column' => 'category', 'filterType' => 'exact'],
         'status' => ['column' => 'status', 'filterType' => 'exact'],
     ];
 

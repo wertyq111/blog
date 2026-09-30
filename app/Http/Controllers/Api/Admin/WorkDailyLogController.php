@@ -21,9 +21,7 @@ class WorkDailyLogController extends Controller
 {
     /** 本机 Codex CLI 可选模型 */
     private const LOCAL_CODEX_MODELS = [
-        'local-codex/gpt-5.5',
-        'local-codex/gpt-5.6-sol',
-        'local-codex/gpt-5.6-terra',
+        'local-codex/gpt-6-sol',
         'local-codex/gpt-6-astra',
     ];
 
@@ -39,6 +37,7 @@ class WorkDailyLogController extends Controller
         'local-claude/claude-opus-4-6',
         'local-claude/claude-opus-4-8',
         'local-claude/claude-opus-5',
+        'local-claude/claude-opus-5-5',
     ];
 
     /**
@@ -345,10 +344,12 @@ class WorkDailyLogController extends Controller
     }
 
     /**
-     * 创建异步报表导出任务。
+     * 创建异步报表导出任务：工作报表必出，区间内有「个人」大类记录时附带一份个人成长记录。
      *
      * @param WorkDailyLogRequest $request
      * @return \Illuminate\Http\JsonResponse
+     * @author zhouxufeng <zxf@netsun.com>
+     * @date 2026/9/30
      */
     public function reportExport(WorkDailyLogRequest $request)
     {
@@ -370,15 +371,21 @@ class WorkDailyLogController extends Controller
                     return [
                         'blocked' => true,
                         'export' => $this->workDailyReportService->exportData($activeExport),
+                        'growthExport' => null,
                     ];
                 }
 
-                $export = $this->workDailyReportService->createExport($userId, $type, $payload, $model);
-                GenerateWorkDailyReportExport::dispatch($export->id);
+                $exports = $this->workDailyReportService->createExports($userId, $type, $payload, $model);
+                foreach ($exports as $export) {
+                    GenerateWorkDailyReportExport::dispatch($export->id);
+                }
+                $workExport = $exports[0];
+                $growthExport = $exports[1] ?? null;
 
                 return [
                     'blocked' => false,
-                    'export' => $this->workDailyReportService->exportData($export),
+                    'export' => $this->workDailyReportService->exportData($workExport),
+                    'growthExport' => $growthExport ? $this->workDailyReportService->exportData($growthExport) : null,
                 ];
             });
 

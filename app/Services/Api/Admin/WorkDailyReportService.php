@@ -18,15 +18,41 @@ class WorkDailyReportService
     ) {
     }
 
-    public function createExport(int $userId, string $type, array $payload, ?string $model): WorkDailyReportExport
+    /**
+     * 创建一次导出的全部报表任务：工作报表必建，区间内有「个人」大类记录时再建一份个人成长记录。
+     *
+     * @param int $userId
+     * @param string $type
+     * @param array $payload
+     * @param string|null $model
+     * @return WorkDailyReportExport[]
+     * @author zhouxufeng <zxf@netsun.com>
+     * @date 2026/9/30
+     */
+    public function createExports(int $userId, string $type, array $payload, ?string $model): array
     {
         [$start, $end] = $this->resolveRange($type, $payload);
-        $fileName = $this->buildFileName($type, $payload);
+        $user = User::query()->with('roles')->findOrFail($userId);
+        $groups = $this->groupRecordsByCategory($this->fetchLogs($user, $start, $end));
+
+        $exports = [$this->createExport($userId, $type, WorkDailyReportExport::KIND_WORK, $payload, $model)];
+        if (!empty($groups[WorkPlatform::CATEGORY_PERSONAL])) {
+            $exports[] = $this->createExport($userId, $type, WorkDailyReportExport::KIND_GROWTH, $payload, $model);
+        }
+
+        return $exports;
+    }
+
+    private function createExport(int $userId, string $type, string $kind, array $payload, ?string $model): WorkDailyReportExport
+    {
+        [$start, $end] = $this->resolveRange($type, $payload);
+        $fileName = $this->buildFileName($type, $kind, $payload);
 
         $export = new WorkDailyReportExport();
         $export->fill([
             'user_id' => $userId,
             'type' => $type,
+            'kind' => $kind,
             'period_start' => $start,
             'period_end' => $end,
             'model' => $model,
@@ -45,22 +71,26 @@ class WorkDailyReportService
     public function generate(WorkDailyReportExport $export): string
     {
         $user = User::query()->with('roles')->findOrFail($export->user_id);
-        $logs = $this->fetchLogs($user, $export->period_start, $export->period_end);
-        $title = $this->buildTitle($export->type, $export->period_start, $export->period_end);
-        $previousOverview = $this->findPreviousOverview($export->user_id, $export->type, $export->period_start);
+        $groups = $this->groupRecordsByCategory($this->fetchLogs($user, $export->period_start, $export->period_end));
+        $title = $this->buildTitle($export->type, $export->kind, $export->period_start, $export->period_end);
+        $previousOverview = $this->findPreviousOverview($export->user_id, $export->type, $export->kind, $export->period_start);
 
-        return $this->buildSummaryMarkdown($title, $logs, $export->type, $export->model, $previousOverview);
+        if ($export->kind === WorkDailyReportExport::KIND_GROWTH) {
+            return $this->buildGrowthMarkdown($title, $groups[WorkPlatform::CATEGORY_PERSONAL], $export->type, $export->model, $previousOverview);
+        }
+
+        return $this->buildSummaryMarkdown($title, $groups, $export->type, $export->model, $previousOverview);
     }
 
     public function generateForUser(int $userId, string $type, array $payload, ?string $model): string
     {
         [$start, $end] = $this->resolveRange($type, $payload);
         $user = User::query()->with('roles')->findOrFail($userId);
-        $logs = $this->fetchLogs($user, $start, $end);
-        $title = $this->buildTitle($type, $start, $end);
-        $previousOverview = $this->findPreviousOverview($userId, $type, $start);
+        $groups = $this->groupRecordsByCategory($this->fetchLogs($user, $start, $end));
+        $title = $this->buildTitle($type, WorkDailyReportExport::KIND_WORK, $start, $end);
+        $previousOverview = $this->findPreviousOverview($userId, $type, WorkDailyReportExport::KIND_WORK, $start);
 
-        return $this->buildSummaryMarkdown($title, $logs, $type, $model, $previousOverview);
+        return $this->buildSummaryMarkdown($title, $groups, $type, $model, $previousOverview);
     }
 
     public function exportData(WorkDailyReportExport $export): array
@@ -68,6 +98,7 @@ class WorkDailyReportService
         return [
             'id' => $export->id,
             'type' => $export->type,
+            'kind' => $export->kind,
             'periodStart' => $export->period_start,
             'periodEnd' => $export->period_end,
             'model' => $export->model,
@@ -140,8 +171,17 @@ class WorkDailyReportService
         return false;
     }
 
-    private function buildTitle(string $type, string $start, string $end): string
+    private function buildTitle(string $type, string $kind, string $start, string $end): string
     {
+        if ($kind === WorkDailyReportExport::KIND_GROWTH) {
+            return match ($type) {
+                'month' => '个人成长月记 - ' . Carbon::parse($start)->format('Y-m'),
+                'week' => "个人成长周记 - {$start} ~ {$end}",
+                'year' => '个人成长年记 - ' . Carbon::parse($start)->format('Y'),
+                default => throw new \InvalidArgumentException('报表类型不正确'),
+            };
+        }
+
         return match ($type) {
             'month' => '牛马日常月报 - ' . Carbon::parse($start)->format('Y-m'),
             'week' => "牛马日常周报 - {$start} ~ {$end}",
@@ -150,8 +190,17 @@ class WorkDailyReportService
         };
     }
 
-    private function buildFileName(string $type, array $payload): string
+    private function buildFileName(string $type, string $kind, array $payload): string
     {
+        if ($kind === WorkDailyReportExport::KIND_GROWTH) {
+            return match ($type) {
+                'month' => '个人成长月记_' . $payload['month'] . '.md',
+                'week' => '个人成长周记_' . $payload['start_date'] . '_' . $payload['end_date'] . '.md',
+                'year' => '个人成长年记_' . $payload['year'] . '.md',
+                default => throw new \InvalidArgumentException('报表类型不正确'),
+            };
+        }
+
         return match ($type) {
             'month' => '工作月报_' . $payload['month'] . '.md',
             'week' => '工作周报_' . $payload['start_date'] . '_' . $payload['end_date'] . '.md',
@@ -160,88 +209,149 @@ class WorkDailyReportService
         };
     }
 
-    private function buildSummaryMarkdown(string $title, Collection $logs, string $type, ?string $model, ?string $previousOverview = null): string
+    /**
+     * 按平台大类、再按平台名分组原始记录；未指定平台的记录归入工作大类。
+     *
+     * @param Collection $logs
+     * @return array<string, array<string, array<int, array{date: string, content: string}>>>
+     * @author zhouxufeng <zxf@netsun.com>
+     * @date 2026/9/30
+     */
+    private function groupRecordsByCategory(Collection $logs): array
     {
-        if ($logs->isEmpty()) {
-            return "# {$title}\n\n暂无记录。\n";
-        }
+        $groups = array_fill_keys(WorkPlatform::CATEGORIES, []);
+        $platformMap = $this->buildPlatformMap($logs);
 
-        $platformNameMap = $this->buildPlatformNameMap($logs);
-        $platformGroups = [];
         foreach ($logs as $item) {
-            $platforms = $this->normalizePlatforms($item, $platformNameMap);
+            $platforms = $this->normalizePlatforms($item, $platformMap);
             if (empty($platforms)) {
-                $platformName = $item->platform ? $item->platform->name : '未指定平台';
                 $content = is_array($item->content)
                     ? json_encode($item->content, JSON_UNESCAPED_UNICODE)
                     : $item->content;
-                $platformGroups[$platformName][] = [
-                    'date' => $item->log_date,
+                $platforms = [[
+                    'platform_name' => $item->platform ? $item->platform->name : null,
+                    'category' => $item->platform ? $item->platform->category : WorkPlatform::CATEGORY_WORK,
                     'content' => $content,
-                ];
-                continue;
+                ]];
             }
 
             foreach ($platforms as $platform) {
-                $platformName = $platform['platform_name'] ?? ($platformNameMap[$platform['platform_id']] ?? '未指定平台');
-                $platformGroups[$platformName][] = [
+                $platformName = $platform['platform_name'] ?? '未指定平台';
+                $groups[$platform['category']][$platformName][] = [
                     'date' => $item->log_date,
-                    'content' => $platform['content'] ?? '',
+                    'content' => (string)($platform['content'] ?? ''),
                 ];
             }
         }
 
+        return $groups;
+    }
+
+    private function formatRecordSource(array $platformGroups, string $heading): string
+    {
         $source = '';
-        $recordCount = 0;
         foreach ($platformGroups as $platform => $items) {
-            $source .= "## {$platform}\n";
+            $source .= "{$heading} {$platform}\n";
             foreach ($items as $item) {
-                $recordCount++;
-                $source .= "- {$item['date']}: " . str_replace("\n", ' ', trim((string)$item['content'])) . "\n";
+                $source .= "- {$item['date']}: " . str_replace("\n", ' ', trim($item['content'])) . "\n";
             }
             $source .= "\n";
         }
 
-        $typeLabel = match ($type) {
+        return $source;
+    }
+
+    private function countRecords(array $platformGroups): int
+    {
+        return array_sum(array_map('count', $platformGroups));
+    }
+
+    private function reportTypeLabel(string $type): string
+    {
+        return match ($type) {
             'month' => '月报',
             'week' => '周报',
             'year' => '年报',
             default => '报表',
         };
-        $platformNames = implode('、', array_keys($platformGroups));
+    }
+
+    private function buildSummaryMarkdown(string $title, array $groups, string $type, ?string $model, ?string $previousOverview = null): string
+    {
+        $workGroups = $groups[WorkPlatform::CATEGORY_WORK];
+        $studyGroups = $groups[WorkPlatform::CATEGORY_STUDY];
+        if (empty($workGroups) && empty($studyGroups)) {
+            return "# {$title}\n\n暂无记录。\n";
+        }
+
+        $source = '';
+        if (!empty($workGroups)) {
+            $source .= "# 工作\n\n" . $this->formatRecordSource($workGroups, '##');
+        }
+        if (!empty($studyGroups)) {
+            $source .= "# 学习\n\n" . $this->formatRecordSource($studyGroups, '##');
+        }
+
         $styleHint = match ($type) {
             'month' => '月报风格：强调本月完成模块、修复问题、体验改进、可见产出和月度学习模式。',
             'week' => '周报风格：强调本周重点进展、已解决问题、阻塞点和下周可延续动作。',
-            'year' => '年报风格：强调年度成果、关键项目、长期改进、经验沉淀和下一年方向。',
+            'year' => '年终总结风格：抒情开篇，再依次讲工作、学习、用得顺手的地方、不足与新一年近期计划。',
             default => '按平台归纳总结，突出产出。',
         };
 
         // SKILL 是结构与规则的唯一权威，prompt 只塞输入变量，避免与 SKILL 漂移。
-        $skill = $this->loadReportSkill();
+        $skill = $this->loadSkill('work-daily-report');
         $prompt = "请按下面注入的 work-daily-report skill 整理工作日志，输出中文 Markdown。\n" .
             "不要解释过程，只输出最终报表。\n\n" .
             "<skill name=\"work-daily-report\">\n{$skill}\n</skill>\n\n" .
             "报表输入：\n" .
             "- title: {$title}\n" .
             "- type: {$type}\n" .
-            "- report_type_label: {$typeLabel}\n" .
-            "- platform_count: " . count($platformGroups) . "\n" .
-            "- record_count: {$recordCount}\n" .
-            "- platforms: {$platformNames}\n" .
+            "- report_type_label: " . $this->reportTypeLabel($type) . "\n" .
+            "- platform_count: " . (count($workGroups) + count($studyGroups)) . "\n" .
+            "- record_count: " . ($this->countRecords($workGroups) + $this->countRecords($studyGroups)) . "\n" .
+            "- work_platforms: " . (implode('、', array_keys($workGroups)) ?: '无') . "\n" .
+            "- study_platforms: " . (implode('、', array_keys($studyGroups)) ?: '无') . "\n" .
             "- style: {$styleHint}\n\n" .
             ($previousOverview === null
                 ? ''
                 : "上一期报表概览（previous_summary，仅用于趋势对比）：\n{$previousOverview}\n\n") .
-            "原始记录（已按平台分组）：\n{$source}";
+            "原始记录（已按大类、平台分组）：\n{$source}";
 
-        return $this->normalizeSummaryMarkdown($title, $this->callReportModel($prompt, $model));
+        return $this->normalizeSummaryMarkdown($title, $this->callReportModel($prompt, $model, 'work-daily-report'));
     }
 
-    public function findPreviousOverview(int $userId, string $type, string $periodStart): ?string
+    private function buildGrowthMarkdown(string $title, array $personalGroups, string $type, ?string $model, ?string $previousOverview = null): string
+    {
+        if (empty($personalGroups)) {
+            return "# {$title}\n\n暂无记录。\n";
+        }
+
+        $skill = $this->loadSkill('personal-growth-report');
+        $prompt = "请按下面注入的 personal-growth-report skill 整理个人项目记录，输出中文 Markdown。\n" .
+            "不要解释过程，只输出最终成长记录。\n\n" .
+            "<skill name=\"personal-growth-report\">\n{$skill}\n</skill>\n\n" .
+            "成长记录输入：\n" .
+            "- title: {$title}\n" .
+            "- type: {$type}\n" .
+            "- report_type_label: " . $this->reportTypeLabel($type) . "\n" .
+            "- platform_count: " . count($personalGroups) . "\n" .
+            "- record_count: " . $this->countRecords($personalGroups) . "\n" .
+            "- platforms: " . implode('、', array_keys($personalGroups)) . "\n\n" .
+            ($previousOverview === null
+                ? ''
+                : "上一期成长记录概览（previous_summary，仅用于趋势对比）：\n{$previousOverview}\n\n") .
+            "原始记录（个人大类，已按平台分组）：\n" . $this->formatRecordSource($personalGroups, '##');
+
+        return $this->normalizeSummaryMarkdown($title, $this->callReportModel($prompt, $model, 'personal-growth-report'));
+    }
+
+    public function findPreviousOverview(int $userId, string $type, string $kind, string $periodStart): ?string
     {
         $previous = WorkDailyReportExport::query()
             ->where('user_id', $userId)
             ->where('type', $type)
+            ->where('kind', $kind)
             ->where('status', WorkDailyReportExport::STATUS_COMPLETED)
             ->where('period_end', '<', $periodStart)
             ->orderBy('period_end', 'desc')
@@ -257,8 +367,8 @@ class WorkDailyReportService
 
     public function extractOverview(string $markdown): ?string
     {
-        // 兼容带图标的新格式（## 🏝️ 概览）和无图标的历史格式（## 概览）
-        if (!preg_match('/^##\s[^\n]*概览[^\n]*$\R(.*?)(?=^#{1,6}\s|\z)/msu', $markdown, $matches)) {
+        // 兼容带图标的新格式（## 🏝️ 概览）、无图标的历史格式（## 概览）和年终总结的开篇（## 🎐 写在前面）
+        if (!preg_match('/^##\s[^\n]*(?:概览|写在前面)[^\n]*$\R(.*?)(?=^#{1,6}\s|\z)/msu', $markdown, $matches)) {
             return null;
         }
 
@@ -270,55 +380,19 @@ class WorkDailyReportService
         return mb_substr($overview, 0, 600);
     }
 
-    private function loadReportSkill(): string
+    private function loadSkill(string $name): string
     {
-        $path = resource_path('ai/skills/work-daily-report/SKILL.md');
+        $path = resource_path("ai/skills/{$name}/SKILL.md");
         if (!is_file($path)) {
-            throw new \RuntimeException('work-daily-report skill file not found');
+            throw new \RuntimeException("{$name} skill file not found");
         }
 
         $skill = trim((string)file_get_contents($path));
         if ($skill === '') {
-            throw new \RuntimeException('work-daily-report skill file is empty');
+            throw new \RuntimeException("{$name} skill file is empty");
         }
 
         return $skill;
-    }
-
-    private function buildMarkdown(string $title, Collection $logs): string
-    {
-        $markdown = "# {$title}\n\n";
-        if ($logs->isEmpty()) {
-            return $markdown . "暂无记录。\n";
-        }
-
-        $platformNameMap = $this->buildPlatformNameMap($logs);
-        $grouped = $logs->groupBy('log_date');
-
-        foreach ($grouped as $date => $items) {
-            $markdown .= "## {$date}\n\n";
-            foreach ($items as $item) {
-                $platforms = $this->normalizePlatforms($item, $platformNameMap);
-                if (empty($platforms)) {
-                    $platformName = $item->platform ? $item->platform->name : '未指定平台';
-                    $content = is_array($item->content)
-                        ? json_encode($item->content, JSON_UNESCAPED_UNICODE)
-                        : $item->content;
-                    $markdown .= "### 平台：{$platformName}\n\n";
-                    $markdown .= trim((string)$content) . "\n\n";
-                    continue;
-                }
-
-                foreach ($platforms as $platform) {
-                    $platformName = $platform['platform_name'] ?? ($platformNameMap[$platform['platform_id']] ?? '未指定平台');
-                    $content = $platform['content'] ?? '';
-                    $markdown .= "### 平台：{$platformName}\n\n";
-                    $markdown .= trim((string)$content) . "\n\n";
-                }
-            }
-        }
-
-        return $markdown;
     }
 
     private function normalizeSummaryMarkdown(string $title, string $summary): string
@@ -331,7 +405,15 @@ class WorkDailyReportService
         return "# {$title}\n\n{$summary}\n";
     }
 
-    private function buildPlatformNameMap(Collection $logs): array
+    /**
+     * 查询记录涉及平台的名称和大类。
+     *
+     * @param Collection $logs
+     * @return array<int, array{name: string, category: string}>
+     * @author zhouxufeng <zxf@netsun.com>
+     * @date 2026/9/30
+     */
+    private function buildPlatformMap(Collection $logs): array
     {
         $ids = [];
         foreach ($logs as $item) {
@@ -353,11 +435,14 @@ class WorkDailyReportService
 
         return WorkPlatform::query()
             ->whereIn('id', $ids)
-            ->pluck('name', 'id')
+            ->get(['id', 'name', 'category'])
+            ->mapWithKeys(fn(WorkPlatform $platform) => [
+                $platform->id => ['name' => $platform->name, 'category' => $platform->category],
+            ])
             ->all();
     }
 
-    private function normalizePlatforms(WorkDailyLog $item, array $platformNameMap): array
+    private function normalizePlatforms(WorkDailyLog $item, array $platformMap): array
     {
         if (!is_array($item->content) || !isset($item->content['platforms'])) {
             return [];
@@ -369,10 +454,11 @@ class WorkDailyReportService
                 continue;
             }
             $platformId = $platform['platform_id'] ?? $item->platform_id ?? 0;
-            $platformName = $platform['platform_name'] ?? ($platformId ? ($platformNameMap[$platformId] ?? null) : null);
+            $mapped = $platformId ? ($platformMap[$platformId] ?? null) : null;
             $platforms[] = [
                 'platform_id' => $platformId,
-                'platform_name' => $platformName,
+                'platform_name' => $platform['platform_name'] ?? ($mapped['name'] ?? null),
+                'category' => $mapped['category'] ?? WorkPlatform::CATEGORY_WORK,
                 'content' => $platform['content'] ?? '',
             ];
         }
@@ -380,20 +466,20 @@ class WorkDailyReportService
         return $platforms;
     }
 
-    private function callReportModel(string $prompt, ?string $model = null): string
+    private function callReportModel(string $prompt, ?string $model, string $skillName): string
     {
         $targetModel = $model ?: env('OPENCLAW_MODEL', 'github-copilot/gpt-5.2-codex');
 
         if ($this->isLocalCodexModel($targetModel)) {
-            return $this->callLocalCodex($this->applyHumanWritingSkill($prompt), $targetModel);
+            return $this->callLocalCodex($this->applyHumanWritingSkill($prompt, $skillName), $targetModel);
         }
 
         if ($this->isLocalAgyModel($targetModel)) {
-            return $this->callLocalAgy($this->applyHumanWritingSkill($prompt), $targetModel);
+            return $this->callLocalAgy($this->applyHumanWritingSkill($prompt, $skillName), $targetModel);
         }
 
         if ($this->isLocalClaudeModel($targetModel)) {
-            return $this->callLocalClaude($this->applyHumanWritingSkill($prompt), $targetModel);
+            return $this->callLocalClaude($this->applyHumanWritingSkill($prompt, $skillName), $targetModel);
         }
 
         return $this->callOpenClaw($prompt, $targetModel);
@@ -403,17 +489,22 @@ class WorkDailyReportService
      * 为本机 Codex / Claude / Gemini 报表追加活人感写作 skill 指令。
      *
      * @param string $prompt
+     * @param string $skillName 负责结构与事实边界的报表 skill
      * @return string
-     * @author Codex
-     * @date 2026-08-17
+     * @author zhouxufeng <zxf@netsun.com>
+     * @date 2026/9/30
      */
-    private function applyHumanWritingSkill(string $prompt): string
+    private function applyHumanWritingSkill(string $prompt, string $skillName): string
     {
+        $factSource = $skillName === 'personal-growth-report'
+            ? '原始记录和注入的个人能力档案是唯一事实来源。'
+            : '原始工作记录是唯一事实来源。';
+
         return "使用 \$human-writing 对报表成稿进行中文创作与改稿。\n" .
-            "work-daily-report skill 负责报表结构、Markdown 格式、统计口径和事实边界；" .
+            "{$skillName} skill 负责报表结构、Markdown 格式、统计口径和事实边界；" .
             "human-writing skill 只负责自然中文和成稿复核。\n" .
-            "原始工作记录是唯一事实来源。禁止检索、追问或补造材料；资料不足时按报表 skill 的精简规则输出。\n" .
-            "两套规则冲突时，以 work-daily-report skill 为准。不要解释过程，只输出最终 Markdown。\n\n" .
+            $factSource . "禁止检索、追问或补造材料；资料不足时按报表 skill 的精简规则输出。\n" .
+            "两套规则冲突时，以 {$skillName} skill 为准。不要解释过程，只输出最终 Markdown。\n\n" .
             $prompt;
     }
 

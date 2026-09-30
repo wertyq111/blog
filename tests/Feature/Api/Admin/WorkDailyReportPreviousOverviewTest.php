@@ -22,6 +22,7 @@ beforeEach(function () {
         $table->id();
         $table->unsignedInteger('user_id');
         $table->string('type', 20);
+        $table->string('kind', 20)->default('work');
         $table->date('period_start');
         $table->date('period_end');
         $table->string('model', 120)->nullable();
@@ -47,6 +48,7 @@ function makeExport(array $attributes): WorkDailyReportExport
     $export->fill(array_merge([
         'user_id' => 1,
         'type' => 'month',
+        'kind' => WorkDailyReportExport::KIND_WORK,
         'model' => null,
         'status' => WorkDailyReportExport::STATUS_COMPLETED,
         'file_name' => '工作月报.md',
@@ -85,7 +87,7 @@ test('findPreviousOverview 选中 period_end 最近且已完成的同类型上�
         'content' => "# 周报\n\n## 概览\n\n周报概览。\n",
     ]);
 
-    $overview = $this->service->findPreviousOverview(1, 'month', '2026-06-01');
+    $overview = $this->service->findPreviousOverview(1, 'month', WorkDailyReportExport::KIND_WORK, '2026-06-01');
 
     expect($overview)->toBe('四月概览。');
 });
@@ -105,7 +107,7 @@ test('findPreviousOverview 无已完成上期时返回 null', function () {
         'content' => "# 六月\n\n## 概览\n\n六月概览。\n",
     ]);
 
-    expect($this->service->findPreviousOverview(1, 'month', '2026-06-01'))->toBeNull();
+    expect($this->service->findPreviousOverview(1, 'month', WorkDailyReportExport::KIND_WORK, '2026-06-01'))->toBeNull();
 });
 
 // 升级到带图标的新版结构后，历史报表仍是无图标旧格式；两种格式都要能解析，
@@ -119,4 +121,29 @@ test('extractOverview 兼容新旧标题格式并截断超长内容', function (
         ->and($this->service->extractOverview($iconized))->toBe('新格式概览。')
         ->and(mb_strlen((string)$this->service->extractOverview($long)))->toBe(600)
         ->and($this->service->extractOverview("# 报表\n\n没有概览节。\n"))->toBeNull();
+});
+
+// 工作报表和个人成长记录各自对比各自的上期，混用会让成长记录拿工作概览做趋势对比。
+test('findPreviousOverview 只在同种类报表里找上期', function () {
+    makeExport([
+        'period_start' => '2026-04-01',
+        'period_end' => '2026-04-30',
+        'content' => "# 四月工作\n\n## 概览\n\n四月工作概览。\n",
+    ]);
+    makeExport([
+        'kind' => WorkDailyReportExport::KIND_GROWTH,
+        'period_start' => '2026-03-01',
+        'period_end' => '2026-03-31',
+        'content' => "# 三月成长\n\n## 🏝️ 概览\n\n三月成长概览。\n",
+    ]);
+
+    expect($this->service->findPreviousOverview(1, 'month', WorkDailyReportExport::KIND_GROWTH, '2026-06-01'))
+        ->toBe('三月成长概览。');
+});
+
+// 年终总结的开篇节改名为「写在前面」，下一年仍要能拿它做对比参考。
+test('extractOverview 识别年终总结的写在前面', function () {
+    $yearly = "# 牛马日常年报 - 2026\n\n## 🎐 写在前面\n\n这一年很忙。\n\n## 🥬 数据速览\n\n| 指标 | 数值 |\n";
+
+    expect($this->service->extractOverview($yearly))->toBe('这一年很忙。');
 });
