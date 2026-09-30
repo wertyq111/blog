@@ -19,7 +19,7 @@ class GenerateWorkDailyReportExport implements ShouldQueue
 
     public int $tries = 1;
 
-    public int $timeout = 300;
+    public int $timeout = 1800;
 
     public function __construct(private readonly int $exportId)
     {

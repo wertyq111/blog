@@ -18,9 +18,7 @@ it('报表模型列表提供三个本机 CLI 各自的可选模型', function ()
     config(['services.openclaw.gateway_url' => null]);
 
     expect(workDailyReportModelCatalog())->toContain(
-        'local-codex/gpt-5.5',
-        'local-codex/gpt-5.6-sol',
-        'local-codex/gpt-5.6-terra',
+        'local-codex/gpt-6-sol',
         'local-codex/gpt-6-astra',
         'local-agy/gemini-3.1-pro-high',
         'local-agy/gemini-3.7-flash-high',
@@ -28,7 +26,19 @@ it('报表模型列表提供三个本机 CLI 各自的可选模型', function ()
         'local-claude/claude-opus-4-6',
         'local-claude/claude-opus-4-8',
         'local-claude/claude-opus-5',
+        'local-claude/claude-opus-5-5',
     );
+});
+
+it('报表模型列表不再提供已下线的 Codex 旧版本', function () {
+    // gpt-5.5 已移除，gpt-5.6 sol/terra 已被 gpt-6 系列替代；gpt-6-terra 本机 ChatGPT 账号不支持，不能出现
+    config(['services.openclaw.gateway_url' => null]);
+
+    expect(workDailyReportModelCatalog())
+        ->not->toContain('local-codex/gpt-5.5')
+        ->not->toContain('local-codex/gpt-5.6-sol')
+        ->not->toContain('local-codex/gpt-5.6-terra')
+        ->not->toContain('local-codex/gpt-6-terra');
 });
 
 it('报表模型列表不再暴露走 CLI 默认模型的通用入口', function () {

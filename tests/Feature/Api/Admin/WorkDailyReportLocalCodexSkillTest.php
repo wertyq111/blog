@@ -14,7 +14,7 @@ function localCodexSkillCallReportModel(
     $method = new ReflectionMethod($service, 'callReportModel');
     $method->setAccessible(true);
 
-    return $method->invoke($service, $prompt, $model);
+    return $method->invoke($service, $prompt, $model, 'work-daily-report');
 }
 
 it('选择 Codex 导出报表时调用 human-writing skill', function () {

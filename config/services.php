@@ -44,7 +44,7 @@ return [
     ],
 
     'local_codex' => [
-        'bridge_url' => env('LOCAL_CODEX_BRIDGE_URL'),
+        'bridge_url' => env('LOCAL_CODEX_BRIDGE_URL', 'http://host.docker.internal:19194'),
         'bridge_token' => env('LOCAL_CODEX_BRIDGE_TOKEN'),
     ],
 
@@ -54,7 +54,7 @@ return [
     ],
 
     'local_claude' => [
-        'bridge_url' => env('LOCAL_CLAUDE_BRIDGE_URL'),
+        'bridge_url' => env('LOCAL_CLAUDE_BRIDGE_URL', 'http://host.docker.internal:19202'),
         'bridge_token' => env('LOCAL_CLAUDE_BRIDGE_TOKEN'),
     ],
 
