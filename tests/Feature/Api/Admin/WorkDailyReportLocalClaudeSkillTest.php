@@ -14,7 +14,7 @@ function localClaudeSkillCallReportModel(
     $method = new ReflectionMethod($service, 'callReportModel');
     $method->setAccessible(true);
 
-    return $method->invoke($service, $prompt, $model, 'work-daily-report');
+    return $method->invoke($service, $prompt, $model, 'work-daily-report', 'month');
 }
 
 it('选择 Claude 导出报表时调用 human-writing skill', function () {
@@ -43,9 +43,26 @@ it('选择 Claude 导出报表时调用 human-writing skill', function () {
 
         return $request->url() === 'http://claude-bridge.test/v1/chat/completions'
             && $request->data()['model'] === 'local-claude/claude-opus-5'
+            && $request->data()['timeout'] === 1740
             && str_contains($prompt, '使用 $human-writing')
             && str_contains($prompt, '原始工作记录是唯一事实来源')
             && str_contains($prompt, '禁止检索、追问或补造材料')
             && str_contains($prompt, '原始报表提示词');
     });
+});
+
+// 年报记录多、max 推理耗时长，单独放宽；桥里的 CLI 必须比后端 HTTP 先超时，才能报出真实原因。
+it('年报给桥的 CLI 超时放宽到约 60 分钟', function () {
+    config(['services.local_claude.bridge_url' => 'http://claude-bridge.test']);
+    Http::fake([
+        'http://claude-bridge.test/v1/chat/completions' => Http::response([
+            'choices' => [['message' => ['content' => '# 年报']]],
+        ]),
+    ]);
+
+    $method = new ReflectionMethod(WorkDailyReportService::class, 'callReportModel');
+    $method->setAccessible(true);
+    $method->invoke(app(WorkDailyReportService::class), '年报提示词', 'local-claude/claude-opus-5-5', 'work-daily-report', 'year');
+
+    Http::assertSent(fn(Request $request): bool => $request->data()['timeout'] === 3540);
 });

@@ -19,11 +19,23 @@ class GenerateWorkDailyReportExport implements ShouldQueue
 
     public int $tries = 1;
 
-    public int $timeout = 1800;
+    public int $timeout;
 
-    public function __construct(private readonly int $exportId)
+    private readonly int $exportId;
+
+    /**
+     * 工作报表和个人成长记录各走一条队列，由各自的 worker 并行生成；超时按报表类型区分。
+     *
+     * @param WorkDailyReportExport $export
+     * @return void
+     * @author zhouxufeng <zxf@netsun.com>
+     * @date 2026/9/30
+     */
+    public function __construct(WorkDailyReportExport $export)
     {
-        $this->onQueue('work-daily-report');
+        $this->exportId = $export->id;
+        $this->timeout = WorkDailyReportExport::timeoutFor($export->type);
+        $this->onQueue($export->kind === WorkDailyReportExport::KIND_GROWTH ? 'work-daily-growth' : 'work-daily-report');
     }
 
     public function handle(WorkDailyReportService $reportService): void

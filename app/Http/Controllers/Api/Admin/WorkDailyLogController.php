@@ -377,7 +377,7 @@ class WorkDailyLogController extends Controller
 
                 $exports = $this->workDailyReportService->createExports($userId, $type, $payload, $model);
                 foreach ($exports as $export) {
-                    GenerateWorkDailyReportExport::dispatch($export->id);
+                    GenerateWorkDailyReportExport::dispatch($export);
                 }
                 $workExport = $exports[0];
                 $growthExport = $exports[1] ?? null;
@@ -393,16 +393,17 @@ class WorkDailyLogController extends Controller
     }
 
     /**
-     * 获取当前用户最近的报表导出任务。
+     * 获取当前用户的报表导出任务：有生成中的优先返回生成中的，否则返回最近一条。
      *
      * @return \Illuminate\Http\JsonResponse
+     * @author zhouxufeng <zxf@netsun.com>
+     * @date 2026/9/30
      */
     public function currentReportExport()
     {
-        $export = WorkDailyReportExport::query()
-            ->where('user_id', (int)auth('api')->id())
-            ->orderByDesc('id')
-            ->first();
+        $query = WorkDailyReportExport::query()->where('user_id', (int)auth('api')->id());
+        $export = (clone $query)->whereIn('status', WorkDailyReportExport::activeStatuses())->orderByDesc('id')->first()
+            ?? $query->orderByDesc('id')->first();
 
         return response()->json([
             'export' => $export ? $this->workDailyReportService->exportData($export) : null,

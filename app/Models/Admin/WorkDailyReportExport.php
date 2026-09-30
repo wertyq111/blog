@@ -39,6 +39,19 @@ class WorkDailyReportExport extends BaseModel
         ];
     }
 
+    /**
+     * 报表任务的整体超时秒数：年报记录多、max 推理耗时长，单独放宽到 60 分钟。
+     *
+     * @param string $type
+     * @return int
+     * @author zhouxufeng <zxf@netsun.com>
+     * @date 2026/9/30
+     */
+    public static function timeoutFor(string $type): int
+    {
+        return $type === 'year' ? 3600 : 1800;
+    }
+
     public function isCompleted(): bool
     {
         return $this->status === self::STATUS_COMPLETED;
