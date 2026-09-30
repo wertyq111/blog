@@ -571,7 +571,7 @@ class WorkDailyReportService
 
         try {
             $response = Http::withHeaders($headers)
-                ->timeout(240)
+                ->timeout(1770)
                 ->post($baseUrl . '/v1/chat/completions', [
                     'model' => $model,
                     'messages' => [
@@ -610,7 +610,7 @@ class WorkDailyReportService
 
         try {
             $response = Http::withHeaders($headers)
-                ->timeout(240)
+                ->timeout(1770)
                 ->post($baseUrl . '/v1/chat/completions', [
                     'model' => $model,
                     'messages' => [
@@ -649,7 +649,7 @@ class WorkDailyReportService
 
         try {
             $response = Http::withHeaders($headers)
-                ->timeout(240)
+                ->timeout(1770)
                 ->post($baseUrl . '/v1/chat/completions', [
                     'model' => $model,
                     'messages' => [
