@@ -30,6 +30,7 @@ class Member extends BaseModel
         'district_code',
         'address',
         'intro',
+        'abilities',
         'signature',
         'admire',
         'device',
@@ -41,6 +42,15 @@ class Member extends BaseModel
         'login_at',
         'login_region',
         'login_count'
+    ];
+
+    /**
+     * 属性类型转换
+     *
+     * @var array<string, string>
+     */
+    protected $casts = [
+        'abilities' => 'array',
     ];
 
     /**

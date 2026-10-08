@@ -10,6 +10,7 @@ use App\Http\Controllers\Api\User\MembersController;
 use App\Http\Controllers\Api\User\MemberLevelController;
 use App\Http\Controllers\Api\User\VerificationCodesController;
 use App\Http\Controllers\Api\User\AvatarController;
+use App\Http\Controllers\Api\User\PasswordController;
 use App\Http\Controllers\Api\AuthorizationsController;
 use App\Http\Controllers\Api\MiniProgram\WallpaperController;
 use App\Http\Controllers\Api\MiniProgram\WallpaperClassifyController;
@@ -142,6 +143,8 @@ Route::name('api')->group(function () {
         Route::post('index/updateUserInfo', [UsersController::class, 'updateUserInfo'])->name('users.updateUserInfo');
         // 上传当前用户头像
         Route::post('user/avatar', [AvatarController::class, 'add'])->name('user.avatar.add');
+        // 修改当前用户密码
+        Route::post('user/password', [PasswordController::class, 'edit'])->name('user.password.edit');
         Route::controller(UsersController::class)
             ->prefix('users')
             ->name('users.')
