@@ -202,12 +202,12 @@ class UsersController extends Controller
     /**
      * 更新当前用户资料
      *
-     * @param FormRequest $request
+     * @param UserRequest $request
      * @return UserResource
      * @author zhouxufeng <zxf@netsun.com>
-     * @date 2026/3/30 09:25
+     * @date 2026/10/8
      */
-    public function updateUserInfo(FormRequest $request)
+    public function updateUserInfo(UserRequest $request)
     {
         $user = auth()->user();
         $data = $request->getSnakeRequest();
@@ -233,6 +233,10 @@ class UsersController extends Controller
             'address',
             'intro',
         ]);
+        // 个人能力只落已校验的字段，避免把未知键写进 JSON
+        if ($request->has('abilities')) {
+            $memberPayload['abilities'] = $request->validated('abilities');
+        }
 
         $filledMemberPayload = array_filter($memberPayload, static function ($value) {
             return $value !== null && $value !== '';

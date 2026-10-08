@@ -47,6 +47,15 @@ class UserRequest extends FormRequest
             'status' => [
                 'status' => ['required', 'integer', 'in:0,1,2'],
             ],
+            'updateUserInfo' => [
+                'abilities' => ['sometimes', 'array'],
+                'abilities.position' => ['nullable', 'string', 'max:50'],
+                'abilities.organization' => ['nullable', 'string', 'max:100'],
+                'abilities.region' => ['nullable', 'string', 'max:100'],
+                'abilities.tech_stack' => ['nullable', 'string', 'max:200'],
+                'abilities.skills' => ['nullable', 'array', 'max:20'],
+                'abilities.skills.*' => ['string', 'max:30'],
+            ],
             default => [],
         };
     }
@@ -119,6 +128,13 @@ class UserRequest extends FormRequest
             'password' => '密码',
             'status' => '状态',
             'role_ids' => '角色',
+            'abilities' => '个人能力',
+            'abilities.position' => '角色定位',
+            'abilities.organization' => '组织信息',
+            'abilities.region' => '所在地区',
+            'abilities.tech_stack' => '技术栈',
+            'abilities.skills' => '技能标签',
+            'abilities.skills.*' => '技能标签',
         ]);
     }
 }
