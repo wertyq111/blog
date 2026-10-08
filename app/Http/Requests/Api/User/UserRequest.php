@@ -128,7 +128,7 @@ class UserRequest extends FormRequest
             'password' => '密码',
             'status' => '状态',
             'role_ids' => '角色',
-            'abilities' => '个人能力',
+            'abilities' => '个人档案',
             'abilities.position' => '角色定位',
             'abilities.organization' => '组织信息',
             'abilities.region' => '所在地区',
