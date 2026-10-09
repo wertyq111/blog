@@ -17,7 +17,11 @@ class AvatarService
 
     private const MAX_DIMENSION = 3000;
 
-    private const MAX_GIF_FRAMES = 300;
+    private const ANIMATED_EXTENSIONS = ['gif', 'mp4'];
+
+    private const MAX_ANIMATED_SECONDS = 10;
+
+    private const MAX_ANIMATED_FPS = 24;
 
     /**
      * 初始化头像处理服务。
@@ -41,22 +45,27 @@ class AvatarService
      * @return User
      * @author zhouxufeng <zxf@netsun.com>
      *
-     * @date 2026/7/7
+     * @date 2026/10/9
      */
     public function update(User $user, UploadedFile $file, array $crop): User
     {
-        $extension = $this->extensionForMime($file->getMimeType());
-        [$width, $height, $frames] = $this->inspect($file, $extension);
-        $this->assertImageLimits($width, $height, $frames);
+        $sourceExtension = $this->extensionForMime($file->getMimeType());
+        $animated = in_array($sourceExtension, self::ANIMATED_EXTENSIONS, true);
+        [$width, $height, $fps] = $animated ? $this->inspectAnimated($file) : [...$this->inspect($file), 0];
+        $this->assertImageLimits($width, $height);
         $this->assertCropBounds($width, $height, $crop);
 
+        // GIF / MP4 统一转成 WebP 动图，静态图保持原格式
+        $extension = $animated ? 'webp' : $sourceExtension;
         $processingPath = $this->processingPath($extension);
         $relativePath = '/uploads/avatars/'.date('Ymd').'/'.Str::uuid().'.'.$extension;
         $absolutePath = public_path($relativePath);
         $oldPath = $user->member?->avatar;
 
         try {
-            $this->crop($file->getRealPath(), $processingPath, $extension, $crop);
+            $animated
+                ? $this->transcode($file->getRealPath(), $processingPath, $crop, $fps)
+                : $this->crop($file->getRealPath(), $processingPath, $crop);
             $this->moveToPublicDirectory($processingPath, $absolutePath);
 
             try {
@@ -87,13 +96,13 @@ class AvatarService
     }
 
     /**
-     * 根据真实 MIME 获取输出扩展名。
+     * 根据真实 MIME 获取上传文件的扩展名。
      *
      * @param string|null $mime
      * @return string
      * @author zhouxufeng <zxf@netsun.com>
      *
-     * @date 2026/7/7
+     * @date 2026/10/9
      */
     private function extensionForMime(?string $mime): string
     {
@@ -102,55 +111,75 @@ class AvatarService
             'image/png' => 'png',
             'image/gif' => 'gif',
             'image/webp' => 'webp',
+            'video/mp4' => 'mp4',
             default => throw ValidationException::withMessages(['file' => '头像文件格式不正确']),
         };
     }
 
     /**
-     * 读取图像尺寸与帧数。
+     * 读取静态图像尺寸。
      *
      * @param UploadedFile $file
-     * @param string $extension
      * @return array
      * @author zhouxufeng <zxf@netsun.com>
      *
-     * @date 2026/7/7
+     * @date 2026/10/9
      */
-    private function inspect(UploadedFile $file, string $extension): array
+    private function inspect(UploadedFile $file): array
     {
-        $command = $extension === 'gif'
-            ? ['identify', '-format', '%w %h %n\n', $file->getRealPath()]
-            : ['convert', $file->getRealPath(), '-auto-orient', '-format', '%w %h 1\n', 'info:'];
-        $process = new Process($command);
+        $process = new Process(['convert', $file->getRealPath(), '-auto-orient', '-format', '%w %h\n', 'info:']);
         $process->mustRun();
 
         $line = strtok(trim($process->getOutput()), "\n");
-        if (! is_string($line) || ! preg_match('/^(\d+) (\d+) (\d+)$/', trim($line), $matches)) {
+        if (! is_string($line) || ! preg_match('/^(\d+) (\d+)$/', trim($line), $matches)) {
             throw new RuntimeException('无法读取头像图像信息');
         }
 
-        return [(int) $matches[1], (int) $matches[2], (int) $matches[3]];
+        return [(int) $matches[1], (int) $matches[2]];
     }
 
     /**
-     * 校验图像尺寸与 GIF 帧数。
+     * 读取 GIF / MP4 的画面尺寸与帧率。
+     *
+     * @param UploadedFile $file
+     * @return array
+     * @author zhouxufeng <zxf@netsun.com>
+     *
+     * @date 2026/10/9
+     */
+    private function inspectAnimated(UploadedFile $file): array
+    {
+        $process = new Process([
+            'ffprobe', '-v', 'error', '-select_streams', 'v:0',
+            '-show_entries', 'stream=width,height,avg_frame_rate',
+            '-of', 'csv=p=0', $file->getRealPath(),
+        ]);
+        $process->mustRun();
+
+        $line = strtok(trim($process->getOutput()), "\n");
+        if (! is_string($line) || ! preg_match('#^(\d+),(\d+),(\d+)/(\d+)#', trim($line), $matches)) {
+            throw ValidationException::withMessages(['file' => '头像文件里没有可用的画面']);
+        }
+
+        $fps = (int) $matches[4] > 0 ? (int) $matches[3] / (int) $matches[4] : 0;
+
+        return [(int) $matches[1], (int) $matches[2], $fps];
+    }
+
+    /**
+     * 校验图像尺寸。
      *
      * @param int $width
      * @param int $height
-     * @param int $frames
      * @return void
      * @author zhouxufeng <zxf@netsun.com>
      *
-     * @date 2026/7/7
+     * @date 2026/10/9
      */
-    private function assertImageLimits(int $width, int $height, int $frames): void
+    private function assertImageLimits(int $width, int $height): void
     {
         if ($width < 1 || $height < 1 || $width > self::MAX_DIMENSION || $height > self::MAX_DIMENSION) {
             throw ValidationException::withMessages(['file' => '头像尺寸不能超过 3000×3000 像素']);
-        }
-
-        if ($frames > self::MAX_GIF_FRAMES) {
-            throw ValidationException::withMessages(['file' => 'GIF 头像不能超过 300 帧']);
         }
     }
 
@@ -193,18 +222,17 @@ class AvatarService
     }
 
     /**
-     * 执行头像裁剪与缩放。
+     * 裁剪静态头像并缩放到固定尺寸。
      *
      * @param string $sourcePath
      * @param string $targetPath
-     * @param string $extension
      * @param array $crop
      * @return void
      * @author zhouxufeng <zxf@netsun.com>
      *
-     * @date 2026/7/7
+     * @date 2026/10/9
      */
-    private function crop(string $sourcePath, string $targetPath, string $extension, array $crop): void
+    private function crop(string $sourcePath, string $targetPath, array $crop): void
     {
         $geometry = sprintf(
             '%dx%d+%d+%d',
@@ -214,19 +242,63 @@ class AvatarService
             $crop['crop_y']
         );
 
-        $command = $extension === 'gif'
-            ? [
-                'convert', $sourcePath, '-coalesce', '-crop', $geometry, '+repage',
-                '-resize', self::OUTPUT_SIZE.'x'.self::OUTPUT_SIZE.'>', '-layers', 'Optimize', $targetPath,
-            ]
-            : [
-                'convert', $sourcePath, '-auto-orient', '-crop', $geometry, '+repage',
-                '-resize', self::OUTPUT_SIZE.'x'.self::OUTPUT_SIZE.'!', $targetPath,
-            ];
+        (new Process([
+            'convert', $sourcePath, '-auto-orient', '-crop', $geometry, '+repage',
+            '-resize', self::OUTPUT_SIZE.'x'.self::OUTPUT_SIZE.'!', $targetPath,
+        ]))->mustRun();
 
-        (new Process($command))->mustRun();
+        $this->assertProcessed($targetPath);
+    }
 
-        if (! is_file($targetPath) || filesize($targetPath) === 0) {
+    /**
+     * 把 GIF / MP4 裁剪并转成 WebP 动图。
+     *
+     * @param string $sourcePath
+     * @param string $targetPath
+     * @param array $crop
+     * @param float $fps
+     * @return void
+     * @author zhouxufeng <zxf@netsun.com>
+     *
+     * @date 2026/10/9
+     */
+    private function transcode(string $sourcePath, string $targetPath, array $crop, float $fps): void
+    {
+        $filters = [sprintf('crop=%1$d:%1$d:%2$d:%3$d', $crop['crop_size'], $crop['crop_x'], $crop['crop_y'])];
+        if ($fps > self::MAX_ANIMATED_FPS) {
+            $filters[] = 'fps='.self::MAX_ANIMATED_FPS;
+        }
+        // 只缩不放：裁剪结果不足 512 时保持原尺寸，放大只会变糊变大
+        if ($crop['crop_size'] > self::OUTPUT_SIZE) {
+            $filters[] = sprintf('scale=%1$d:%1$d:flags=lanczos', self::OUTPUT_SIZE);
+        }
+
+        $process = new Process([
+            'ffmpeg', '-v', 'error', '-y', '-i', $sourcePath,
+            '-t', (string) self::MAX_ANIMATED_SECONDS, '-an',
+            '-vf', implode(',', $filters),
+            '-c:v', 'libwebp_anim', '-q:v', '75', '-compression_level', '4', '-loop', '0',
+            $targetPath,
+        ]);
+        // 10 秒 720p 素材实测转码约 17 秒，Process 默认 60 秒超时余量不够；前端该接口超时是 120 秒
+        $process->setTimeout(100);
+        $process->mustRun();
+
+        $this->assertProcessed($targetPath);
+    }
+
+    /**
+     * 确认头像处理结果已生成。
+     *
+     * @param string $path
+     * @return void
+     * @author zhouxufeng <zxf@netsun.com>
+     *
+     * @date 2026/10/9
+     */
+    private function assertProcessed(string $path): void
+    {
+        if (! is_file($path) || filesize($path) === 0) {
             throw new RuntimeException('头像处理结果为空');
         }
     }

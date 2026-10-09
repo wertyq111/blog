@@ -36,9 +36,9 @@ jobs:
           extensions: mbstring, curl, simplexml, pdo_mysql, sqlite3, pdo_sqlite, bcmath, gd, exif, zip
           coverage: none
 
-      - name: Install ImageMagick
-        # 头像上传裁剪用 convert CLI 处理图片，与 runtimes/Dockerfile 一致
-        run: sudo apt-get update && sudo apt-get install -y imagemagick
+      - name: Install ImageMagick and ffmpeg
+        # 头像上传：静态图用 convert CLI 裁剪，GIF / MP4 用 ffmpeg 转 WebP 动图，与 runtimes/Dockerfile 一致
+        run: sudo apt-get update && sudo apt-get install -y imagemagick ffmpeg
 
       - name: Prepare environment
         run: |

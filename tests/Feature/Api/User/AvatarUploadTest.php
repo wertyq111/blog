@@ -81,7 +81,7 @@ it('个人资料接口使用 APP_URL 返回本地头像公开地址', function (
         );
 });
 
-it('裁剪 GIF 后仍保留动画帧', function () {
+it('GIF 头像转成 WebP 动图并保留动画帧', function () {
     $token = avatarUploadLoginToken();
     $fixture = avatarUploadAnimatedGifFixture();
     $this->avatarUploadFiles[] = $fixture;
@@ -102,13 +102,10 @@ it('裁剪 GIF 后仍保留动画帧', function () {
     $relativePath = DB::table('members')->value('avatar');
     $absolutePath = public_path($relativePath);
     $this->avatarUploadFiles[] = $absolutePath;
-    $identify = new Process(['identify', '-format', '%n\n', $absolutePath]);
-    $identify->mustRun();
-    $frames = (int) strtok(trim($identify->getOutput()), "\n");
-    [$width, $height] = getimagesize($absolutePath);
+    [$width, $height, $frames] = avatarUploadInspectOutput($absolutePath);
 
-    expect($relativePath)->toEndWith('.gif')
-        ->and($frames)->toBeGreaterThan(1)
+    expect($relativePath)->toEndWith('.webp')
+        ->and($frames)->toBe(2)
         ->and($width)->toBe(120)
         ->and($height)->toBe(120);
 });
@@ -134,10 +131,121 @@ it('超过最大尺寸的 GIF 裁剪结果缩小到 512', function () {
     $relativePath = DB::table('members')->value('avatar');
     $absolutePath = public_path($relativePath);
     $this->avatarUploadFiles[] = $absolutePath;
-    [$width, $height] = getimagesize($absolutePath);
+    [$width, $height] = avatarUploadInspectOutput($absolutePath);
 
     expect($width)->toBe(512)
         ->and($height)->toBe(512);
+});
+
+it('MP4 头像转成 WebP 动图', function () {
+    $token = avatarUploadLoginToken();
+    $fixture = avatarUploadVideoFixture(seconds: 1, fps: 10);
+    $this->avatarUploadFiles[] = $fixture;
+
+    $response = $this
+        ->withHeader('Authorization', "Bearer {$token}")
+        ->post('/api/user/avatar', [
+            'file' => new UploadedFile($fixture, 'avatar.mp4', 'video/mp4', null, true),
+            'crop_x' => 20,
+            'crop_y' => 0,
+            'crop_size' => 120,
+        ]);
+
+    $response
+        ->assertOk()
+        ->assertJsonPath('code', 0);
+
+    $relativePath = DB::table('members')->value('avatar');
+    $absolutePath = public_path($relativePath);
+    $this->avatarUploadFiles[] = $absolutePath;
+    [$width, $height, $frames] = avatarUploadInspectOutput($absolutePath);
+
+    expect($relativePath)->toEndWith('.webp')
+        ->and($response->json('data.member.avatar'))->toBe('http://10.10.9.184:3925'.$relativePath)
+        ->and($frames)->toBe(10)
+        ->and($width)->toBe(120)
+        ->and($height)->toBe(120);
+});
+
+it('超过 10 秒的视频只保留前 10 秒', function () {
+    $token = avatarUploadLoginToken();
+    $fixture = avatarUploadVideoFixture(seconds: 12, fps: 5);
+    $this->avatarUploadFiles[] = $fixture;
+
+    $this
+        ->withHeader('Authorization', "Bearer {$token}")
+        ->post('/api/user/avatar', [
+            'file' => new UploadedFile($fixture, 'long.mp4', 'video/mp4', null, true),
+            'crop_x' => 0,
+            'crop_y' => 0,
+            'crop_size' => 120,
+        ])
+        ->assertOk()
+        ->assertJsonPath('code', 0);
+
+    $absolutePath = public_path(DB::table('members')->value('avatar'));
+    $this->avatarUploadFiles[] = $absolutePath;
+    [, , $frames] = avatarUploadInspectOutput($absolutePath);
+
+    expect($frames)->toBe(50);
+});
+
+it('高帧率视频降到每秒 24 帧', function () {
+    $token = avatarUploadLoginToken();
+    $fixture = avatarUploadVideoFixture(seconds: 2, fps: 60);
+    $this->avatarUploadFiles[] = $fixture;
+
+    $this
+        ->withHeader('Authorization', "Bearer {$token}")
+        ->post('/api/user/avatar', [
+            'file' => new UploadedFile($fixture, 'smooth.mp4', 'video/mp4', null, true),
+            'crop_x' => 0,
+            'crop_y' => 0,
+            'crop_size' => 120,
+        ])
+        ->assertOk()
+        ->assertJsonPath('code', 0);
+
+    $absolutePath = public_path(DB::table('members')->value('avatar'));
+    $this->avatarUploadFiles[] = $absolutePath;
+    [, , $frames] = avatarUploadInspectOutput($absolutePath);
+
+    expect($frames)->toBe(48);
+});
+
+it('MP4 可以超过 5MB 而静态图不行', function () {
+    $token = avatarUploadLoginToken();
+    $fixture = avatarUploadVideoFixture(seconds: 1, fps: 10);
+    $this->avatarUploadFiles[] = $fixture;
+    // 在视频尾部补零撑到 6MB 以上，内容仍是可解码的 MP4
+    file_put_contents($fixture, str_repeat("\0", 6 * 1024 * 1024), FILE_APPEND);
+
+    $this
+        ->withHeader('Authorization', "Bearer {$token}")
+        ->post('/api/user/avatar', [
+            'file' => new UploadedFile($fixture, 'big.mp4', 'video/mp4', null, true),
+            'crop_x' => 0,
+            'crop_y' => 0,
+            'crop_size' => 120,
+        ])
+        ->assertOk()
+        ->assertJsonPath('code', 0);
+
+    $absolutePath = public_path(DB::table('members')->value('avatar'));
+    $this->avatarUploadFiles[] = $absolutePath;
+
+    $this
+        ->withHeader('Authorization', "Bearer {$token}")
+        ->post('/api/user/avatar', [
+            'file' => UploadedFile::fake()->image('big.png', 240, 240)->size(6 * 1024),
+            'crop_x' => 0,
+            'crop_y' => 0,
+            'crop_size' => 240,
+        ])
+        ->assertOk()
+        ->assertJsonPath('code', 422);
+
+    expect(DB::table('members')->value('avatar'))->toEndWith('.webp');
 });
 
 it('拒绝越界的头像裁剪区域', function () {
@@ -300,4 +408,50 @@ function avatarUploadAnimatedGifFixture(int $width = 160, int $height = 120): st
     unlink($secondPath);
 
     return $gifPath;
+}
+
+/**
+ * 创建测试用 MP4 视频（ffmpeg 自带测试画面，每帧内容不同）。
+ *
+ * @param int $width
+ * @param int $height
+ * @param int $seconds
+ * @param int $fps
+ * @return string
+ * @author zhouxufeng <zxf@netsun.com>
+ *
+ * @date 2026/10/9
+ */
+function avatarUploadVideoFixture(int $width = 160, int $height = 120, int $seconds = 1, int $fps = 10): string
+{
+    $directory = storage_path('app/avatar-test');
+    if (! is_dir($directory)) {
+        mkdir($directory, 0755, true);
+    }
+
+    $videoPath = $directory.'/'.uniqid('avatar-', true).'.mp4';
+    (new Process([
+        'ffmpeg', '-v', 'error', '-y', '-f', 'lavfi',
+        '-i', "testsrc=size={$width}x{$height}:rate={$fps}:duration={$seconds}",
+        '-pix_fmt', 'yuv420p', '-c:v', 'libx264', $videoPath,
+    ]))->mustRun();
+
+    return $videoPath;
+}
+
+/**
+ * 读取头像处理结果的宽、高、帧数。
+ *
+ * @param string $path
+ * @return array
+ * @author zhouxufeng <zxf@netsun.com>
+ *
+ * @date 2026/10/9
+ */
+function avatarUploadInspectOutput(string $path): array
+{
+    $identify = new Process(['identify', '-format', '%w %h %n\n', $path]);
+    $identify->mustRun();
+
+    return array_map('intval', explode(' ', strtok(trim($identify->getOutput()), "\n")));
 }

@@ -36,6 +36,12 @@ RUN apt-get update \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
+# 头像动图（GIF / MP4）转 WebP 用 ffmpeg。单独成层：有构建缓存时只重跑这一层，不连带重装上面的 PHP 等包
+RUN apt-get update \
+    && apt-get install -y ffmpeg \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+
 RUN setcap "cap_net_bind_service=+ep" /usr/bin/php8.2
 
 RUN groupadd --force -g $WWWGROUP sail
